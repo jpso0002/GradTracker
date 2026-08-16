@@ -45,6 +45,7 @@ Keep entries concise. One line per decision when possible.
 - **No global state library.** Server state lives in the typed API client + component state; a store gets added only when two distant components demonstrably need the same data.
 - **The design system is a read-only dependency.** `GradTracker Design System/` is consumed, never edited and never re-implemented.
 - **Adapters default to `fake`** — `GMAIL_ADAPTER` and `CLASSIFIER_ADAPTER` must be explicitly set to `live`.
+- **Commits are made by the team, not by Claude** (set 16 August 2026). Claude leaves the working tree ready and reports what changed; staging, committing and branching are manual. Documentation updates still happen per task, so a commit is always a coherent unit.
 - **Documentation is maintained per task, not in a batch.** On completing any task: log it in [changelog.md](changelog.md), record any decision here, tick it in [tasks.md](tasks.md), and update the in-app `/docs` pages if architecture, components, data flow, APIs or dependencies changed.
 - **The changelog follows Keep a Changelog** — `[Unreleased]` grouped by Added / Changed / Fixed / Removed / Security. Every entry carries a date, a short description, and the files affected. Past entries are appended to, never edited or deleted.
 - **The in-app Documentation Center renders the markdown in `docs/`** rather than duplicating it, so the two cannot drift (task T5.9).
