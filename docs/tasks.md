@@ -19,7 +19,7 @@ when its dependencies are checked off.
 | 2 — Harness | 2–3 | T2.1–T2.8 | ☐ Not started |
 | 3 — Pipeline | 3–5 | T3.1–T3.8 | ☐ Not started |
 | 4 — API | 5–6 | T4.1–T4.7 | ☐ Not started |
-| 5 — Dashboard | 6–8 | T5.1–T5.8 | ☐ Not started |
+| 5 — Dashboard | 6–8 | T5.1–T5.9 | ☐ Not started |
 | 6 — Human-in-the-loop | 8–9 | T6.1–T6.5 | ☐ Not started |
 | 7 — Live adapters | 9–11 | T7.1–T7.6 | ☐ Not started |
 | 8 — Traceability | 11–12 | T8.1–T8.5 | ☐ Not started |
@@ -333,6 +333,13 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   cards and the sidebar becomes a bottom tab bar.
   *Done when:* the pipeline is usable at 375px with 44px touch targets and **identical
   ranking** — SM-4 is not a desktop-only promise.
+
+- [ ] **T5.9 — Documentation Center (`/docs` app route)** · Lane C · needs T5.2
+  In-app documentation pages: Architecture, Components, Data flow, API, Dependencies.
+  Rendered from the markdown in `docs/` rather than hand-written, so the two cannot drift.
+  **New scope, added 16 August 2026** — not part of the original MVP definition.
+  *Done when:* `/docs` renders all five pages inside the app shell, and editing a file in
+  `docs/` changes the rendered page with no second edit.
 
 ---
 

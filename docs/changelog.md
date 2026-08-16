@@ -1,0 +1,73 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+### Added
+
+- **2026-08-16** — Documentation Center task (T5.9) added to Phase 5: in-app `/docs` pages for Architecture, Components, Data flow, API and Dependencies, rendered from the markdown in `docs/` so the two cannot drift. New scope, not part of the original MVP definition. · `docs/tasks.md`
+- **2026-08-16** — Project rulebook created: ~90 one-line rules across Architecture, Naming Conventions, Design Patterns, Business Logic and Integrations. Established that `rules.md` holds the rule and `decision-record.md` holds the reasoning; on conflict, `rules.md` is correct. · `docs/rules.md`
+- **2026-08-16** — Naming conventions defined (previously undocumented): `snake_case` plural tables, `camelCase` API payloads with repository-layer mapping, kebab-case modules, PascalCase components, `NNN-slug.json` fixtures. · `docs/rules.md`
+- **2026-08-16** — State management decided: no global store. Server state via the typed API client, everything else component state; a store is added only when two distant components demonstrably need the same data. · `docs/rules.md`
+- **2026-08-16** — Implementation task list created: 54 tasks across 9 phases with owner lanes (Domain / Quality / Interface), dependencies, and per-task completion criteria. Includes a new Phase 0 (week 1) for Google Cloud and OAuth setup, created to de-risk the schedule. · `docs/tasks.md`
+- **2026-08-16** — Four product requirement documents created. · `docs/masterplan.md`, `docs/implementation.md`, `docs/design.md`, `docs/app-flow.md`
+  - `masterplan.md` — vision, target users, value proposition, nine success metrics each with a named owning test, product principles, scope boundaries, risks.
+  - `implementation.md` — architecture, repository layout, column-level schema, port interfaces, classification pipeline, stage rules, job matching, sync engine, API surface, security implementation, accuracy harness, phased plan.
+  - `design.md` — brand foundation, tokens, component inventory, the AI-vs-human visual contract, iconography, content voice, accessibility, responsive behaviour.
+  - `app-flow.md` — screen map, routes, four state machines, six user journeys, per-screen specs, empty states, 17 error states, 22 edge cases.
+- **2026-08-16** — Initial architecture decision record created, covering decisions D1–D15 with options rejected and reasoning. · `docs/decision-record.md`
+  - Stack: TypeScript end-to-end (React + Vite client, Node + Express server), diverging from the submitted proposal's Node-or-Python option.
+  - Database: Postgres in production, SQLite in dev and test via Drizzle, diverging from the submitted MySQL.
+  - Build against mocked Gmail and a fixture-backed classifier first; live adapters behind the same ports.
+  - Multi-account with row-level scoping, no admin layer. Marketing site out of scope. Confidence-gated review queue in the MVP.
+
+### Changed
+
+- **2026-08-16** — Documentation maintenance rules added: documentation is updated per task rather than batched, and the in-app Documentation Center renders `docs/` rather than duplicating it. · `docs/rules.md`
+- **2026-08-16** — Decision record raised to revision 2: resolved D10, added D16–D21, added a section recording six specification defects, added the measured cost model and the statistical-power finding. · `docs/decision-record.md`
+  - **D10 resolved** — six computed stages, not seven literal ones. "Deadline Approaching" becomes `DeadlinePill` coloured from `daysLeft`; "Follow-up Required" becomes a computed staleness flag. Unblocked the database schema.
+  - **D16** — classifier is `claude-haiku-4-5`, escalating to `claude-sonnet-5` below 0.6 confidence. ~$4.30 per 2,000-email scan, ~$65 across development.
+  - **D17** — 80 synthetic fixtures now, ~300 real hand-labelled emails during the semester; harness reports a Wilson 95% confidence interval alongside every figure.
+  - **D18** — live-adapter spike moved to week 1 from week 9.
+  - **D19** — structured output via `output_config.format` with `zodOutputFormat`, superseding the tool-use schema approach.
+  - **D20** — Batches API for initial inbox scans, halving the largest single cost.
+  - **D21** — three parallel owner lanes: Domain, Quality, Interface.
+- **2026-08-16** — T8.3 (real labelled email corpus) rescheduled to start week 3 rather than week 11 — it is the longest-lead item in the project and the only one that makes the accuracy claim defensible. · `docs/tasks.md`
+
+### Fixed
+
+- **2026-08-16** — Six specification defects found reviewing the four documents against each other, each assigned to the task that fixes it. · `docs/decision-record.md`, `docs/tasks.md`
+  - **C2** — `implementation.md` and `app-flow.md` disagreed on which clock computes deadline urgency; a row could display "2 days left" while ranked in the 3–7 day bucket. Resolved: the client sends its IANA timezone and the server ranks with it.
+  - **C3** — JSON output was specified via tool-use schema rather than `output_config.format`.
+  - **C4** — the cost model wrongly assumed prompt caching applies; Haiku 4.5's minimum cacheable prefix is 4,096 tokens, far above a classification prompt. Batches API adopted as the offset.
+  - **C5** — D10 was recorded as open in all four documents after being resolved.
+
+### Removed
+
+- (none yet)
+
+### Security
+
+- **2026-08-16** — **C1** — the classifier's declared `reasoning` field, described as "logged for debugging, never persisted", would have leaked email content into persisted logs — violating the no-raw-content criterion through the log file rather than the database. Resolved: development-only, scrubbed, never written to a persisted log. · `docs/decision-record.md`, `docs/tasks.md`
+- **2026-08-16** — **C6** — recorded that `gmail.readonly` is a Google *restricted* scope: public launch would require a paid third-party security assessment. Not a blocker (test-user mode permits 100 users) but it bounds the product's future distribution. · `docs/decision-record.md`
+
+---
+
+**Format for new entries:**
+
+- **Added** for new features
+- **Changed** for changes in existing functionality
+- **Fixed** for bug fixes
+- **Removed** for removed features
+- **Security** for security improvements
+
+**Rules:**
+
+- Add a new entry after every completed task or group of related tasks
+- Include the date, a short description, and files affected
+- This is a historical log — never edit or delete past entries
+
+---
+
+*No application code has been written yet. Implementation begins at task T0.1.*
