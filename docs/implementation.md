@@ -253,13 +253,21 @@ export const ClassificationSchema = z.object({
   deadlineAt: z.string().datetime().nullable(),
   nextAction: z.string().max(120).nullable(),
   confidence: z.number().min(0).max(1),
-  reasoning:  z.string().max(300),   // logged for debugging, never persisted
+  // `reasoning` is DEV-ONLY (C1). It quotes the email, so persisting it — including to a
+  // log file — violates SM-6. Requested only when CLASSIFIER_DEBUG=1, never logged, never
+  // returned by the API, discarded with the body at the end of classifyOne().
+  reasoning:  z.string().max(300).optional(),
 });
 
 export interface EmailClassifier {
   classify(email: RawEmail): Promise<Classification>;
 }
 ```
+
+> **Retention rule.** No field on this schema other than the extracted values may outlive
+> `classifyOne()`. `reasoning` exists to debug misclassifications on a developer's machine
+> and is absent in production. A log line containing email content is the same defect as a
+> database column containing it.
 
 **Fakes.** `FakeGmailClient` reads `fixtures/emails/`. `FakeEmailClassifier` is a map from
 fixture id to a recorded response. Both are the default in test and in demo mode.
@@ -357,10 +365,24 @@ asserting it.
 
 **Prompt contract** (`adapters/classifier/prompt.ts`): system prompt states the task, the
 six stages with definitions, the output JSON schema, today's date (for resolving "by
-Friday"), and the instruction to return `isApplication: false` rather than guess. Output is
-constrained by a tool-use schema so malformed JSON is not a normal failure mode. **The
+Friday"), and the instruction to return `isApplication: false` rather than guess. **The
 prompt is version-stamped**; the harness reports which version produced a given accuracy
 number.
+
+**Output is constrained by structured outputs, not a tool-use schema (C3).** The call uses
+`output_config.format` with `zodOutputFormat(ClassificationSchema)` and `messages.parse()`,
+so the same Zod schema already defined in `packages/shared` is enforced by the API and
+returns a typed object — one fewer parsing layer, and malformed JSON stops being a normal
+failure mode.
+
+*Note:* the schema's string-length and numeric-range constraints (`.max(120)`, `.min(0)`)
+are outside the JSON Schema subset the API enforces. The SDK strips them from the
+transmitted schema and validates them client-side. Behaviour is correct; the enforcement
+point differs.
+
+**No prompt caching on this path (C4).** Haiku 4.5's minimum cacheable prefix is 4,096
+tokens and the classification system prompt is far below it, so the prompt is billed in
+full on every call. The offset is the Batches API for initial scans (§7.1, T7.4).
 
 ### 7.5 F3 — Stage the application *(workflow 3)*
 
@@ -384,16 +406,17 @@ number.
 5. Every transition writes an `email_events` row, so the detail-panel timeline is a
    projection of real events rather than a separate log.
 
-**The brief's other two "stages" are computed, not stored** — see the decision record D10:
+**The brief's other two "stages" are computed, not stored** — decision D10, **resolved
+16 August 2026 in favour of six stages**:
 
 - **Deadline Approaching** → `DeadlinePill`, coloured from `daysLeft` at render time
   (≤2 ruby, 3–7 amber, else muted). Never goes stale.
 - **Follow-up Required** → derived staleness flag: `now - last_event_at` exceeds the
   per-stage threshold — `applied` 14 days, `assessment` 5, `interview` 7, `offer` 3.
 
-*(D10 is the one open decision. If the team elects to follow the brief literally,
-`StageBadge` gains a seventh stage and both computed values become stored ones — at the
-cost of staleness.)*
+Both are properties of today's date rather than of an email, so storing them would mean a
+dashboard left open overnight is wrong by morning. Computing them means they cannot go
+stale. The stage enum is therefore final at six values.
 
 ### 7.6 Job identity and deduplication
 

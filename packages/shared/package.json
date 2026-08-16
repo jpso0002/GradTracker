@@ -1,0 +1,22 @@
+{
+  "name": "@gradtracker/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Zod schemas and inferred types shared by server and client. The single source of type truth.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}

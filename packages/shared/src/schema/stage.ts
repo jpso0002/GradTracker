@@ -1,0 +1,94 @@
+import { z } from "zod";
+
+/**
+ * The six application stages — decision D10, resolved 16 August 2026.
+ *
+ * These match `StageBadge` in the design system exactly, which is the single
+ * source of stage colour. The brief's other two values ("Deadline Approaching",
+ * "Follow-up Required") are NOT stages: they are properties of today's date
+ * rather than of an email, and are computed at render time so they cannot go
+ * stale. See rules.md → Business Logic.
+ */
+export const StageEnum = z.enum([
+  "applied",
+  "assessment",
+  "interview",
+  "offer",
+  "rejected",
+  "withdrawn",
+]);
+
+export type Stage = z.infer<typeof StageEnum>;
+
+/**
+ * Progression rank. A new stage is applied only if its rank exceeds the
+ * current rank — a confirmation email arriving after an interview invite must
+ * not regress the job.
+ *
+ * Terminal stages carry rank 0: they are never reached by progression, only by
+ * the explicit rules below.
+ */
+export const STAGE_RANK: Readonly<Record<Stage, number>> = Object.freeze({
+  applied: 1,
+  assessment: 2,
+  interview: 3,
+  offer: 4,
+  rejected: 0,
+  withdrawn: 0,
+});
+
+/** Stages a job cannot progress out of. */
+export const TERMINAL_STAGES: ReadonlySet<Stage> = new Set<Stage>([
+  "rejected",
+  "withdrawn",
+]);
+
+/**
+ * Stages that may arrive from ANY current stage and always apply. A rejection
+ * can land before the confirmation email; an offer can skip the queue.
+ */
+export const ALWAYS_APPLIES: ReadonlySet<Stage> = new Set<Stage>([
+  "rejected",
+  "offer",
+]);
+
+/** Never AI-assigned. Set only by explicit user action. */
+export const USER_ONLY_STAGES: ReadonlySet<Stage> = new Set<Stage>(["withdrawn"]);
+
+/**
+ * Days without a new event before a job is flagged "follow-up required".
+ * Terminal stages never go stale — there is nothing left to follow up.
+ */
+export const STALENESS_THRESHOLD_DAYS: Readonly<Record<Stage, number | null>> =
+  Object.freeze({
+    applied: 14,
+    assessment: 5,
+    interview: 7,
+    offer: 3,
+    rejected: null,
+    withdrawn: null,
+  });
+
+/**
+ * Urgency buckets for pipeline ranking, lowest = most urgent. Ranking is
+ * lexicographic: bucket → stage rank desc → last_event_at asc → company A–Z.
+ *
+ * A follow-up-required job is capped at FAR (3) so staleness cannot hide
+ * beneath far-future deadlines.
+ */
+export const URGENCY_BUCKET = Object.freeze({
+  OVERDUE: 0,
+  IMMINENT: 1, // <= 2 days
+  SOON: 2, // 3–7 days
+  FAR: 3, // 8–14 days
+  NONE: 4, // no deadline, or > 14 days
+} as const);
+
+export type UrgencyBucket = (typeof URGENCY_BUCKET)[keyof typeof URGENCY_BUCKET];
+
+/** Upper day bounds for each bucket. Consumed by the ranking function (T3.7). */
+export const URGENCY_BOUNDS = Object.freeze({
+  IMMINENT_MAX_DAYS: 2,
+  SOON_MAX_DAYS: 7,
+  FAR_MAX_DAYS: 14,
+});
