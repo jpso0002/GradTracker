@@ -80,7 +80,7 @@ task** — it is a task's precondition, and it belongs to a person, not a lane.
 | ~~B1~~ | ~~Node.js is not installed.~~ **Cleared 2026-08-16** — Node v24.19.0 / npm 11.17.0 installed. PowerShell's execution policy blocks `npm.ps1`; use `npm.cmd`, which needs no policy change. | — | — | Resolved. |
 | **B2** | No Google Cloud project exists. | T0.1, T0.2, T7.1 | Team, one member | See T0.1. Needs a signed-in Google account. |
 | **B3** | No Anthropic API key. | T0.3, T2.8, T7.3 | Team, one member | See T0.3. |
-| **B4** | **`docs/` is not under version control.** One commit exists in the repo and it predates all documentation. | Nothing technically — but all specification work is currently one `rm` from gone | Team | `git add docs/ package.json tsconfig*.json vitest.config.ts eslint.config.js .gitignore .env.example packages/ fixtures/ && git commit` |
+| ~~B4~~ | ~~`docs/` is not under version control.~~ **Withdrawn 2026-08-16 — the claim was wrong.** All eight `docs/` files were already tracked and committed in `b6d846f`; the repo had three commits, not one. The claim was made without running `git ls-files`. Uncommitted work was doc *modifications* plus the new scaffold, now committed as `0056599` on branch `setup/scaffold-and-shared-schemas`. | — | — | Resolved. |
 
 ---
 

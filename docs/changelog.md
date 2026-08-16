@@ -28,6 +28,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **2026-08-16** — T1.1–T1.3 committed as `0056599` on branch `setup/scaffold-and-shared-schemas` (30 files). Added `.gitattributes` normalising line endings to LF so a team on mixed platforms does not generate phantom whole-file diffs. · `.gitattributes`
+- **2026-08-16** — Blocker B4 withdrawn as incorrect. The claim that `docs/` was not under version control was made without checking; all eight files were already tracked and committed in `b6d846f`, and the repository had three commits rather than one. · `docs/tasks.md`
 - **2026-08-16** — **T1.2, T1.3 verified and marked done.** Blocker B1 cleared: Node v24.19.0 / npm 11.17.0 installed. `npm.cmd install` → 163 packages, 0 vulnerabilities; `npm.cmd test` → 18 passed; `typecheck` and `lint` both clean, with no config edits needed after install. · `docs/tasks.md`
 - **2026-08-16** — Vitest upgraded from `^2.1.4` to `^3.2.4`. Vitest 2 pulled a vite/esbuild chain carrying 5 advisories including one critical; Vitest 3 audits clean. Dev-only dependencies, but a scaffold should not ship with a critical advisory. · `package.json`
 - **2026-08-16** — Windows shell conventions recorded: documentation commands must be PowerShell-safe (no `&&`), and `npm.cmd` is used instead of `npm` because the `npm.ps1` shim is blocked by the default execution policy — no `Set-ExecutionPolicy` change is ever required. Zero npm audit vulnerabilities set as the standing baseline. · `docs/rules.md`
