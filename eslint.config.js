@@ -17,11 +17,19 @@ export default tseslint.config(
     },
   },
   {
-    // ── Port boundary (rules.md → Architecture) ────────────────────────────
-    // No vendor SDK may be imported above the port line. The full rule lands
-    // with the ports in T2.1; this stub documents the intent and already
-    // blocks the two SDKs from the domain layer.
-    files: ["packages/server/src/domain/**/*.ts"],
+    // ── Port boundary (T2.1) ───────────────────────────────────────────────
+    //
+    // No vendor SDK may be imported anywhere in the server EXCEPT under
+    // `adapters/`. This is the property the entire test strategy rests on: if
+    // domain, routes or db code can reach the Gmail or Anthropic SDK directly,
+    // then swapping in the fakes no longer exercises the real code path and
+    // every offline test becomes a lie.
+    //
+    // Enforced here rather than by convention, because a convention that
+    // matters is a convention that will eventually be broken by someone in a
+    // hurry at 2am in week 11.
+    files: ["packages/server/src/**/*.ts"],
+    ignores: ["packages/server/src/adapters/**"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -30,12 +38,24 @@ export default tseslint.config(
             {
               name: "googleapis",
               message:
-                "Domain code must not import the Gmail SDK. Depend on the GmailClient port instead (rules.md → Architecture).",
+                "Only adapters/gmail/ may import the Gmail SDK. Depend on the GmailClient port (ports/gmail-client.ts).",
+            },
+            {
+              name: "google-auth-library",
+              message:
+                "Only adapters/gmail/ may import Google auth. Depend on the GmailClient port (ports/gmail-client.ts).",
             },
             {
               name: "@anthropic-ai/sdk",
               message:
-                "Domain code must not import the Anthropic SDK. Depend on the EmailClassifier port instead (rules.md → Architecture).",
+                "Only adapters/classifier/ may import the Anthropic SDK. Depend on the EmailClassifier port (ports/email-classifier.ts).",
+            },
+          ],
+          patterns: [
+            {
+              group: ["googleapis/*", "@anthropic-ai/sdk/*"],
+              message:
+                "Vendor SDK subpaths are restricted to adapters/ for the same reason as the packages themselves.",
             },
           ],
         },

@@ -16,7 +16,7 @@ when its dependencies are checked off.
 |---|---|---|---|
 | 0 — De-risk | 1 | T0.1–T0.3 | ⛔ Blocked — B2, B3 |
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** — 127 tests green |
-| 2 — Harness | 2–3 | T2.1–T2.8 | ☐ Not started |
+| 2 — Harness | 2–3 | T2.1–T2.8 | ◐ In progress — T2.1–T2.5 done, harness next |
 | 3 — Pipeline | 3–5 | T3.1–T3.8 | ☐ Not started |
 | 4 — API | 5–6 | T4.1–T4.7 | ☐ Not started |
 | 5 — Dashboard | 6–8 | T5.1–T5.9 | ☐ Not started |
@@ -218,36 +218,91 @@ day and removes the project's largest schedule risk while there are 11 weeks of 
 **Built before the pipeline it measures.** Accuracy becomes visible in week 3, leaving nine
 weeks to improve it.
 
-- [ ] **T2.1 — Port interfaces** · Lane A · needs T1.3
+- [x] **T2.1 — Port interfaces** · Lane A · needs T1.3 · ✅ **2026-08-16**
   `GmailClient` and `EmailClassifier` per [implementation.md §5](implementation.md).
   *Done when:* both are defined and nothing above them imports a vendor SDK. **Add a lint
   rule enforcing that** — it is the property the whole test strategy rests on.
+  **Verified in the failing direction:** a `googleapis` import placed outside `adapters/`
+  fails lint with a message naming the port to use instead; the same import inside
+  `adapters/gmail/` passes. Both checked, then removed.
+  **Typed errors, not message matching:** `HistoryIdExpiredError`, `GmailRateLimitError`,
+  `GmailAuthRevokedError`, `ClassifierUnavailableError`, `ClassificationInvalidError` — so
+  the sync engine can catch an expired cursor specifically and fall back to a rescan.
+  `ClassificationInvalidError` deliberately carries only a message id, never content.
 
-- [ ] **T2.2 — Fake adapters** · Lane B · needs T2.1
+- [x] **T2.2 — Fake adapters** · Lane B · needs T2.1 · ✅ **2026-08-16**
   `FakeGmailClient` reading `fixtures/emails/`; `FakeEmailClassifier` as a fixture-id map.
   Fake Gmail simulates paging, `historyId` advance, and expiry.
   *Done when:* both are the default under `NODE_ENV=test` with no credentials present.
+  **Verified:** both are the default with no credentials, and **forced** to fake under
+  `NODE_ENV=test` even when `GMAIL_ADAPTER=live` is set — a test run must never reach a live
+  API, not because it would fail but because it might succeed, spending money and coupling
+  CI to the network.
+  The fake also simulates a mid-batch fetch failure, so T3.8's crash-recovery path has
+  something to test against. `FakeEmailClassifier` takes `confidenceFor` and `corrupt` hooks
+  specifically so the harness itself can be tested at T2.6 — a fake that can only ever be
+  right cannot demonstrate that the accuracy gate detects error.
+  **Corpus loader validates ground truth on load** rather than trusting it: a label saying
+  "not an application" while naming a company is rejected, because it would silently corrupt
+  every precision and recall figure derived from it and the result would look reasonable.
 
-- [ ] **T2.3 — Classification prompt and schema** · Lane A · needs T2.1
+- [x] **T2.3 — Classification prompt and schema** · Lane A · needs T2.1 · ✅ **2026-08-16**
   Version-stamped system prompt: task, six stage definitions, today's date, explicit
   instruction to return `isApplication: false` rather than guess. Output via
   `output_config.format` + `zodOutputFormat` **(C3)**. `reasoning` dev-only and never
   logged in production **(C1)**.
   *Done when:* a fixture classifies to a validated typed object, and no production log line
   can contain email content.
+  **C1 made structural:** `emailRef()` reduces an email to message id, thread id, sender
+  *domain* and timestamp — the only shape allowed into a log, an error or a metric. Callers
+  outside the classifier adapter never hold content to leak. `scrubForLog()` is the backstop
+  for objects of unknown shape. Tested by asserting the serialised ref contains no substring
+  of the subject or body.
+  The prompt names the hard-negative categories explicitly (job alerts, cold outreach,
+  "viewed your profile"), since those are what the corpus is built around.
+  **`output_config.format` wiring lands with the live adapter at T7.3** — there is no live
+  call to constrain until then. The schema it will use is already defined and tested.
 
-- [ ] **T2.4 — Fixture corpus: 55 positives** · Lane B · needs T2.2
+- [x] **T2.4 — Fixture corpus: 55 positives** · Lane B · needs T2.2 · ✅ **2026-08-16**
   All six stages. ATS senders (Greenhouse, Workday, Lever, SmartRecruiters) and direct human
   email. ~30 carry explicit deadlines in varied formats: "by Friday 23 May", "within 5
   business days", "before 11:59pm AEST on 23/05".
   *Done when:* 55 email/expected pairs exist, each with `hasExplicitDeadlineLanguage` set.
+  **Verified:** 55 positives — applied 13, assessment 15, interview 12, offer 5, rejected 8,
+  withdrawn 2. All four ATS domains present plus 8 fixtures from named humans, so the
+  classifier cannot learn sender shape instead of content.
+  **Deadline-bearing: 26, not 30.** Deliberate shortfall. Deadlines were added only where an
+  email would realistically carry one; inventing them in acknowledgements would make the
+  corpus less realistic, which is a worse trade than missing a soft target. 26 is the SM-3
+  denominator and the harness prints it. Eight distinct phrasings are asserted, including
+  "within 5 business days", `12/06/2026`, "close of business", "no later than", "expires in
+  48 hours" and "remains open until".
+  **Three negative controls carry deadline-shaped text that must NOT be extracted:** an
+  applications-close date meant for other applicants (`015`), an interview time (`034`), and
+  a promise about when the employer will act (`042`).
 
-- [ ] **T2.5 — Fixture corpus: 25 negatives** · Lane B · needs T2.2
+- [x] **T2.5 — Fixture corpus: 25 negatives** · Lane B · needs T2.2 · ✅ **2026-08-16**
   **15 hard** — LinkedIn job alerts, Seek recommendations, university careers newsletters,
   "someone viewed your application", networking invites, recruiter cold outreach for roles
   never applied to. **10 easy** — unit announcements, banking, retail, personal.
   *Done when:* 25 pairs exist. The hard negatives are the ones that matter; anything can
   separate a rejection from a bank statement.
+  **Verified:** exactly 15 hard and 10 easy. The hard ones are built to defeat the shortcuts
+  a classifier might otherwise take:
+  - **8 name companies with live applications** — a Seek digest listing REA, Telstra and NAB;
+    "someone at Deloitte viewed your profile"; a careers fair listing four employers already
+    in the pipeline.
+  - **`071` is sent from `greenhouse.io`** — the same ATS domain as genuine application
+    emails, so sender domain alone cannot classify. Three domains appear in both positives
+    and negatives: `greenhouse.io`, `commbank.com.au`, `seek.com.au`.
+  - **6 carry deadline language** — "Register by 20 May", "RSVP by 2 June", "Apply by 30
+    June" — so deadline text cannot be treated as evidence of an application.
+  - **`066` is from an employer the student applied to**, announcing that applications are
+    open. Same sender, same company, opposite meaning.
+  Every negative carries a note explaining why it is in the corpus.
+  **Ground-truth validation verified in the failing direction:** a label claiming
+  `isApplication: false` while naming a company was rejected on load with all three
+  contradictions named, then restored.
 
 - [ ] **T2.6 — Accuracy harness** · Lane B · needs T2.4, T2.5
   `npm run accuracy` prints accuracy, precision, recall, false-negative count and

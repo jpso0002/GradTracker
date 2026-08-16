@@ -41,7 +41,13 @@ Keep entries concise. One line per decision when possible.
 - **Zero npm audit vulnerabilities is the baseline.** Dev-only advisories count: the scaffold shipped clean on Vitest 3 rather than carrying Vitest 2's critical advisory. Re-check after any dependency change.
 - **`packages/shared` is the only place types are defined.** Client and server import them; neither redeclares them.
 - **Two ports, each with a fake:** `GmailClient` and `EmailClassifier`. Fakes are the default in test and demo mode.
-- **No vendor SDK may be imported above the port line** — enforced by lint rule, not convention.
+- **No vendor SDK may be imported anywhere in the server except `adapters/`** — enforced by ESLint `no-restricted-imports`, verified in both directions. If domain, route or db code could reach the Gmail or Anthropic SDK directly, swapping in the fakes would stop exercising the real path and every offline test would become a lie.
+- **Errors crossing a port are typed classes, never message strings.** `HistoryIdExpiredError` must be catchable specifically so sync can fall back to a rescan; pattern-matching a message is not a control.
+- **Anything logged about an email is an `EmailRef`** — message id, thread id, sender *domain*, timestamp. Never subject, body or full address. Callers outside `adapters/classifier/` never hold content to leak; `scrubForLog()` is the backstop, not the mechanism.
+- **Corpus realism outranks corpus targets.** Deadlines are labelled only where an email would genuinely carry one — 26 deadline-bearing rather than a padded 30. Inventing deadlines in acknowledgements to hit a number would make the corpus less representative, and the number it produced would mean less.
+- **Hard negatives must defeat the shortcuts.** A negative that names no pipeline company, arrives from an unused domain and carries no deadline text teaches nothing. At least: some naming live-application companies, one from a shared ATS domain, several carrying deadline language.
+- **Fixture ground truth is validated on load, not trusted.** A mislabelled fixture corrupts every accuracy figure derived from it and the result still looks plausible, so the loader refuses to load it.
+- **Under `NODE_ENV=test` the adapters are forced to fake**, even if `live` is requested. A test that can reach a live API might succeed — spending money and coupling CI to the network.
 - **No global state library.** Server state lives in the typed API client + component state; a store gets added only when two distant components demonstrably need the same data.
 - **The design system is a read-only dependency.** `GradTracker Design System/` is consumed, never edited and never re-implemented.
 - **Adapters default to `fake`** — `GMAIL_ADAPTER` and `CLASSIFIER_ADAPTER` must be explicitly set to `live`.

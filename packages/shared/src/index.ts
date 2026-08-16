@@ -9,3 +9,4 @@ export * from "./schema/stage.js";
 export * from "./schema/classification.js";
 export * from "./schema/job.js";
 export * from "./schema/api.js";
+export * from "./schema/fixture.js";
