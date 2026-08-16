@@ -140,17 +140,38 @@ day and removes the project's largest schedule risk while there are 11 weeks of 
   user-only sets, staleness thresholds, the classification contract, and the empty-patch
   rejection.
 
-- [ ] **T1.4 — Database schema and migrations** · Lane A · needs T1.3
+- [x] **T1.4 — Database schema and migrations** · Lane A · needs T1.3 · ✅ **2026-08-16**
   `users`, `jobs`, `email_events`, `job_field_provenance`, `sync_state` per
   [implementation.md §4](implementation.md). All indexes. Drizzle, running on both SQLite
   and Postgres.
   *Done when:* `npm run db:migrate` succeeds clean on both engines from empty.
+  **Verified:** `npm run db:migrate` against a real SQLite file creates all five tables from
+  empty. `migrate.test.ts` applies both migration sets in-process — libsql in memory and
+  **PGlite** (real Postgres compiled to WASM), so no database server is needed — and asserts
+  the five tables exist, that a second run is a no-op, and that Postgres actually rejects a
+  duplicate `(user_id, gmail_message_id)`.
+  **Two schema files, one guarantee:** Drizzle needs a definition per dialect, so
+  `schema.parity.test.ts` compares them column by column — names, nullability, primary keys,
+  declared indexes, and uniqueness — because two hand-maintained copies drift silently.
+  **Deviation from spec:** the three refresh-token columns are `text` holding base64 rather
+  than `bytea`/`blob`. Same security property, and it keeps both dialects structurally
+  identical so parity can be compared directly. Recorded in `rules.md`.
 
-- [ ] **T1.5 — Forbidden-column guard** · Lane B · needs T1.4
+- [x] **T1.5 — Forbidden-column guard** · Lane B · needs T1.4 · ✅ **2026-08-16**
   A test asserting no table has a column named `subject`, `body`, `snippet`, `body_html`,
   `from_address`, `raw`, or `password`.
   *Done when:* adding any such column to the schema fails CI. **Verify by adding one
   temporarily and watching it fail.**
+  **Verified in the failing direction, as required:** `subject: text("subject")` was added to
+  `emailEvents`, the suite was run, and **two independent guards fired** — the retention test
+  named the offending table and pointed at `implementation.md §4.3`, and the parity test
+  caught it as dialect drift. Then reverted; 100 tests green.
+  **Scope widened beyond the brief:** 27 forbidden names across three groups — raw content
+  (`subject`, `body`, `snippet`, `raw`, `content`, …), identity beyond sender domain
+  (`from_address`, `to_address`, `cc`, …), and credentials (`password`, `api_key`,
+  `refresh_token`, `token`, …). Also asserts positively what the boundary *permits*
+  (`sender_domain`, `gmail_message_id`), so a later reader does not over-apply the rule and
+  delete the provenance trail the timeline depends on.
 
 - [ ] **T1.6 — Repository layer with mandatory user scoping** · Lane A · needs T1.4
   Every method takes `userId` as its first argument. No method can be called without it —
