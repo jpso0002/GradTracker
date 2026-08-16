@@ -1,0 +1,14 @@
+{
+  "name": "@gradtracker/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "React dashboard consuming the GradTracker Design System.",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean"
+  },
+  "dependencies": {
+    "@gradtracker/shared": "*"
+  }
+}

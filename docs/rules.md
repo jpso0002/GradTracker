@@ -32,6 +32,13 @@ Keep entries concise. One line per decision when possible.
 - **Postgres in production, SQLite in dev and test**, one Drizzle schema driving both.
 - **`npm install && npm test` must pass on a clean clone** — no database server, no Google account, no API key. This constraint outranks convenience.
 - **Monorepo:** `packages/shared` (Zod schemas + types), `packages/server`, `packages/client`, `fixtures/`.
+- **npm workspaces**, not pnpm or yarn — boring and preinstalled with Node (the brief prefers well-documented dependencies over clever ones).
+- **ESM throughout** (`"type": "module"`), `moduleResolution: NodeNext`. Relative imports carry the `.js` extension even in `.ts` source.
+- **TypeScript project references** with `composite: true`; build with `tsc --build`. Strict mode plus `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
+- **Node 20 LTS minimum**, enforced by `engines` in the root `package.json`.
+- **Commands in documentation are PowerShell-safe.** The development machine is Windows, and Windows PowerShell 5.1 rejects `&&` as a statement separator. Write each command on its own line, or chain with `;` / `if ($?) { … }` — never `cmd-a && cmd-b`.
+- **Use `npm.cmd`, not `npm`, in PowerShell.** The `npm.ps1` shim is blocked by the default execution policy. `npm.cmd` bypasses it and needs no security setting changed — never instruct anyone to run `Set-ExecutionPolicy` for this.
+- **Zero npm audit vulnerabilities is the baseline.** Dev-only advisories count: the scaffold shipped clean on Vitest 3 rather than carrying Vitest 2's critical advisory. Re-check after any dependency change.
 - **`packages/shared` is the only place types are defined.** Client and server import them; neither redeclares them.
 - **Two ports, each with a fake:** `GmailClient` and `EmailClassifier`. Fakes are the default in test and demo mode.
 - **No vendor SDK may be imported above the port line** — enforced by lint rule, not convention.

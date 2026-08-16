@@ -1,0 +1,16 @@
+{
+  "name": "@gradtracker/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Express API, domain pipeline, and the Gmail/classifier ports.",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean"
+  },
+  "dependencies": {
+    "@gradtracker/shared": "*",
+    "zod": "^3.23.8"
+  }
+}

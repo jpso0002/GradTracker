@@ -373,7 +373,7 @@ stuck, because that state most often means the gate is too high.
 | Student signs in with a different Google account | Separate `google_sub` → separate user → separate pipeline. No merge |
 | Two browser tabs open | Last write wins; the stale tab's next request returns fresh data and re-renders |
 | First scan interrupted by a closed tab | Server-side and continues. Progress resumes on return |
-| Clock skew / timezone | All timestamps stored UTC (`timestamptz`), rendered in the browser's timezone. `daysLeft` computed client-side against local midnight |
+| Clock skew / timezone | All timestamps stored UTC (`timestamptz`). The client sends its IANA timezone with every pipeline request; **the server computes `daysLeft` and ranks with it, and returns `daysLeft` on each job** (C2). The client renders that value and never recomputes it — one clock governs ranking and display, so a row cannot read "2 days" while sitting in the 3–7 day bucket |
 
 ---
 

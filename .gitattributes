@@ -1,0 +1,23 @@
+# Normalise line endings so a three-person team on mixed platforms does not
+# generate phantom whole-file diffs. Text is stored LF in the repository and
+# checked out LF everywhere.
+* text=auto eol=lf
+
+# Binary assets — never touch these
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+
+# Generated — collapse in diffs and mark as not-authored for language stats
+package-lock.json linguist-generated=true -diff
+
+# Supplied dependency, not our code. Pattern avoids spaces — gitattributes
+# treats whitespace as a separator and cannot match an escaped or quoted path.
+GradTracker*/** linguist-vendored=true

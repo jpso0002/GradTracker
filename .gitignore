@@ -1,0 +1,27 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local environment — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# SQLite dev/test databases
+*.db
+*.db-journal
+*.sqlite
+
+# Build and test output
+coverage/
+.vite/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Throwaway spike scripts (T0.2) — never production code
+spikes/

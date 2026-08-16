@@ -14,8 +14,8 @@ when its dependencies are checked off.
 
 | Phase | Weeks | Tasks | Status |
 |---|---|---|---|
-| 0 — De-risk | 1 | T0.1–T0.3 | ☐ Not started |
-| 1 — Foundation | 1–2 | T1.1–T1.7 | ☐ Not started |
+| 0 — De-risk | 1 | T0.1–T0.3 | ⛔ Blocked — B2, B3 |
+| 1 — Foundation | 1–2 | T1.1–T1.7 | ◐ In progress — T1.1–T1.3 done, T1.4 next |
 | 2 — Harness | 2–3 | T2.1–T2.8 | ☐ Not started |
 | 3 — Pipeline | 3–5 | T3.1–T3.8 | ☐ Not started |
 | 4 — API | 5–6 | T4.1–T4.7 | ☐ Not started |
@@ -70,6 +70,20 @@ the documents right now.
 
 ---
 
+## Blockers
+
+Work that cannot proceed without action outside this repository. **A blocker is not a
+task** — it is a task's precondition, and it belongs to a person, not a lane.
+
+| # | Blocker | Blocks | Owner | Action needed |
+|---|---|---|---|---|
+| ~~B1~~ | ~~Node.js is not installed.~~ **Cleared 2026-08-16** — Node v24.19.0 / npm 11.17.0 installed. PowerShell's execution policy blocks `npm.ps1`; use `npm.cmd`, which needs no policy change. | — | — | Resolved. |
+| **B2** | No Google Cloud project exists. | T0.1, T0.2, T7.1 | Team, one member | See T0.1. Needs a signed-in Google account. |
+| **B3** | No Anthropic API key. | T0.3, T2.8, T7.3 | Team, one member | See T0.3. |
+| ~~B4~~ | ~~`docs/` is not under version control.~~ **Withdrawn 2026-08-16 — the claim was wrong.** All eight `docs/` files were already tracked and committed in `b6d846f`; the repo had three commits, not one. The claim was made without running `git ls-files`. Uncommitted work was doc *modifications* plus the new scaffold, now committed as `0056599` on branch `setup/scaffold-and-shared-schemas`. | — | — | Resolved. |
+
+---
+
 ## Phase 0 — De-risk *(week 1, before anything else)*
 
 Google-side setup fails in ways that take days to unblock. Doing it in week 1 costs half a
@@ -96,21 +110,35 @@ day and removes the project's largest schedule risk while there are 11 weeks of 
 
 ## Phase 1 — Foundation *(weeks 1–2)*
 
-- [ ] **T1.1 — Apply decisions to the four docs** · Lane A · no deps
+- [x] **T1.1 — Apply decisions to the four docs** · Lane A · no deps · ✅ **2026-08-16**
   Close D10 in all four documents (six stages). Apply corrections C1–C3. Record the model
   choice and corpus plan.
   *Done when:* no document still describes D10 as open, and C1–C3 no longer appear as
   written.
+  **Result:** D10 marked resolved in `implementation.md §7.5`; C1 fixed at
+  `implementation.md §5.2` (`reasoning` now optional + dev-only, with a retention rule);
+  C3 fixed at `§7.4` (structured outputs replace tool-use schema, plus the no-caching note
+  from C4); C2 fixed at `app-flow.md §8` (server computes `daysLeft` from the client's IANA
+  timezone). Verified by grep — no residual "one open decision", "tool-use schema" or
+  "computed client-side" outside the defect records themselves.
 
-- [ ] **T1.2 — Repo scaffold** · Lane A · no deps
+- [x] **T1.2 — Repo scaffold** · Lane A · no deps · ✅ **2026-08-16**
   `packages/shared`, `packages/server`, `packages/client`, `fixtures/`. TypeScript strict,
   Vitest, ESLint, `.env.example` with adapters defaulting to `fake`.
   *Done when:* `npm install && npm test` passes with zero tests and zero config edits.
+  **Verified:** `npm.cmd install` → 163 packages, **0 vulnerabilities**; `npm.cmd test` →
+  18 passed; `npm.cmd run typecheck` → clean; `npm.cmd run lint` → clean. No config edits
+  were needed after install. Node v24.19.0, npm 11.17.0.
 
-- [ ] **T1.3 — Shared Zod schemas** · Lane A · needs T1.2
+- [x] **T1.3 — Shared Zod schemas** · Lane A · needs T1.2 · ✅ **2026-08-16**
   `ClassificationSchema`, `JobSchema`, `StageEnum` (six values), API request/response
   schemas. One definition, consumed by server and client.
   *Done when:* client and server both import from `packages/shared` with no duplicated types.
+  **Verified:** `tsc --build` resolves `@gradtracker/shared` from both `packages/server` and
+  `packages/client` across project references, with no local type declarations in either.
+  18 assertions in `stage.test.ts` cover the six-stage enum, progression ranks, terminal and
+  user-only sets, staleness thresholds, the classification contract, and the empty-patch
+  rejection.
 
 - [ ] **T1.4 — Database schema and migrations** · Lane A · needs T1.3
   `users`, `jobs`, `email_events`, `job_field_provenance`, `sync_state` per
