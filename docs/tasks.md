@@ -15,7 +15,7 @@ when its dependencies are checked off.
 | Phase | Weeks | Tasks | Status |
 |---|---|---|---|
 | 0 — De-risk | 1 | T0.1–T0.3 | ⛔ Blocked — B2, B3 |
-| 1 — Foundation | 1–2 | T1.1–T1.7 | ◐ In progress — T1.1–T1.3 done, T1.4 next |
+| 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** — 127 tests green |
 | 2 — Harness | 2–3 | T2.1–T2.8 | ☐ Not started |
 | 3 — Pipeline | 3–5 | T3.1–T3.8 | ☐ Not started |
 | 4 — API | 5–6 | T4.1–T4.7 | ☐ Not started |
@@ -173,16 +173,43 @@ day and removes the project's largest schedule risk while there are 11 weeks of 
   (`sender_domain`, `gmail_message_id`), so a later reader does not over-apply the rule and
   delete the provenance trail the timeline depends on.
 
-- [ ] **T1.6 — Repository layer with mandatory user scoping** · Lane A · needs T1.4
+- [x] **T1.6 — Repository layer with mandatory user scoping** · Lane A · needs T1.4 · ✅ **2026-08-16**
   Every method takes `userId` as its first argument. No method can be called without it —
   enforced by the type signature, not by convention.
   *Done when:* omitting `userId` is a compile error, not a runtime bug.
+  **Verified in the failing direction:** `repository.typecheck.ts` uses `@ts-expect-error`,
+  which inverts the usual direction — if a call that should fail starts compiling, TypeScript
+  reports `TS2578: Unused '@ts-expect-error' directive` and the build fails. Confirmed by
+  temporarily supplying the `userId` and watching `npm run typecheck` exit 1. The file is
+  deliberately **not** named `*.test.ts`, because test files are excluded from the tsconfig
+  and a type assertion in one would never be checked.
+  **Two guarantees, not one:** omitting `userId` is an arity error, and `UserId` is a
+  *branded* type, so an unauthenticated string — a route parameter, a body field — cannot be
+  passed where a scoping key is required.
+  **The subtle case is provenance.** `job_field_provenance` has no `user_id` column, so its
+  methods scope through the owning job via a single `assertOwnsJob` helper. That indirection
+  is the one place the guarantee could be quietly lost, so it exists once and has its own
+  isolation test.
+  **Identity is separated deliberately:** `createIdentityRepository` holds the only two
+  operations that legitimately run without a `UserId` — because they are what establishes
+  one. Kept tiny so it stays auditable at a glance.
+  11 isolation tests, including that a cross-user read returns `undefined` (→ 404, never
+  403 — a 403 confirms the record exists).
 
-- [ ] **T1.7 — Seed data** · Lane A · needs T1.6
+- [x] **T1.7 — Seed data** · Lane A · needs T1.6 · ✅ **2026-08-16**
   ~25 realistic applications across all six stages: overdue deadlines, near deadlines, no
   deadlines, stale jobs, mixed AI/human provenance, 4 pending review items.
   *Done when:* `npm run db:seed` produces a pipeline that exercises every ranking bucket and
   every stage colour.
+  **Verified:** `npm run db:seed` against a real file produces 25 jobs (applied 7,
+  assessment 7, interview 6, offer 2, rejected 2, withdrawn 1), 29 events, 4 awaiting review,
+  125 provenance rows of which 5 are human-verified. 16 tests assert coverage of all six
+  stages and **all five urgency buckets** rather than trusting the list.
+  **Deadlines are offsets from an injected "today", never fixed dates.** A seed with
+  hardcoded dates silently stops covering the overdue and imminent buckets within a week —
+  exactly when someone would be relying on it to check the ranking.
+  Terminal stages are archived, so the Active tab excludes them while the badges remain
+  exercisable on the Archived tab.
 
 ---
 

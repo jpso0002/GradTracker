@@ -92,3 +92,38 @@ export const URGENCY_BOUNDS = Object.freeze({
   SOON_MAX_DAYS: 7,
   FAR_MAX_DAYS: 14,
 });
+
+/**
+ * Which urgency bucket a job falls into. Pure — the caller supplies `daysLeft`
+ * already computed against the user's timezone, so this never reads a clock.
+ *
+ * A follow-up-required job is capped at FAR rather than NONE: staleness must
+ * not be buried beneath jobs with far-future deadlines.
+ *
+ * The full ranking comparator (T3.7) is built on top of this.
+ */
+export function urgencyBucket(
+  daysLeft: number | null,
+  followUpRequired = false,
+): UrgencyBucket {
+  if (daysLeft === null) {
+    return followUpRequired ? URGENCY_BUCKET.FAR : URGENCY_BUCKET.NONE;
+  }
+  if (daysLeft < 0) return URGENCY_BUCKET.OVERDUE;
+  if (daysLeft <= URGENCY_BOUNDS.IMMINENT_MAX_DAYS) return URGENCY_BUCKET.IMMINENT;
+  if (daysLeft <= URGENCY_BOUNDS.SOON_MAX_DAYS) return URGENCY_BUCKET.SOON;
+  if (daysLeft <= URGENCY_BOUNDS.FAR_MAX_DAYS) return URGENCY_BUCKET.FAR;
+  return followUpRequired ? URGENCY_BUCKET.FAR : URGENCY_BUCKET.NONE;
+}
+
+/**
+ * A user's id, branded so an arbitrary string cannot be passed where scoping
+ * is required. Every repository method takes one as its first argument; the
+ * brand means forgetting to scope a query is a compile error rather than a
+ * cross-user data leak (rules.md → Business Logic → Access control).
+ */
+export type UserId = string & { readonly __brand: "UserId" };
+
+/** Widen a string into a UserId. Call this only where the id has genuinely
+ *  been authenticated — the session middleware, migrations, seeds and tests. */
+export const asUserId = (id: string): UserId => id as UserId;
