@@ -1,0 +1,14 @@
+:root{
+--shadow-1:rgba(0,55,112,.08) 0 1px 3px;
+--shadow-2:rgba(0,55,112,.08) 0 8px 24px,rgba(0,55,112,.04) 0 2px 6px;
+--shadow-3:rgba(0,55,112,.1) 0 24px 56px,rgba(0,55,112,.06) 0 4px 12px;
+--shadow-inset-hairline:inset 0 0 0 1px var(--border-hairline);
+/* the atmospheric mesh — an approximation of the reference's SVG blob mesh */
+--mesh-marketing:radial-gradient(60% 90% at 8% 0%,#f5e9d4 0%,rgba(245,233,212,0) 62%),radial-gradient(48% 80% at 32% 4%,#f9d9b3 0%,rgba(249,217,179,0) 60%),radial-gradient(52% 86% at 58% 0%,#d9d3ff 0%,rgba(217,211,255,0) 64%),radial-gradient(46% 82% at 78% 6%,#a89bfd 0%,rgba(168,155,253,0) 62%),radial-gradient(44% 78% at 98% 0%,#f7a6c8 0%,rgba(247,166,200,0) 60%); /* @kind other */
+--mesh-marketing-dark:radial-gradient(60% 90% at 8% 0%,#2b2450 0%,rgba(43,36,80,0) 62%),radial-gradient(52% 86% at 44% 0%,#33266b 0%,rgba(51,38,107,0) 64%),radial-gradient(46% 82% at 76% 4%,#3b2a86 0%,rgba(59,42,134,0) 62%),radial-gradient(44% 78% at 100% 0%,#5a1e46 0%,rgba(90,30,70,0) 60%); /* @kind other */
+}
+[data-theme="dark"]{
+--shadow-1:rgba(0,0,0,.4) 0 1px 3px;
+--shadow-2:rgba(0,0,0,.45) 0 8px 24px,rgba(0,0,0,.3) 0 2px 6px;
+--shadow-3:rgba(0,0,0,.5) 0 24px 56px,rgba(0,0,0,.35) 0 4px 12px;
+}

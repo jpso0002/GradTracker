@@ -1,0 +1,11 @@
+body{margin:0;background:var(--surface-page);color:var(--text-body);font-family:var(--font-core);font-size:var(--body-md-size);font-weight:var(--weight-thin);line-height:var(--body-md-lh);font-feature-settings:var(--feature-core);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+h1,h2,h3,h4{font-weight:var(--weight-thin);color:var(--text-heading);margin:0}
+h1{font-size:var(--display-xl-size);line-height:var(--display-xl-lh);letter-spacing:var(--display-xl-ls)}
+h2{font-size:var(--display-lg-size);line-height:var(--display-lg-lh);letter-spacing:var(--display-lg-ls)}
+h3{font-size:var(--heading-lg-size);line-height:var(--heading-lg-lh);letter-spacing:var(--heading-lg-ls)}
+h4{font-size:var(--heading-sm-size);line-height:var(--heading-sm-lh)}
+a{color:var(--text-link);text-decoration:none;transition:var(--transition-control)}
+a:hover{color:var(--accent-primary-hover);text-decoration:underline;text-underline-offset:2px}
+.gt-num{font-feature-settings:var(--feature-numeric);font-variant-numeric:tabular-nums;letter-spacing:var(--body-tabular-ls)}
+*:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+::selection{background:var(--accent-primary-subdued);color:var(--ink-900)}

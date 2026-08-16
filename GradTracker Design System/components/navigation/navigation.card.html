@@ -1,0 +1,18 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Navigation" subtitle="Sidebar, top bar, tabs" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Navigation components</title><link rel="stylesheet" href="../../styles.css"><script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script><script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script><script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script><script src="../../_ds_bundle.js"></script><style>body{padding:16px;background:var(--surface-page)}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.col{display:flex;flex-direction:column;gap:12px}.lbl{font-size:var(--micro-cap-size);letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}</style></head><body><div id="root"></div><script type="text/babel">const { SidebarNav, TopBar, Tabs, Button, SearchField } = window.GradTrackerDesignSystem_b026b0;
+function Demo(){const[v,setV]=React.useState("pipeline");const[t,setT]=React.useState("all");
+ return(<div style={{display:"flex",border:"1px solid var(--border-hairline)",borderRadius:"var(--radius-lg)",overflow:"hidden",height:300}}>
+  <SidebarNav activeId={v} onSelect={setV} items={[
+    {id:"pipeline",label:"Pipeline",icon:"layers",count:23},
+    {id:"calendar",label:"Calendar",icon:"calendar-days"},
+    {section:"Inbox"},
+    {id:"review",label:"Needs review",icon:"sparkles",count:4},
+    {id:"archive",label:"Archive",icon:"archive",count:61},
+    {section:"Account"},
+    {id:"settings",label:"Settings",icon:"settings"}]}/>
+  <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column"}}>
+    <TopBar title="Pipeline" subtitle="Synced 4 minutes ago · 23 live"><SearchField width={180}/><Button size="sm" iconLeft="sparkles">Scan inbox</Button></TopBar>
+    <div style={{padding:"0 var(--space-xl)"}}><Tabs activeId={t} onSelect={setT} tabs={[{id:"all",label:"All",count:23},{id:"active",label:"Active",count:11},{id:"waiting",label:"Waiting",count:8},{id:"closed",label:"Closed",count:4}]}/></div>
+  </div>
+</div>);}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo/>);</script></body></html>

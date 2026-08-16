@@ -1,0 +1,16 @@
+<!-- @dsCard group="Components" viewport="700x300" name="Core" subtitle="Pill buttons, icon buttons, cards, badges, tags, wordmark" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Core components</title><link rel="stylesheet" href="../../styles.css"><script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script><script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script><script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script><script src="../../_ds_bundle.js"></script><style>body{padding:16px;background:var(--surface-page)}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.col{display:flex;flex-direction:column;gap:12px}.lbl{font-size:var(--micro-cap-size);letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}</style></head><body><div id="root"></div><script type="text/babel">const { Button, IconButton, Card, Badge, Tag, Wordmark, Icon } = window.GradTrackerDesignSystem_b026b0;
+function Demo(){return(<div className="col" style={{gap:18}}>
+  <div className="row"><Button>Scan inbox</Button><Button variant="secondary">Snooze</Button><Button variant="quiet" iconLeft="filter">Filter</Button><Button variant="ghost">Cancel</Button><Button variant="onDark">Get started</Button><Button disabled>Disabled</Button></div>
+  <div className="row"><Button size="sm" iconLeft="plus">Add</Button><Button size="md" iconRight="arrow-right">Continue</Button><Button size="lg">Connect Gmail</Button>
+    <span style={{width:12}}/><IconButton icon="star" label="Pin" /><IconButton icon="archive" label="Archive" /><IconButton icon="more-horizontal" label="More" variant="outlined" shape="square" /><IconButton icon="check" label="Done" active /></div>
+  <div className="row" style={{gap:10}}><Badge tone="ai">AI detected</Badge><Badge>3 emails</Badge><Badge tone="indigo">New</Badge><Badge tone="jade">Offer</Badge><Badge tone="amber">Due soon</Badge><Badge tone="ruby">Closed</Badge>
+    <Tag icon="briefcase" selected>Internships</Tag><Tag onRemove={()=>{}}>This week</Tag></div>
+  <div className="row" style={{alignItems:"stretch"}}>
+    <Card padding="cell" elevation={1} style={{flex:1}}><Wordmark size={18}/><div style={{marginTop:8,fontSize:"var(--caption-size)",color:"var(--text-muted)"}}>card · elevation 1</div></Card>
+    <Card surface="sunken" padding="cell" style={{flex:1,fontSize:"var(--caption-size)",color:"var(--text-muted)"}}>sunken</Card>
+    <Card surface="cream" padding="cell" style={{flex:1,fontSize:"var(--caption-size)"}}>cream</Card>
+    <Card surface="inverse" padding="cell" style={{flex:1}}><Wordmark size={18} tone="inverse"/><div style={{marginTop:8,fontSize:"var(--caption-size)",opacity:.7}}>inverse</div></Card>
+  </div>
+</div>);}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo/>);</script></body></html>
