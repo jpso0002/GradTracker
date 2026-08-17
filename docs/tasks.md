@@ -14,15 +14,72 @@ when its dependencies are checked off.
 
 | Phase | Weeks | Tasks | Status |
 |---|---|---|---|
-| 0 — De-risk | 1 | T0.1–T0.3 | ⛔ Blocked — B2, B3 |
+| 0 — De-risk | 1 | T0.1–T0.3 | ⏸ Descoped for the demo track |
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** — 127 tests green |
 | 2 — Harness | 2–3 | T2.1–T2.8 | ◐ T2.1–T2.7 done · T2.8 blocked on B3 |
-| 3 — Pipeline | 3–5 | T3.1–T3.8 | ☐ Not started |
-| 4 — API | 5–6 | T4.1–T4.7 | ☐ Not started |
+| 3 — Pipeline | 3–5 | T3.1–T3.7 | ☐ Next — T3.8 deferred |
+| 4 — API | 5–6 | T4.4–T4.6 | ☐ Auth tasks deferred |
 | 5 — Dashboard | 6–8 | T5.1–T5.9 | ☐ Not started |
 | 6 — Human-in-the-loop | 8–9 | T6.1–T6.5 | ☐ Not started |
-| 7 — Live adapters | 9–11 | T7.1–T7.6 | ☐ Not started |
-| 8 — Traceability | 11–12 | T8.1–T8.5 | ☐ Not started |
+| 7 — Live adapters | 9–11 | T7.1–T7.6 | ⏸ Deferred — harvest replaces |
+| 8 — Traceability | 11–12 | T8.1–T8.5 | ⏸ Deferred |
+
+---
+
+## Demo track *(adopted 16 August 2026)*
+
+**Goal changed:** get a working local demo running against the student's *real* inbox, to
+judge whether GradTracker is worth completing, before spending weeks on auth and sync.
+
+**The unlock.** The team's Claude account already has a Gmail connector. Real recruitment
+emails can therefore be read and classified in-session and written into the local database
+through the existing repository — **no Google Cloud project, no Anthropic API key**.
+Blockers **B2 and B3 stop gating the demo entirely**.
+
+Real data also beats invented data as a demo: 25 fictional rows about a fictional student
+prove considerably less than the viewer's own pipeline.
+
+### What the demo demonstrates
+
+| Demonstrated live | Not demonstrated |
+|---|---|
+| Classification and extraction on real email | OAuth and encrypted tokens (SM-5) — no login on a local demo |
+| Stage assignment and progression | Incremental sync — the harvest is a snapshot, so "Refresh" has nothing to call |
+| Ranked pipeline and urgency ordering (SM-4) | Multi-user isolation — enforced in code, invisible with one user |
+| Inline correction with persistent provenance (SM-7) | Gmail rate-limit and crash-recovery behaviour |
+| No raw email content in the database (SM-6) — inspectable live | |
+
+### Revised order
+
+```
+Phase 3 (pipeline)  →  HARVEST  →  Phase 5 (dashboard)  →  Phase 6 (correction)
+```
+
+Phase 3 does **not** shrink. The pipeline is the product; without it the demo is a
+spreadsheet that renders nicely.
+
+**Deferred, not deleted** — every task below stays in this file with its acceptance
+criteria intact, so the FIT3163 traceability story remains available if the project
+continues:
+
+| Deferred | Why it is safe to defer for a demo |
+|---|---|
+| T3.8 sync orchestrator | The harvest replaces it. Crash-safety still matters for a real product. |
+| T4.1–T4.3 auth, sessions, token cipher | No login on a local single-user demo. |
+| T7.1–T7.6 live adapters | Superseded by the in-session harvest. |
+| T8.1–T8.5 traceability | Reinstate if the FIT3163 deliverable is resumed. |
+
+**Still required for the demo:** T3.1–T3.7, T4.4–T4.6 (routes, without auth), T5.1–T5.9,
+T6.1–T6.5.
+
+### Harvest scope
+
+Targeted search only — application confirmations, assessment invites, interview invites,
+offers, rejections. Unrelated personal mail is not read. Expected volume 30–100 messages.
+Extracted fields are persisted; **subject and body are not**, exactly as the retention
+boundary requires, which makes SM-6 demonstrable by inspection during the demo.
+
+---
 
 **Owner lanes.** Three people, three lanes. Lanes run in parallel from Phase 3 onward,
 which is the main reason the ports land early.
@@ -78,8 +135,8 @@ task** — it is a task's precondition, and it belongs to a person, not a lane.
 | # | Blocker | Blocks | Owner | Action needed |
 |---|---|---|---|---|
 | ~~B1~~ | ~~Node.js is not installed.~~ **Cleared 2026-08-16** — Node v24.19.0 / npm 11.17.0 installed. PowerShell's execution policy blocks `npm.ps1`; use `npm.cmd`, which needs no policy change. | — | — | Resolved. |
-| **B2** | No Google Cloud project exists. | T0.1, T0.2, T7.1 | Team, one member | See T0.1. Needs a signed-in Google account. |
-| **B3** | No Anthropic API key. | T0.3, T2.8, T7.3 | Team, one member | See T0.3. |
+| ~~B2~~ | ~~No Google Cloud project.~~ **Descoped for the demo track 16 August 2026** — the Gmail connector on the team's Claude account replaces it. Reinstate if live OAuth is resumed (T7.1). | — | — | Not blocking. |
+| ~~B3~~ | ~~No Anthropic API key.~~ **Descoped for the demo track 16 August 2026** — classification runs in-session. Still required for T2.8, the measured Haiku-vs-Sonnet benchmark, which remains the only way to validate decision D16. | T2.8 only | Team | Optional. ~$1.30 settles D16 with evidence rather than pricing estimates. |
 | ~~B4~~ | ~~`docs/` is not under version control.~~ **Withdrawn 2026-08-16 — the claim was wrong.** All eight `docs/` files were already tracked and committed in `b6d846f`; the repo had three commits, not one. The claim was made without running `git ls-files`. Uncommitted work was doc *modifications* plus the new scaffold, now committed as `0056599` on branch `setup/scaffold-and-shared-schemas`. | — | — | Resolved. |
 
 ---
