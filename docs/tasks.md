@@ -137,6 +137,7 @@ task** — it is a task's precondition, and it belongs to a person, not a lane.
 | ~~B1~~ | ~~Node.js is not installed.~~ **Cleared 2026-08-16** — Node v24.19.0 / npm 11.17.0 installed. PowerShell's execution policy blocks `npm.ps1`; use `npm.cmd`, which needs no policy change. | — | — | Resolved. |
 | ~~B2~~ | ~~No Google Cloud project.~~ **Descoped for the demo track 16 August 2026** — the Gmail connector on the team's Claude account replaces it. Reinstate if live OAuth is resumed (T7.1). | — | — | Not blocking. |
 | ~~B3~~ | ~~No Anthropic API key.~~ **Descoped for the demo track 16 August 2026** — classification runs in-session. Still required for T2.8, the measured Haiku-vs-Sonnet benchmark, which remains the only way to validate decision D16. | T2.8 only | Team | Optional. ~$1.30 settles D16 with evidence rather than pricing estimates. |
+| **B5** | **No application emails in the connected mailbox.** `jiddan2016@gmail.com` holds grad-recruitment *marketing* (GradConnection, Forage) but no confirmations, assessment invites, interview invites, offers or rejections, and nothing from any ATS domain. The harvest would produce an empty pipeline. | T3.9, and the demo dashboard having anything to show | Team | Confirm where application email actually lands — most likely `jpso0002@student.monash.edu`, which was connected earlier — or confirm that few applications have been submitted yet this cycle. |
 | ~~B4~~ | ~~`docs/` is not under version control.~~ **Withdrawn 2026-08-16 — the claim was wrong.** All eight `docs/` files were already tracked and committed in `b6d846f`; the repo had three commits, not one. The claim was made without running `git ls-files`. Uncommitted work was doc *modifications* plus the new scaffold, now committed as `0056599` on branch `setup/scaffold-and-shared-schemas`. | — | — | Resolved. |
 
 ---
@@ -526,6 +527,24 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   pipeline always renders identically — without it, tied jobs would swap places between
   requests, which reads as a bug.
   A stale job with no deadline outranks one with a deadline six weeks out.
+
+- [~] **T3.9 — Inbox harvest** · Lane B · needs T3.4 · ⛔ **Blocked on B5** *(added 2026-08-16)*
+  Read real recruitment email through the Gmail connector, classify in-session, and import
+  through the real `processEmail` pipeline so matching, staging and provenance are all
+  exercised. Replaces T3.8 on the demo track.
+  *Done when:* the local database holds the student's real applications, and inspecting it
+  shows extracted fields with no subject or body anywhere.
+  **Survey result, `jiddan2016@gmail.com` (16 August 2026): no application emails found.**
+  Three searches — subject keywords, ATS sender domains, and full-content phrases — returned
+  **zero** application confirmations, assessment invites, interview invites, offers or
+  rejections, and **zero** mail from `greenhouse.io`, `myworkday.com`, `lever.co`,
+  `smartrecruiters.com`, `successfactors.com` or `icims.com`.
+  What the mailbox does contain is roughly 30 GradConnection and Forage emails of the form
+  *"Applications are now open for X"*, *"You would be a great fit for the 2027 Defence
+  Graduate Program"*, *"Your invitation to apply to Westpac's Institutional Bank Graduate
+  Program"* — every one an **invitation to apply**, which is a hard negative, not an
+  application. Fixtures `066`, `068` and `059` were written to model exactly this, and the
+  real thing turns out to be more abundant than the synthetic version assumed.
 
 - [ ] **T3.8 — Sync orchestrator** · Lane B · needs T3.4
   Lock → list → fetch → classify → single transaction committing events, jobs, provenance
