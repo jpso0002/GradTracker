@@ -21,6 +21,7 @@
     "lint:fix": "eslint . --fix",
     "db:generate": "npm run db:generate:pg --workspace @gradtracker/server && npm run db:generate:sqlite --workspace @gradtracker/server",
     "db:migrate": "node --env-file-if-exists=.env packages/server/dist/db/migrate.js",
+    "accuracy": "npm run typecheck --silent && node packages/server/dist/harness/accuracy.js",
     "db:seed": "node --env-file-if-exists=.env packages/server/dist/db/seed-cli.js",
     "db:reset": "node -e \"require('node:fs').rmSync('dev.db',{force:true})\" && npm run db:migrate && npm run db:seed"
   },

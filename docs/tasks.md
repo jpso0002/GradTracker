@@ -16,7 +16,7 @@ when its dependencies are checked off.
 |---|---|---|---|
 | 0 — De-risk | 1 | T0.1–T0.3 | ⛔ Blocked — B2, B3 |
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** — 127 tests green |
-| 2 — Harness | 2–3 | T2.1–T2.8 | ◐ In progress — T2.1–T2.5 done, harness next |
+| 2 — Harness | 2–3 | T2.1–T2.8 | ◐ T2.1–T2.7 done · T2.8 blocked on B3 |
 | 3 — Pipeline | 3–5 | T3.1–T3.8 | ☐ Not started |
 | 4 — API | 5–6 | T4.1–T4.7 | ☐ Not started |
 | 5 — Dashboard | 6–8 | T5.1–T5.9 | ☐ Not started |
@@ -304,16 +304,42 @@ weeks to improve it.
   `isApplication: false` while naming a company was rejected on load with all three
   contradictions named, then restored.
 
-- [ ] **T2.6 — Accuracy harness** · Lane B · needs T2.4, T2.5
+- [x] **T2.6 — Accuracy harness** · Lane B · needs T2.4, T2.5 · ✅ **2026-08-16**
   `npm run accuracy` prints accuracy, precision, recall, false-negative count and
   deadline-detection rate against the 95% / 80% thresholds. **Names every false negative by
   fixture id.** Exits non-zero on failure.
   *Done when:* it runs offline, gates CI, and a deliberately broken classifier makes it exit 1.
+  **Verified from the command line, not only in tests:** `npm run accuracy -- --invert`
+  exits **1**; the normal run exits **0**. A gate never observed failing is not known to be a
+  gate, so the inversion flag exists to make that checkable by anyone, including a marker.
+  **The self-test banner is the important part.** Run against the fake, the harness scores
+  100% — because the fake replays the corpus labels. Without a prominent warning someone
+  screenshots that for the report. The output states plainly that it measures the harness,
+  not a model.
+  **`--demo` injects a realistic failure pattern** — the hard negatives naming pipeline
+  companies mistaken for applications, an informal human email missed, relative deadlines
+  landing two days late, and a deadline invented from an interview time. It produces the
+  exact report shape in [implementation.md §11.3](implementation.md).
+  Deadline scoring reports **date-correct and exact-time separately**: a 9am deadline
+  predicted as 11:59pm is a missed assessment even though the date matches.
 
-- [ ] **T2.7 — Wilson confidence interval** · Lane B · needs T2.6
+- [x] **T2.7 — Wilson confidence interval** · Lane B · needs T2.6 · ✅ **2026-08-16**
   Print the 95% interval beside the point estimate, so the number is never quoted without
   its uncertainty.
   *Done when:* output reads `Accuracy 96.3% (95% CI: 89.4–98.8%, n=80)`.
+  **Verified:** `--demo` prints `96.3 %` with `95% CI 89.5 % – 98.7 % (Wilson, n=80)`,
+  matching the hand-computed value to three decimal places.
+  **Wilson, not the normal approximation**, which misbehaves exactly where this corpus sits
+  — small n, proportion near 1. At 80/80 the textbook interval extends above 100%, which is
+  not a possible accuracy. Wilson is asymmetric and stays inside [0,1].
+  The interval spans ±4.6 points at n=80, so **96.3% and 91% are not distinguishable by this
+  corpus** — which is the entire argument for T8.3's 300 real labelled emails, now visible
+  in the output rather than buried in a limitations section.
+
+  **One behaviour pinned down while testing:** a corpus with zero deadline-bearing fixtures
+  does **not** pass SM-3 vacuously. 0/0 is not 100% — there is nothing to measure, and
+  silently passing would let someone delete the deadline fixtures while the gate still
+  reported success.
 
 - [ ] **T2.8 — Live-model benchmark mode** · Lane B · needs T2.6, T0.3
   `npm run accuracy -- --live --model=<id>` runs the corpus against the real API and prints
