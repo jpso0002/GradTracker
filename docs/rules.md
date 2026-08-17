@@ -97,6 +97,11 @@ Keep entries concise. One line per decision when possible.
 - **Dialect mappings:** `uuid` → `text`, `timestamptz` → `integer` epoch-ms in SQLite. Drizzle maps both pairs to the same JS types (`string`, `Date`), so application code never branches on dialect.
 - **Refresh-token columns are `text` holding base64, not `bytea`/`blob`** — a deliberate deviation from implementation.md §4.1. AES-256-GCM output encodes losslessly, the security property is unchanged, and identical column types in both dialects are what let the parity test compare them directly.
 - **Postgres is verified in-process with PGlite**, real Postgres compiled to WASM, so "runs on both engines" is a CI assertion rather than something someone once did on their laptop. The `pg` server driver arrives with deployment (T8.5).
+- **Role similarity is measured on the distinguishing part of a title, not the raw string.** `normaliseRole()` strips `graduate`, `program`, `intern` and intake years before the Dice comparison. On raw titles "Graduate Engineer" and "Graduate Trader" score 0.60 — over threshold — and two unrelated applications at one employer would merge. Deviation from implementation.md §7.6, which specifies raw bigrams.
+- **A null sender domain never matches another null.** "Unknown" is not an identity; treating it as one merges unrelated applications.
+- **Over-merging beats duplicating, always.** A duplicate is visible and correctable; a wrong merge silently destroys an application's history and surfaces as a missed deadline. Every ambiguous case creates a new job.
+- **Correcting a company recomputes `companyNormalised`** — otherwise the corrected job stops matching its own future emails.
+- **Stage decisions return a typed reason, not a boolean**, so the timeline can explain why an email changed nothing.
 - **Ranking, staleness and urgency are pure functions** with no I/O, so they are exhaustively testable.
 - **Mutations are optimistic with rollback** and a `Toast` on success.
 - **Colour is never the only signal** — stage badges carry text, deadline pills carry dates, provenance carries a tag.
@@ -121,6 +126,10 @@ Keep entries concise. One line per decision when possible.
 
 ### Classification and confidence
 - **Escalate to Sonnet 5 below 0.6 confidence.** Queue for review below `users.review_threshold` (default 0.75). `>=` accepts at the boundary.
+- **Never filter on a provider domain.** Google, Microsoft and Amazon are mail providers *and* major graduate employers. A rule matching `google.com` dropped genuine `careers-noreply@google.com` application emails, and the loss was invisible in accuracy figures because a filtered email is never scored. Filter on specific bounce addresses only.
+- **The retention boundary is a type, not a discipline.** `classifyOne()` returns a `ClassifiedEmail` with no subject, body or full address, so downstream code cannot persist content it never receives.
+- **Escalation is composition, not a branch.** `EscalatingClassifier` satisfies the `EmailClassifier` port, so the pipeline is unaware of it and the harness scores the pair as one model. An escalated answer replaces the primary — never merges with it.
+- **`daysUntil` counts calendar days in the student's timezone, never elapsed time.** At 11pm Sunday, a 9am Monday deadline is 0.4 elapsed days away and *tomorrow*.
 - **The pre-filter may never make a classification judgement** — it skips only self-sent mail and calendar system notifications. When in doubt, the email goes to the model.
 - **False negatives are the costly failure** and are counted and named explicitly in every harness run.
 - **Threshold changes apply to future syncs only.** Dismissed items stay dismissed.

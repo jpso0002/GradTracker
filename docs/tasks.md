@@ -17,7 +17,7 @@ when its dependencies are checked off.
 | 0 — De-risk | 1 | T0.1–T0.3 | ⏸ Descoped for the demo track |
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** — 127 tests green |
 | 2 — Harness | 2–3 | T2.1–T2.8 | ◐ T2.1–T2.7 done · T2.8 blocked on B3 |
-| 3 — Pipeline | 3–5 | T3.1–T3.7 | ☐ Next — T3.8 deferred |
+| 3 — Pipeline | 3–5 | T3.1–T3.7 | ✅ **Complete** — 307 tests green · T3.8 deferred |
 | 4 — API | 5–6 | T4.4–T4.6 | ☐ Auth tasks deferred |
 | 5 — Dashboard | 6–8 | T5.1–T5.9 | ☐ Not started |
 | 6 — Human-in-the-loop | 8–9 | T6.1–T6.5 | ☐ Not started |
@@ -409,46 +409,123 @@ weeks to improve it.
 
 Lanes diverge here. A owns the domain, B owns sync and security, C starts the shell.
 
-- [ ] **T3.1 — Company normalisation and job matching** · Lane A · needs T1.6
+- [x] **T3.1 — Company normalisation and job matching** · Lane A · needs T1.6 · ✅ **2026-08-16**
   `normaliseCompany()` + Dice coefficient ≥ 0.6 on role bigrams, sender-domain tiebreak.
   Human-verified values become the matching key.
   *Done when:* `matching.test.ts` covers exact match, near-miss roles, legal-suffix variants,
   and the human-key override. Over-merging is worse than a duplicate — test that boundary.
+  **A test caught a real defect in the specified algorithm.** `implementation.md §7.6`
+  prescribes Dice ≥ 0.6 on role bigrams. On raw titles, **"Graduate Engineer" and "Graduate
+  Trader" score exactly 0.60** — the shared word "Graduate" is most of both strings — so the
+  spec as written would have merged two entirely different applications at one employer.
+  That is precisely the over-merge failure the section warns about.
+  **Fix:** `normaliseRole()` strips role boilerplate (`graduate`, `program`, `intern`,
+  intake years) before comparison, mirroring what `normaliseCompany()` does for legal
+  suffixes, so similarity is measured on the *discriminating* part of a title. "Audit
+  Graduate Program" vs "Consulting Graduate Program" now scores below threshold; "Audit
+  Graduate Program" vs "…Programme" still scores 1.0. Deviation recorded in `rules.md`.
+  Also fixed: `"Acme Pty. Ltd."` normalised to `"acme pty"`, because punctuation stripping
+  produced a double space that the multi-word `pty ltd` pattern could not match.
+  **A null sender domain never matches another null** — "unknown" is not an identity, and
+  treating it as one is a direct route to merging unrelated applications.
 
-- [ ] **T3.2 — Stage engine** · Lane A · needs T1.4
+- [x] **T3.2 — Stage engine** · Lane A · needs T1.4 · ✅ **2026-08-16**
   Forward-only progression; `rejected`/`offer` from any stage; `withdrawn` never AI-assigned;
   human-locked stage frozen.
   *Done when:* `stages.test.ts` covers all six stages, no-regression, terminal arrivals, and
   the human lock.
+  **Order-independence is asserted directly:** the same three emails delivered in three
+  different orders reach the same final stage. Gmail does not guarantee order and a re-sync
+  replays history, so this is the property that matters rather than any single transition.
+  Decisions return a **typed reason** (`would-regress`, `already-terminal`, `user-only`,
+  `human-locked`, `no-stage-detected`) rather than a bare boolean, so the timeline can
+  eventually explain why an email did not change anything.
+  Two judgement calls: an **offer may follow a rejection** (a role reopens, a candidate is
+  reconsidered — the newest email is the truth), but **nothing overwrites a withdrawal**,
+  because the student made that decision.
+  Also includes `isFollowUpRequired()` and `deriveNextAction()`, both computed, never stored.
 
-- [ ] **T3.3 — Provenance write path** · Lane A · needs T1.6
+- [x] **T3.3 — Provenance write path** · Lane A · needs T1.6 · ✅ **2026-08-16**
   `applyExtraction()` skips any field with `source = 'human'`. Enforced in the repository,
   inside the transaction.
   *Done when:* `provenance.test.ts` proves a human value survives a conflicting sync — SM-7's
   core evidence.
+  **Verified beyond the stated bar:** a correction survives **five** consecutive conflicting
+  syncs, survives a later classification at **confidence 1.0** (there is no score at which
+  the pipeline may overrule the student), and locks *only* the corrected field — a student
+  who fixes one company name has not opted out of automation for the rest of that job.
+  A **cleared** deadline also sticks: correcting a wrongly-extracted deadline to null is
+  itself a human answer, and is not refilled on the next sync.
+  `applyExtraction` builds one patch and writes once, rather than a write per field: a
+  half-applied extraction interrupted mid-way would leave a job in a state no email ever
+  described.
+  Correcting a company **recomputes `companyNormalised`**, or the corrected job would stop
+  matching its own future emails and silently spawn a duplicate.
 
-- [ ] **T3.4 — Classification pipeline** · Lane A · needs T2.3, T3.1, T3.2, T3.3
+- [x] **T3.4 — Classification pipeline** · Lane A · needs T2.3, T3.1, T3.2, T3.3 · ✅ **2026-08-16**
   Pre-filter → classify → validate → discard non-application → confidence gate → match →
   apply → advance stage. `classifyOne()` holds the only body reference.
   *Done when:* all 80 fixtures flow end-to-end into jobs and `email_events`.
+  **Verified:** the whole corpus runs through the pipeline — 25 negatives produce
+  `not-application` and store *nothing at all* (no row, no id, no domain), 55 positives group
+  into fewer than 40 jobs rather than 55, proving matching actually merges.
+  **The pre-filter dropped two real applications.** A rule skipping
+  `no-reply@google.com` also matched `careers-noreply@google.com`, silently filtering both
+  Google fixtures before the model ever saw them. Invisible in accuracy figures, because an
+  email that never reaches the classifier is never scored. **Google is both a mail provider
+  and a major graduate employer** — the rule is gone, and only bounce notifications remain.
+  This is exactly the failure §7.3 warns about, and the corpus test caught it as "53 jobs,
+  expected 55".
+  **The retention boundary is a type, not a discipline.** `classifyOne()` takes a `RawEmail`
+  carrying subject and body and returns a `ClassifiedEmail` that structurally has neither —
+  downstream code cannot persist what it cannot see.
+  Idempotency is checked **before** the model call, so a crash re-read costs nothing.
+  `lastEventAt` advances on every accepted email even when no field changed: an employer
+  replying "still reviewing" is not a stale job.
 
-- [ ] **T3.5 — Confidence gate and escalation** · Lane A · needs T3.4
+- [x] **T3.5 — Confidence gate and escalation** · Lane A · needs T3.4 · ✅ **2026-08-16**
   Below 0.6 → escalate to Sonnet 5. Below `users.review_threshold` (0.75) → review queue with
   no job. `>=` accepts at the boundary.
   *Done when:* escalation and queueing are both covered, and `classifier_model` records which
   model produced each result.
+  **Escalation is composed, not branched.** `EscalatingClassifier` wraps two classifiers and
+  satisfies the `EmailClassifier` port, so the pipeline never learns escalation exists — and
+  the accuracy harness can score the escalating pair exactly as it scores one model.
+  The escalated answer **replaces** the primary rather than merging with it; combining two
+  disagreeing classifications would produce a result neither model gave, which is
+  untraceable at review. Token usage from both calls is summed, because both were paid for.
+  **A low-confidence extraction creates no job.** Nothing is asserted until the student
+  confirms it. An application with a null company is queued too, rather than inventing a job
+  called "null".
 
-- [ ] **T3.6 — Retention test** · Lane B · needs T3.4
+- [x] **T3.6 — Retention test** · Lane B · needs T3.4 · ✅ **2026-08-16**
   Classify a fixture with distinctive subject and body strings, then assert neither substring
   appears in **any column of any table**.
   *Done when:* `retention.test.ts` is green and fails if a body ever reaches the database.
   This is SM-6's proof.
+  **Stronger than the stated bar:** the entire corpus is run through the real pipeline, then
+  every value of every row of all five tables is dumped and searched for every fixture's
+  subject, six-word body phrases, and full sender address. `schema.retention.test.ts` proves
+  forbidden *columns* do not exist; this proves permitted columns do not *contain* content —
+  a `next_action` field stuffed with a sentence of body text would pass the former and fail
+  this.
+  **Includes a guard against a vacuous pass:** one test plants known content, confirms the
+  search finds it, and removes it. Without that, an empty or unsearchable dump would make
+  every other assertion pass for the wrong reason.
 
-- [ ] **T3.7 — Ranking function** · Lane A · needs T1.6
+- [x] **T3.7 — Ranking function** · Lane A · needs T1.6 · ✅ **2026-08-16**
   Pure function. Urgency bucket → stage rank desc → `last_event_at` asc → company A–Z.
   Follow-up-required capped at bucket 3. **Server ranks using the client's IANA timezone (C2).**
   *Done when:* `ranking.test.ts` asserts exact ordering on fixture pipelines with known
   correct answers, including a timezone-boundary case. This is SM-4's proof.
+  **`daysUntil` counts calendar days, not elapsed time.** At 11pm Sunday a 9am Monday
+  deadline is 0.4 elapsed days away but is *tomorrow* — telling a student "0 days" for
+  something due tomorrow is telling them the wrong thing. Asserted against a real timezone
+  boundary: 15:00 UTC is already tomorrow in Melbourne and still today in London.
+  Input order never affects output, and the alphabetical fourth key means an unchanged
+  pipeline always renders identically — without it, tied jobs would swap places between
+  requests, which reads as a bug.
+  A stale job with no deadline outranks one with a deadline six weeks out.
 
 - [ ] **T3.8 — Sync orchestrator** · Lane B · needs T3.4
   Lock → list → fetch → classify → single transaction committing events, jobs, provenance
