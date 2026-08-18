@@ -8,6 +8,13 @@
       "when": 1786876209519,
       "tag": "0000_majestic_goliath",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787021556913,
+      "tag": "0001_open_archangel",
+      "breakpoints": true
     }
   ]
 }

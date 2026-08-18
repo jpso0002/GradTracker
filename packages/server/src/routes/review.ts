@@ -26,8 +26,8 @@ export function reviewRoutes(repo: Repository): Router {
       eventId: row.id,
       receivedAt: row.receivedAt.toISOString(),
       senderDomain: row.senderDomain,
-      company: null,
-      role: null,
+      company: row.detectedCompany,
+      role: row.detectedRole,
       stage: row.detectedStage,
       deadlineAt: row.detectedDeadlineAt?.toISOString() ?? null,
       nextAction: row.detectedNextAction,
@@ -52,12 +52,17 @@ export function reviewRoutes(repo: Repository): Router {
       }
 
       const corrections = (req.body as { corrections?: Record<string, unknown> }).corrections ?? {};
-      const company = (corrections["company"] as string | undefined) ?? null;
-      const role = (corrections["role"] as string | undefined) ?? null;
+
+      // A correction wins; otherwise the detected value stands. Confirming a
+      // card the student did not edit is the common case, so an empty
+      // `corrections` object must succeed — it means "yes, as shown".
+      const company = (corrections["company"] as string | undefined) ?? pending.detectedCompany;
+      const role = (corrections["role"] as string | undefined) ?? pending.detectedRole;
 
       if (company === null || role === null) {
-        // A confirmed application still needs somewhere to live. Rather than
-        // inventing a job called "null", say what is missing.
+        // Reachable when the classifier extracted neither and the student
+        // supplied neither. A confirmed application still needs somewhere to
+        // live; rather than inventing a job called "null", say what is missing.
         res.status(400).json({
           error: "A company and role are required to confirm an application.",
           field: company === null ? "company" : "role",

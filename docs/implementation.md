@@ -600,11 +600,17 @@ Two contracts worth stating because they look like bugs from the outside:
 defect C2 — the client never recomputes it, so the row and its rank cannot disagree. An
 unparseable timezone falls back rather than throwing.
 
-**Known gap — defect C7.** `email_events` carries no detected company or role, so
-`GET /api/review` returns `company: null, role: null` and `POST /:eventId/confirm`
-must 400 unless the caller supplies both. The review queue is not usable until **T4.8**
-adds those two extracted columns. This does not touch the retention boundary (§7.2):
-company and role are extracted fields that `jobs` already stores, not raw content.
+**Defect C7, closed by T4.8.** `email_events` now carries `detected_company` and
+`detected_role` alongside the stage, deadline and next action it already stored. A review
+item has no job, so the event is the only place a per-email extraction can live; without
+these the student was asked to confirm a card showing a sender domain and a confidence and
+nothing else. Confirming with an empty `corrections` object is the common case and now
+succeeds — it means "yes, as shown" — while a supplied correction still wins, and an event
+the classifier read no company off still returns 400 rather than inventing one.
+
+This does not touch the retention boundary (§7.2): company and role are extracted fields
+that `jobs` already stores, not raw content. The SM-6 content search enumerates columns
+dynamically, so it covered the two new columns without being edited.
 
 ---
 

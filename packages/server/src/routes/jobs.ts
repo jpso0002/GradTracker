@@ -78,6 +78,8 @@ function toEvent(row: Awaited<ReturnType<Repository["listEventsForJob"]>>[number
     gmailThreadId: row.gmailThreadId,
     receivedAt: row.receivedAt.toISOString(),
     senderDomain: row.senderDomain,
+    detectedCompany: row.detectedCompany,
+    detectedRole: row.detectedRole,
     detectedStage: row.detectedStage,
     detectedDeadlineAt: row.detectedDeadlineAt?.toISOString() ?? null,
     detectedNextAction: row.detectedNextAction,

@@ -18,7 +18,7 @@ when its dependencies are checked off.
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** — 127 tests green |
 | 2 — Harness | 2–3 | T2.1–T2.8 | ◐ T2.1–T2.7 done · T2.8 blocked on B3 |
 | 3 — Pipeline | 3–5 | T3.1–T3.7 | ✅ **Complete** — 307 tests green · T3.8 deferred |
-| 4 — API | 5–6 | T4.4–T4.6 | ◐ T4.4–T4.5 done · T4.6 partial · auth deferred |
+| 4 — API | 5–6 | T4.4–T4.8 | ◐ T4.4, T4.5, T4.8 done · T4.6 partial · auth deferred |
 | 5 — Dashboard | 6–8 | T5.1–T5.9 | ☐ Not started |
 | 6 — Human-in-the-loop | 8–9 | T6.1–T6.5 | ☐ Not started |
 | 7 — Live adapters | 9–11 | T7.1–T7.6 | ⏸ Deferred — harvest replaces |
@@ -69,7 +69,7 @@ continues:
 | T7.1–T7.6 live adapters | Superseded by the in-session harvest. |
 | T8.1–T8.5 traceability | Reinstate if the FIT3163 deliverable is resumed. |
 
-**Still required for the demo:** T3.1–T3.7, T4.4–T4.6 (routes, without auth), **T4.8**,
+**Still required for the demo:** T3.1–T3.7, T4.4–T4.6 (routes, without auth), T4.8 ✅,
 T5.1–T5.9, T6.1–T6.5.
 
 ### Harvest scope
@@ -140,7 +140,7 @@ the documents right now.
 | C3 | `implementation.md §7.4` constrains JSON via tool-use schema. | Use `output_config.format` with `zodOutputFormat(ClassificationSchema)` and `messages.parse()` — same Zod schema, API-validated, typed return. | T2.3 |
 | C4 | Cost model assumed prompt caching would apply. Haiku 4.5's minimum cacheable prefix is 4,096 tokens; a classifier system prompt is far below it. | No caching on the classifier path. Use the **Batches API for initial scans** instead — 50% discount, and the scan is not latency-sensitive. | T7.4 |
 | C5 | D10 was marked open in all four documents. | Now closed — six stages. Update the four docs. | T1.1 |
-| C7 | `email_events` stores `detected_stage`, `detected_deadline_at` and `detected_next_action` but **no detected company or role**. So a review card can only show a sender domain and a confidence — `GET /api/review` returns `company: null, role: null`, and `POST /:id/confirm` must 400 unless the student types both from memory. The queue is unusable as specified. | Add `detected_company` and `detected_role` to `email_events`. These are *extracted fields*, not raw content — `jobs` already stores both — so SM-6 is unaffected. Migration + repository + `ReviewItem` mapping + fixtures. | **T4.8** (new) |
+| ~~C7~~ | **Fixed 2026-08-18 by T4.8.** ~~`email_events` stores `detected_stage`, `detected_deadline_at` and `detected_next_action` but **no detected company or role**. So a review card can only show a sender domain and a confidence — `GET /api/review` returns `company: null, role: null`, and `POST /:id/confirm` must 400 unless the student types both from memory. The queue is unusable as specified. | Add `detected_company` and `detected_role` to `email_events`. These are *extracted fields*, not raw content — `jobs` already stores both — so SM-6 is unaffected. Migration + repository + `ReviewItem` mapping + fixtures.~~ | ~~**T4.8**~~ Done |
 | C6 | Gmail `gmail.readonly` is a Google-restricted scope: production verification needs a paid third-party security assessment. Not a blocker (test-user mode allows 100 users) but it means the app cannot be publicly launched as specified. | State it as a documented limitation. | T8.2 |
 
 ---
@@ -634,7 +634,7 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   track, so there is nothing to start. The 409-on-concurrent path therefore has no test and
   the done-when is **not** satisfied. Do not tick this until T3.8 lands.
 
-- [ ] **T4.8 — Detected company & role on review items** · Lane A · needs T4.5 — **blocks T6.3**
+- [x] **T4.8 — Detected company & role on review items** · Lane A · needs T4.5 — *done 2026-08-18*
   Add `detected_company` / `detected_role` to `email_events`, populate them in
   `processEmail`, and surface them on `ReviewItem`. Extracted fields, not raw content —
   the same two values `jobs` already stores — so the retention guard is unaffected and must
@@ -642,6 +642,13 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   *Done when:* `GET /api/review` returns a non-null company and role for a seeded pending
   item, `POST /:id/confirm` succeeds with an empty `corrections` object, and
   `schema.retention.test.ts` still passes unmodified.
+  *Verified:* all three, plus the SM-6 content search — which enumerates columns via
+  `select()` with no projection, so it picked up the two new columns without being edited,
+  and passed with real extracted values in them. Confirming an unedited card writes every
+  field as `human` with `confidence: null`; a supplied correction still beats the detected
+  value; an event the classifier read no company off still 400s, so that path stayed
+  reachable. **Verified in the failing direction** — the pipeline's `detectedCompany` write
+  was replaced with `null` and the guard fired before being restored. Closes defect **C7**.
 
 - [ ] **T4.7 — Security test suite** · Lane B · needs T4.1–T4.6
   Consolidates: no password column, token encryption, HTTPS, session flags, validation,

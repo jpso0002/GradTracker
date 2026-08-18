@@ -92,6 +92,8 @@ export interface NewEmailEvent {
   gmailThreadId: string;
   receivedAt: Date;
   senderDomain?: string | null;
+  detectedCompany?: string | null;
+  detectedRole?: string | null;
   detectedStage?: Stage | null;
   detectedDeadlineAt?: Date | null;
   detectedNextAction?: string | null;
@@ -192,6 +194,8 @@ export function createRepository(db: Database) {
           gmailThreadId: input.gmailThreadId,
           receivedAt: input.receivedAt,
           senderDomain: input.senderDomain ?? null,
+          detectedCompany: input.detectedCompany ?? null,
+          detectedRole: input.detectedRole ?? null,
           detectedStage: input.detectedStage ?? null,
           detectedDeadlineAt: input.detectedDeadlineAt ?? null,
           detectedNextAction: input.detectedNextAction ?? null,

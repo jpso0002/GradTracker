@@ -80,6 +80,11 @@ export const EmailEventSchema = z.object({
   /** e.g. "greenhouse.io" — powers "Detected from a Greenhouse email". The
    *  full sender address is never stored. */
   senderDomain: z.string().nullable(),
+  /** What this one email claimed, before matching decided where it belongs.
+   *  Lets the timeline show "this email said KPMG" beside a job the student
+   *  later renamed. */
+  detectedCompany: z.string().nullable(),
+  detectedRole: z.string().nullable(),
   detectedStage: StageEnum.nullable(),
   detectedDeadlineAt: z.string().datetime().nullable(),
   detectedNextAction: z.string().nullable(),

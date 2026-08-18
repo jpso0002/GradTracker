@@ -234,17 +234,20 @@ describe("POST /api/jobs/:id/withdraw", () => {
 });
 
 describe("review routes", () => {
-  async function seedPending() {
+  async function seedPending(over: Record<string, unknown> = {}) {
     return repo.insertEmailEvent(userId, {
       jobId: null,
       gmailMessageId: "pending-1",
       gmailThreadId: "pt-1",
       receivedAt: new Date("2026-08-15T00:00:00Z"),
       senderDomain: "boutique-consult.com.au",
+      detectedCompany: "Boutique Consulting",
+      detectedRole: "Graduate Analyst",
       detectedStage: "interview",
       confidence: 0.41,
       reviewStatus: "pending",
       classifierModel: "fake",
+      ...over,
     });
   }
 
@@ -282,13 +285,60 @@ describe("review routes", () => {
   });
 
   it("refuses to confirm without a company, rather than inventing one", async () => {
-    const pending = await seedPending();
+    // Nothing detected and nothing corrected — the only remaining 400 path.
+    const pending = await seedPending({ detectedCompany: null, detectedRole: null });
     const res = await request(app)
       .post(`/api/review/${pending!.id}/confirm`)
       .send({ corrections: { role: "Graduate Analyst" } })
       .expect(400);
     expect(res.body.field).toBe("company");
     expect(await repo.listJobs(userId)).toHaveLength(0);
+  });
+
+  // ── T4.8 / defect C7 ──────────────────────────────────────────────────────
+  it("proposes the detected company and role, so the card is not blank", async () => {
+    await seedPending();
+    const res = await request(app).get("/api/review").expect(200);
+    expect(res.body.items[0].company).toBe("Boutique Consulting");
+    expect(res.body.items[0].role).toBe("Graduate Analyst");
+  });
+
+  it("confirms with an empty corrections object — the common case", async () => {
+    // The student read the card and said yes. Before T4.8 this was a 400.
+    const pending = await seedPending();
+    const res = await request(app)
+      .post(`/api/review/${pending!.id}/confirm`)
+      .send({})
+      .expect(200);
+
+    const job = await repo.findJob(userId, res.body.jobId);
+    expect(job!.company).toBe("Boutique Consulting");
+    expect(job!.role).toBe("Graduate Analyst");
+  });
+
+  it("accepting an unedited card still marks the fields human, not ai", async () => {
+    // The student did not type the value, but they did look at it and accept
+    // it. A later sync must not overwrite that (SM-7).
+    const pending = await seedPending();
+    const res = await request(app).post(`/api/review/${pending!.id}/confirm`).send({}).expect(200);
+
+    const provenance = await repo.listProvenance(userId, res.body.jobId);
+    expect(provenance.length).toBeGreaterThan(0);
+    expect(provenance.every((p) => p.source === "human")).toBe(true);
+    expect(provenance.every((p) => p.confidence === null)).toBe(true);
+  });
+
+  it("a correction still beats the detected value", async () => {
+    const pending = await seedPending();
+    const res = await request(app)
+      .post(`/api/review/${pending!.id}/confirm`)
+      .send({ corrections: { company: "Boutique Consulting Co" } })
+      .expect(200);
+
+    const job = await repo.findJob(userId, res.body.jobId);
+    expect(job!.company).toBe("Boutique Consulting Co");
+    // The role was not corrected, so the detected value stands.
+    expect(job!.role).toBe("Graduate Analyst");
   });
 
   it("dismisses without deleting, so the email can never resurface", async () => {

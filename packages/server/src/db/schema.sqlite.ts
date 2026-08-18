@@ -102,6 +102,12 @@ export const emailEvents = sqliteTable(
     receivedAt: integer("received_at", { mode: "timestamp_ms" }).notNull(),
     senderDomain: text("sender_domain"),
 
+    /** What the classifier read off this one email, before matching decided
+     *  which job it belongs to. Extracted fields, not raw content — `jobs`
+     *  stores the same two values — so the retention boundary is unaffected.
+     *  Without these a review card can only show a sender domain (defect C7). */
+    detectedCompany: text("detected_company"),
+    detectedRole: text("detected_role"),
     detectedStage: text("detected_stage").$type<Stage>(),
     detectedDeadlineAt: integer("detected_deadline_at", { mode: "timestamp_ms" }),
     detectedNextAction: text("detected_next_action"),

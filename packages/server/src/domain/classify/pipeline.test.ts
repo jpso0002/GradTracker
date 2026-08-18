@@ -158,6 +158,38 @@ describe("processEmail", () => {
     expect(await repo.listJobs(userId)).toHaveLength(0);
   });
 
+  it("records what the email said on the queued event, so the card is not blank (T4.8)", async () => {
+    // A review item has no job, so the only place the extraction can live is
+    // the event itself. Without this the student confirms a sender domain and
+    // a confidence and nothing else (defect C7).
+    await processEmail(
+      deps({ classifier: new FakeEmailClassifier({ fixtures: corpus, confidenceFor: () => 0.41 }) }),
+      userId,
+      await email("fixture-001"),
+    );
+
+    const truth = corpus.find((f) => f.email.gmailMessageId === "fixture-001")!.expected;
+    const [pending] = await repo.listPendingReview(userId);
+    expect(pending!.detectedCompany).toBe(truth.company);
+    expect(pending!.detectedRole).toBe(truth.role);
+  });
+
+  it("leaves the detected company null when the classifier read none", async () => {
+    await processEmail(
+      deps({
+        classifier: new FakeEmailClassifier({
+          fixtures: corpus,
+          corrupt: (truth): Classification => ({ ...truth, company: null, confidence: 0.41 }),
+        }),
+      }),
+      userId,
+      await email("fixture-001"),
+    );
+
+    const [pending] = await repo.listPendingReview(userId);
+    expect(pending!.detectedCompany).toBeNull();
+  });
+
   it("is idempotent — a re-read after a crash changes nothing", async () => {
     await processEmail(deps(), userId, await email("fixture-001"));
     const second = await processEmail(deps(), userId, await email("fixture-001"));

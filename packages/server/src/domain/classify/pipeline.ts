@@ -165,6 +165,10 @@ export async function processEmail(
     gmailThreadId: classified.gmailThreadId,
     receivedAt: classified.receivedAt,
     senderDomain: classified.senderDomain,
+    // Recorded per-email, not just per-job. A review item has no job yet, so
+    // without these the student is asked to confirm a blank card (defect C7).
+    detectedCompany: c.company,
+    detectedRole: c.role,
     detectedStage: c.stage,
     detectedDeadlineAt: c.deadlineAt ? new Date(c.deadlineAt) : null,
     detectedNextAction: c.nextAction,

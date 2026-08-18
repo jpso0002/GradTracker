@@ -86,11 +86,14 @@ export const SEED_JOBS: SeedSpec[] = [
 ];
 
 /** Low-confidence detections awaiting review — they have no job yet. */
+/** The last entry deliberately has no company or role: a low-confidence email
+ *  the classifier could not read a company off at all. It keeps the "confirm
+ *  needs a company" 400 path reachable from seeded data. */
 export const SEED_REVIEW_ITEMS = [
-  { company: "Boutique Consulting Co", stage: "interview" as Stage, senderDomain: "boutique-consult.com.au", confidence: 0.41, daysAgo: 1 },
-  { company: "Nine Entertainment", stage: "applied" as Stage, senderDomain: "nine.com.au", confidence: 0.52, daysAgo: 2 },
-  { company: "Grok Academy", stage: "assessment" as Stage, senderDomain: "grokacademy.org", confidence: 0.48, daysAgo: 3 },
-  { company: "Unknown Sender", stage: "applied" as Stage, senderDomain: "mail.startup.io", confidence: 0.38, daysAgo: 5 },
+  { company: "Boutique Consulting Co", role: "Analyst Graduate Program", stage: "interview" as Stage, senderDomain: "boutique-consult.com.au", confidence: 0.41, daysAgo: 1 },
+  { company: "Nine Entertainment", role: "Technology Graduate", stage: "applied" as Stage, senderDomain: "nine.com.au", confidence: 0.52, daysAgo: 2 },
+  { company: "Grok Academy", role: "Software Intern", stage: "assessment" as Stage, senderDomain: "grokacademy.org", confidence: 0.48, daysAgo: 3 },
+  { company: null, role: null, stage: "applied" as Stage, senderDomain: "mail.startup.io", confidence: 0.38, daysAgo: 5 },
 ];
 
 export function normaliseCompany(name: string): string {
@@ -167,6 +170,8 @@ export async function seed(db: Database, today: Date = new Date()): Promise<Seed
       gmailThreadId: `seed-thread-${randomUUID()}`,
       receivedAt: lastEventAt,
       senderDomain: spec.senderDomain,
+      detectedCompany: spec.company,
+      detectedRole: spec.role,
       detectedStage: spec.stage,
       detectedDeadlineAt: spec.deadlineInDays === null ? null : days(today, spec.deadlineInDays),
       detectedNextAction: spec.nextAction,
@@ -183,6 +188,8 @@ export async function seed(db: Database, today: Date = new Date()): Promise<Seed
       gmailThreadId: `seed-review-thread-${randomUUID()}`,
       receivedAt: days(today, -item.daysAgo),
       senderDomain: item.senderDomain,
+      detectedCompany: item.company,
+      detectedRole: item.role,
       detectedStage: item.stage,
       detectedNextAction: null,
       confidence: item.confidence,

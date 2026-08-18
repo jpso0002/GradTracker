@@ -118,6 +118,10 @@ Keep entries concise. One line per decision when possible.
 - **A route with nothing behind it returns 501 with an explanation, never a faked success.** `POST /api/sync` refuses rather than returning a 202 that starts nothing.
 - **Timezone comes from the `x-timezone` request header and falls back on anything unparseable.** A bad value from a client must not crash ranking (defect C2).
 - **`createApp` takes an explicit `userId` for tests.** Depending on which row `limit 1` returns is a test that passes for the wrong reason.
+- **Confirming an unedited review card is a 200, not a 400.** "Yes, as shown" is the common case; requiring the student to retype what the classifier already read is the friction the product exists to remove.
+- **A correction beats a detected value; a detected value beats nothing.** Both are better than asking.
+- **Anything a review card displays must be stored on the event, not the job.** A review item has no job yet — that is the definition. An extraction that lives only on `jobs` cannot be shown before the student confirms.
+- **Extracted fields are not raw content.** Company, role, stage, deadline and next action may be persisted per-email; subject, body and sender address may not. The line is "did the model derive this", not "did it come from the email".
 - **`demoContext` is the only unauthenticated seam, and it is loud about it:** it throws under `NODE_ENV=production` and refuses to start without `ALLOW_UNAUTHENTICATED=1`. Restoring real auth replaces that one function and nothing else.
 
 ## Business Logic
