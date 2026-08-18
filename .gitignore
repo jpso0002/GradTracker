@@ -25,3 +25,5 @@ Thumbs.db
 
 # Throwaway spike scripts (T0.2) — never production code
 spikes/
+harvest.db
+harvest*.db

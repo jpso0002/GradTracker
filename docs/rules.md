@@ -108,6 +108,18 @@ Keep entries concise. One line per decision when possible.
 - **Empty states admit the gap** rather than filling space. Blank means blank.
 - **No fake progress.** If duration is unknown, show a real count of work done.
 
+### API routes
+- **A record belonging to another user returns 404, never 403.** A 403 confirms the record exists, which is itself a disclosure. "Not yours", "already handled" and "never existed" must be indistinguishable to the caller.
+- **There is no `?sort=`.** Ranking is the product's single opinion about what matters today. A client that can re-sort by company name has rebuilt the spreadsheet GradTracker exists to replace.
+- **Validation errors return the offending `field` alongside `error`**, so an inline editor can attach the message to the input rather than showing a banner.
+- **Unknown body fields are stripped, not rejected and not persisted.** A client must not be able to smuggle `status` or `confidence` into a `PATCH`.
+- **An empty patch is a 400, not a 200 no-op.** Silently accepting a request that changes nothing hides a broken client.
+- **Every confirmed field is written as `human`, not `ai`.** Confirming is the moment a machine guess becomes a human fact; a later sync must not overwrite what the student looked at and accepted.
+- **A route with nothing behind it returns 501 with an explanation, never a faked success.** `POST /api/sync` refuses rather than returning a 202 that starts nothing.
+- **Timezone comes from the `x-timezone` request header and falls back on anything unparseable.** A bad value from a client must not crash ranking (defect C2).
+- **`createApp` takes an explicit `userId` for tests.** Depending on which row `limit 1` returns is a test that passes for the wrong reason.
+- **`demoContext` is the only unauthenticated seam, and it is loud about it:** it throws under `NODE_ENV=production` and refuses to start without `ALLOW_UNAUTHENTICATED=1`. Restoring real auth replaces that one function and nothing else.
+
 ## Business Logic
 
 ### Stages and progression
@@ -196,3 +208,9 @@ Keep entries concise. One line per decision when possible.
 ---
 
 *Last updated: 16 August 2026 · Reasoning and rejected options: [decision-record.md](decision-record.md)*
+
+## Harvest
+
+- **Harvest input files live outside the repository.** They contain email subjects and bodies; only extracted fields reach the database. The file is a transient input, never a committed artefact.
+- **The harvest runs the real `processEmail` pipeline**, not a shortcut importer — matching, stage progression, provenance and the retention boundary must all be exercised, or the demo proves nothing about the product.
+- **`jpso0002@student.monash.edu` is the recruitment mailbox.** `jiddan2016@gmail.com` carries grad-recruitment *marketing* only and contains no application emails.

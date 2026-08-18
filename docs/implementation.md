@@ -570,6 +570,42 @@ mandatory first argument on every method.
 Every request body is Zod-validated by shared schemas. Validation failure → 400 with the
 offending field. Unknown fields are stripped, never persisted.
 
+### 9.1 As built *(T4.4–T4.6, 18 August 2026)*
+
+Shipped: `/api/me`, all four `/api/jobs` routes, all three `/api/review` routes, and
+`GET /api/sync/status`. Four deviations from the table above, each deliberate:
+
+- **No `/auth/*` routes and no session.** T4.1–T4.3 are deferred on the demo track.
+  `demoContext` resolves the single local user instead, throws under `NODE_ENV=production`
+  and refuses to start without `ALLOW_UNAUTHENTICATED=1`. Scoping is unchanged — every
+  handler passes a branded `UserId` into a repository method that requires one — so
+  restoring auth means replacing one middleware function.
+- **`POST /api/sync` returns 501, not 202.** The orchestrator (T3.8) is deferred; the
+  pipeline was populated by a one-off harvest. A 202 that starts nothing is worse than an
+  honest refusal, so the route says what is missing and names the tasks that supply it.
+  The 409-on-concurrent contract therefore remains untested and **T4.6 stays open**.
+- **No `/api/settings`.** Belongs with the settings view (Phase 6); the review threshold
+  is currently the `DEFAULT_REVIEW_THRESHOLD` constant.
+- **`GET /api/jobs` also returns `stats`** — `liveApplications`, `dueThisWeek`,
+  `needsReview`, `emailsRead` — rather than requiring a second request for the header
+  the dashboard always renders alongside the list.
+
+Two contracts worth stating because they look like bugs from the outside:
+
+- **Another user's job is a 404, never a 403.** A 403 confirms the record exists.
+- **There is no `?sort=`.** Ranking (§7.9) is the product's single opinion about what
+  matters today; a client-sortable table is the spreadsheet this replaces.
+
+`daysLeft` is computed **server-side** from the `x-timezone` request header, closing
+defect C2 — the client never recomputes it, so the row and its rank cannot disagree. An
+unparseable timezone falls back rather than throwing.
+
+**Known gap — defect C7.** `email_events` carries no detected company or role, so
+`GET /api/review` returns `company: null, role: null` and `POST /:eventId/confirm`
+must 400 unless the caller supplies both. The review queue is not usable until **T4.8**
+adds those two extracted columns. This does not touch the retention boundary (§7.2):
+company and role are extracted fields that `jobs` already stores, not raw content.
+
 ---
 
 ## 10. Security implementation *(SM-5)*

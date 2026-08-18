@@ -18,7 +18,7 @@ when its dependencies are checked off.
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** — 127 tests green |
 | 2 — Harness | 2–3 | T2.1–T2.8 | ◐ T2.1–T2.7 done · T2.8 blocked on B3 |
 | 3 — Pipeline | 3–5 | T3.1–T3.7 | ✅ **Complete** — 307 tests green · T3.8 deferred |
-| 4 — API | 5–6 | T4.4–T4.6 | ☐ Auth tasks deferred |
+| 4 — API | 5–6 | T4.4–T4.6 | ◐ T4.4–T4.5 done · T4.6 partial · auth deferred |
 | 5 — Dashboard | 6–8 | T5.1–T5.9 | ☐ Not started |
 | 6 — Human-in-the-loop | 8–9 | T6.1–T6.5 | ☐ Not started |
 | 7 — Live adapters | 9–11 | T7.1–T7.6 | ⏸ Deferred — harvest replaces |
@@ -69,13 +69,30 @@ continues:
 | T7.1–T7.6 live adapters | Superseded by the in-session harvest. |
 | T8.1–T8.5 traceability | Reinstate if the FIT3163 deliverable is resumed. |
 
-**Still required for the demo:** T3.1–T3.7, T4.4–T4.6 (routes, without auth), T5.1–T5.9,
-T6.1–T6.5.
+**Still required for the demo:** T3.1–T3.7, T4.4–T4.6 (routes, without auth), **T4.8**,
+T5.1–T5.9, T6.1–T6.5.
 
 ### Harvest scope
 
 Targeted search only — application confirmations, assessment invites, interview invites,
-offers, rejections. Unrelated personal mail is not read. Expected volume 30–100 messages.
+offers, rejections. Unrelated personal mail is not read. Expected volume 30–100 messages. Scope with `newer_than:` — the mailbox goes back to 2022 and holds casual
+retail applications that are not part of the graduate pipeline.
+
+Three things the real mailbox will test that the fixtures do not:
+
+- **`criteriacorp.com` sends assessment invites for KPMG, PwC *and* nbn.** The sender
+  domain is ambiguous across three employers, so company extraction from the body carries
+  the whole matching decision. `findMatch` gates on an exact normalised company before the
+  domain fallback applies, so a miss produces an **orphan job, not a wrong merge** — that is
+  the failure mode to watch for, and it is the safe one.
+- **Two NAB applications and two Macquarie applications** (Summer Intern vs Graduate
+  Program; Technology vs Data, Sydney). Correct behaviour is four jobs, not two.
+- **`correspondenceanzbanking@…successfactors.com` — "Inviting you to apply for the 2027
+  ANZ Australia Graduate program".** A real ATS domain and a real graduate program, for an
+  application that was never made. Harder than any hard negative in the 80-fixture corpus.
+  Other genuine negatives present: a Westpac *share trading* application, an OS-HELP *loan*
+  application, "Your Exclusive VIP Offer Inside", "Final round: Boxing Day Blitz ends soon",
+  and newsletter subjects of the form "An interview with …".
 Extracted fields are persisted; **subject and body are not**, exactly as the retention
 boundary requires, which makes SM-6 demonstrable by inspection during the demo.
 
@@ -123,6 +140,7 @@ the documents right now.
 | C3 | `implementation.md §7.4` constrains JSON via tool-use schema. | Use `output_config.format` with `zodOutputFormat(ClassificationSchema)` and `messages.parse()` — same Zod schema, API-validated, typed return. | T2.3 |
 | C4 | Cost model assumed prompt caching would apply. Haiku 4.5's minimum cacheable prefix is 4,096 tokens; a classifier system prompt is far below it. | No caching on the classifier path. Use the **Batches API for initial scans** instead — 50% discount, and the scan is not latency-sensitive. | T7.4 |
 | C5 | D10 was marked open in all four documents. | Now closed — six stages. Update the four docs. | T1.1 |
+| C7 | `email_events` stores `detected_stage`, `detected_deadline_at` and `detected_next_action` but **no detected company or role**. So a review card can only show a sender domain and a confidence — `GET /api/review` returns `company: null, role: null`, and `POST /:id/confirm` must 400 unless the student types both from memory. The queue is unusable as specified. | Add `detected_company` and `detected_role` to `email_events`. These are *extracted fields*, not raw content — `jobs` already stores both — so SM-6 is unaffected. Migration + repository + `ReviewItem` mapping + fixtures. | **T4.8** (new) |
 | C6 | Gmail `gmail.readonly` is a Google-restricted scope: production verification needs a paid third-party security assessment. Not a blocker (test-user mode allows 100 users) but it means the app cannot be publicly launched as specified. | State it as a documented limitation. | T8.2 |
 
 ---
@@ -137,7 +155,7 @@ task** — it is a task's precondition, and it belongs to a person, not a lane.
 | ~~B1~~ | ~~Node.js is not installed.~~ **Cleared 2026-08-16** — Node v24.19.0 / npm 11.17.0 installed. PowerShell's execution policy blocks `npm.ps1`; use `npm.cmd`, which needs no policy change. | — | — | Resolved. |
 | ~~B2~~ | ~~No Google Cloud project.~~ **Descoped for the demo track 16 August 2026** — the Gmail connector on the team's Claude account replaces it. Reinstate if live OAuth is resumed (T7.1). | — | — | Not blocking. |
 | ~~B3~~ | ~~No Anthropic API key.~~ **Descoped for the demo track 16 August 2026** — classification runs in-session. Still required for T2.8, the measured Haiku-vs-Sonnet benchmark, which remains the only way to validate decision D16. | T2.8 only | Team | Optional. ~$1.30 settles D16 with evidence rather than pricing estimates. |
-| **B5** | **No application emails in the connected mailbox.** `jiddan2016@gmail.com` holds grad-recruitment *marketing* (GradConnection, Forage) but no confirmations, assessment invites, interview invites, offers or rejections, and nothing from any ATS domain. The harvest would produce an empty pipeline. | T3.9, and the demo dashboard having anything to show | Team | Confirm where application email actually lands — most likely `jpso0002@student.monash.edu`, which was connected earlier — or confirm that few applications have been submitted yet this cycle. |
+| ~~B5~~ | ~~No application emails in the connected mailbox.~~ **Resolved 2026-08-16, superseded 2026-08-18.** The mailbox survey was run twice more. `jiddan2016@gmail.com` holds only grad-recruitment marketing. `jpso0002@student.monash.edu` holds 2 applications / 15 emails and **no offer at any point**. `jordanpsomas@gmail.com` holds ~12 graduate and vacation applications across ~60 emails, 9+ ATS domains, and **two complete offer journeys** (NAB 2025/26 Summer Intern, NAB 2027 Graduate — the latter accepted and ongoing). It is the source of record. The 16 August conclusion naming `jpso0002` was correct on the evidence then available and wrong once the third mailbox was checked. | — | — | Resolved — use `jordanpsomas@gmail.com`. |
 | ~~B4~~ | ~~`docs/` is not under version control.~~ **Withdrawn 2026-08-16 — the claim was wrong.** All eight `docs/` files were already tracked and committed in `b6d846f`; the repo had three commits, not one. The claim was made without running `git ls-files`. Uncommitted work was doc *modifications* plus the new scaffold, now committed as `0056599` on branch `setup/scaffold-and-shared-schemas`. | — | — | Resolved. |
 
 ---
@@ -528,23 +546,36 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   requests, which reads as a bug.
   A stale job with no deadline outranks one with a deadline six weeks out.
 
-- [~] **T3.9 — Inbox harvest** · Lane B · needs T3.4 · ⛔ **Blocked on B5** *(added 2026-08-16)*
+- [x] **T3.9 — Inbox harvest** · Lane B · needs T3.4 · ✅ **2026-08-16**
   Read real recruitment email through the Gmail connector, classify in-session, and import
   through the real `processEmail` pipeline so matching, staging and provenance are all
   exercised. Replaces T3.8 on the demo track.
   *Done when:* the local database holds the student's real applications, and inspecting it
   shows extracted fields with no subject or body anywhere.
-  **Survey result, `jiddan2016@gmail.com` (16 August 2026): no application emails found.**
-  Three searches — subject keywords, ATS sender domains, and full-content phrases — returned
-  **zero** application confirmations, assessment invites, interview invites, offers or
-  rejections, and **zero** mail from `greenhouse.io`, `myworkday.com`, `lever.co`,
-  `smartrecruiters.com`, `successfactors.com` or `icims.com`.
-  What the mailbox does contain is roughly 30 GradConnection and Forage emails of the form
-  *"Applications are now open for X"*, *"You would be a great fit for the 2027 Defence
-  Graduate Program"*, *"Your invitation to apply to Westpac's Institutional Bank Graduate
-  Program"* — every one an **invitation to apply**, which is a hard negative, not an
-  application. Fixtures `066`, `068` and `059` were written to model exactly this, and the
-  real thing turns out to be more abundant than the synthetic version assumed.
+  **Mailbox comparison settled B5.** `jiddan2016@gmail.com` held zero application emails —
+  only GradConnection and Forage marketing. `jpso0002@student.monash.edu` holds the real
+  thing, and is the mailbox the harvest uses.
+  **Result:** 15 emails imported → 2 jobs, 7 application events, 8 correctly rejected.
+  - **KPMG 2025/26 Vacationer Program** — a complete five-email journey across two months
+    and two sender domains (`criteriacorp.com` for the assessment invite,
+    `smartrecruiters.com` for the rest): applied → assessment → assessment → interview →
+    rejected. Every transition applied correctly and in order, and the sender-domain
+    fallback in `findMatch` is what kept the Criteria invite attached to the same job.
+  - **Wesfarmers Graduate Analyst (Business Development)** — two `livehire.com` emails
+    matched to one job.
+  **Verified: no email content in the database.** Every subject, seven-word body phrase and
+  full sender address was searched across all five tables and none appear. What is stored
+  per email is exactly: sender *domain*, detected stage, confidence, timestamps, Gmail ids.
+  **The negatives are the interesting part.** All 8 were rejected, including a Monash
+  *"Thanks for your application to defer your scheduled final assessment"* — containing
+  "application", "assessment" and "defer", entirely about coursework — and a KPMG
+  candidate-pool newsletter from the **same `smartrecruiters.com` domain** as five genuine
+  application emails. Sender domain alone could not have separated those, which is exactly
+  what corpus fixture `071` was built to model.
+  **Known gap surfaced:** a job reaching a terminal *stage* is not automatically given
+  `status = 'archived'`. Ranking already excludes terminal stages from the Active tab, so
+  the dashboard is correct, but `listJobs({status:'active'})` still returns the rejected
+  KPMG job. Two overlapping notions of "done" — worth reconciling before Phase 5.
 
 - [ ] **T3.8 — Sync orchestrator** · Lane B · needs T3.4
   Lock → list → fetch → classify → single transaction committing events, jobs, provenance
@@ -574,20 +605,43 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   *Done when:* a test asserts the persisted bytes do not contain the plaintext, and that
   tampering with the tag fails decryption.
 
-- [ ] **T4.4 — Job routes** · Lane A · needs T3.7, T4.2
+- [x] **T4.4 — Job routes** · Lane A · needs T3.7, T4.2 — *done 2026-08-18*
   `GET /api/jobs` (ranked, filtered), `GET /api/jobs/:id`, `PATCH /api/jobs/:id`,
   `POST /api/jobs/:id/withdraw`. Zod-validated, user-scoped.
   *Done when:* every route rejects invalid input with 400 naming the field, and a cross-user
   fetch returns **404, not 403** — 403 confirms the record exists.
+  *Verified:* `routes.test.ts` — 400-with-`field` on unknown status, empty patch and blank
+  company; 404 (asserted `not.toBe(403)`) on another user's job across GET, PATCH and
+  withdraw. Unknown body fields are stripped, not persisted, so a client cannot smuggle
+  `status` or `confidence` into a patch. Ranking is not client-overridable — there is no
+  `?sort=`. Withdraw sets **both** `stage` and `status`, closing the gap the harvest found.
 
-- [ ] **T4.5 — Review routes** · Lane A · needs T3.5, T4.2
+- [x] **T4.5 — Review routes** · Lane A · needs T3.5, T4.2 — *done 2026-08-18*
   `GET /api/review`, `POST /api/review/:id/confirm`, `POST /api/review/:id/dismiss`.
   Confirmed fields become `human`.
   *Done when:* a dismissed item never resurfaces, guaranteed by the unique constraint.
+  *Verified:* dismissal sets `review_status = 'dismissed'` and never deletes the row, so the
+  `(user_id, gmail_message_id)` unique constraint blocks re-insertion on a later sync.
+  Confirm writes **every** confirmed field as `human`, and reuses `findMatch` so confirming
+  an email for an existing application updates it rather than duplicating it.
+  **See defect C7** — the queue cannot yet propose a company or role.
 
-- [ ] **T4.6 — Sync routes** · Lane B · needs T3.8, T4.2
+- [ ] **T4.6 — Sync routes** · Lane B · needs T3.8, T4.2 — ◐ *partial 2026-08-18*
   `POST /api/sync` (409 if already running), `GET /api/sync/status`.
   *Done when:* concurrent syncs for one user are impossible.
+  *Partial:* `GET /api/sync/status` is complete and reads `sync_state`. `POST /api/sync`
+  returns **501, not a faked 202** — T3.8 (the sync orchestrator) is deferred on the demo
+  track, so there is nothing to start. The 409-on-concurrent path therefore has no test and
+  the done-when is **not** satisfied. Do not tick this until T3.8 lands.
+
+- [ ] **T4.8 — Detected company & role on review items** · Lane A · needs T4.5 — **blocks T6.3**
+  Add `detected_company` / `detected_role` to `email_events`, populate them in
+  `processEmail`, and surface them on `ReviewItem`. Extracted fields, not raw content —
+  the same two values `jobs` already stores — so the retention guard is unaffected and must
+  stay green. Fixes defect **C7**.
+  *Done when:* `GET /api/review` returns a non-null company and role for a seeded pending
+  item, `POST /:id/confirm` succeeds with an empty `corrections` object, and
+  `schema.retention.test.ts` still passes unmodified.
 
 - [ ] **T4.7 — Security test suite** · Lane B · needs T4.1–T4.6
   Consolidates: no password column, token encryption, HTTPS, session flags, validation,

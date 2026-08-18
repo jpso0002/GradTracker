@@ -211,6 +211,21 @@ export function createRepository(db: Database) {
         .orderBy(desc(emailEvents.receivedAt));
     },
 
+    /** Update a review item. Scoped like everything else: an event id
+     *  belonging to another user simply is not found. */
+    async updateEmailEvent(
+      userId: UserId,
+      eventId: string,
+      patch: { jobId?: string | null; reviewStatus?: ReviewStatus },
+    ) {
+      const [row] = await db
+        .update(emailEvents)
+        .set(patch)
+        .where(and(eq(emailEvents.userId, userId), eq(emailEvents.id, eventId)))
+        .returning();
+      return row;
+    },
+
     async listPendingReview(userId: UserId) {
       return db
         .select()
