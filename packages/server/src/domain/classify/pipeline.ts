@@ -1,4 +1,5 @@
-import type { Classification, ClassifierModel, ReviewStatus, UserId } from "@gradtracker/shared";
+import { TERMINAL_STAGES } from "@gradtracker/shared";
+import type { Classification, ClassifierModel, ReviewStatus, Stage, UserId } from "@gradtracker/shared";
 import type { EmailClassifier, RawEmail } from "../../ports/index.js";
 import { senderDomain } from "../../ports/index.js";
 import type { Repository } from "../../db/repository.js";
@@ -139,6 +140,25 @@ export interface PipelineDeps {
  * Ordering is deliberate: the idempotency check comes **first**, before any
  * model call, so a re-read after a crash costs nothing and changes nothing.
  */
+/**
+ * A terminal stage and an archived status are two ways of saying the same
+ * thing, and until now only one of them was set.
+ *
+ * Ranking excludes terminal stages, so a rejected application vanished from
+ * Active — but `status` stayed `active`, so it never appeared on Archived
+ * either. The first real harvest made that concrete: five rejected
+ * applications were in the database and visible on no screen in the product.
+ *
+ * The withdraw route already set both. This makes the pipeline agree.
+ */
+function isTerminal(stage: Stage | null): boolean {
+  return stage !== null && TERMINAL_STAGES.has(stage);
+}
+
+async function archive(deps: PipelineDeps, userId: UserId, jobId: string): Promise<void> {
+  await deps.repo.updateJob(userId, jobId, { status: "archived" });
+}
+
 export async function processEmail(
   deps: PipelineDeps,
   userId: UserId,
@@ -229,6 +249,8 @@ export async function processEmail(
       await deps.repo.setProvenance(userId, job!.id, field, "ai", c.confidence);
     }
 
+    if (isTerminal(c.stage)) await archive(deps, userId, job!.id);
+
     await deps.repo.insertEmailEvent(userId, {
       ...common,
       jobId: job!.id,
@@ -268,6 +290,10 @@ export async function processEmail(
   await deps.repo.updateJob(userId, match.candidate.id, {
     lastEventAt: classified.receivedAt,
   });
+
+  if (stageDecision.applies && isTerminal(stageDecision.stage)) {
+    await archive(deps, userId, match.candidate.id);
+  }
 
   await deps.repo.insertEmailEvent(userId, {
     ...common,

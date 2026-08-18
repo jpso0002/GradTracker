@@ -100,6 +100,35 @@ describe("GET /api/jobs", () => {
     expect((await request(app).get("/api/jobs?status=archived")).body.jobs).toHaveLength(1);
   });
 
+  it("reports stats for the pipeline, not for the current tab", async () => {
+    // "Live applications" must mean live applications. Measured against the
+    // filtered list it counted archived jobs while the Archived tab was open.
+    await seedJob(userId, { company: "Live Co", companyNormalised: "live co" });
+    const rejected = await seedJob(userId, {
+      company: "Gone Co",
+      companyNormalised: "gone co",
+      stage: "rejected",
+    });
+    // insertJob does not take `status`; archiving is an update.
+    await repo.updateJob(userId, rejected!.id, { status: "archived" });
+
+    const active = await request(app).get("/api/jobs").expect(200);
+    const archived = await request(app).get("/api/jobs?status=archived").expect(200);
+
+    expect(archived.body.jobs).toHaveLength(1);
+    expect(archived.body.stats.liveApplications).toBe(1);
+    expect(archived.body.stats.liveApplications).toBe(active.body.stats.liveApplications);
+  });
+
+  it("does not let a stage filter change the headline counts", async () => {
+    await seedJob(userId, { stage: "assessment" });
+    const all = await request(app).get("/api/jobs").expect(200);
+    const filtered = await request(app).get("/api/jobs?stage=offer").expect(200);
+
+    expect(filtered.body.jobs).toHaveLength(0);
+    expect(filtered.body.stats.liveApplications).toBe(all.body.stats.liveApplications);
+  });
+
   it("rejects an unknown status with 400 naming the field", async () => {
     const res = await request(app).get("/api/jobs?status=banana").expect(400);
     expect(res.body.field).toBe("status");

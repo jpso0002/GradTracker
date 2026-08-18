@@ -190,6 +190,35 @@ describe("processEmail", () => {
     expect(pending!.detectedCompany).toBeNull();
   });
 
+  it("archives a job that reaches a terminal stage, so it is not invisible", async () => {
+    // Ranking excludes terminal stages, so a rejected job leaves Active. If
+    // `status` stays `active` it never reaches Archived either, and the
+    // application exists in the database but on no screen. The first real
+    // harvest put five applications in exactly that state.
+    await processEmail(
+      deps({
+        classifier: new FakeEmailClassifier({
+          fixtures: corpus,
+          corrupt: (truth): Classification => ({ ...truth, stage: "rejected" }),
+        }),
+      }),
+      userId,
+      await email("fixture-001"),
+    );
+
+    const [job] = await repo.listJobs(userId);
+    expect(job!.stage).toBe("rejected");
+    expect(job!.status).toBe("archived");
+    expect(await repo.listJobs(userId, { status: "active" })).toHaveLength(0);
+    expect(await repo.listJobs(userId, { status: "archived" })).toHaveLength(1);
+  });
+
+  it("leaves a live job active", async () => {
+    await processEmail(deps(), userId, await email("fixture-001"));
+    const [job] = await repo.listJobs(userId);
+    expect(job!.status).toBe("active");
+  });
+
   it("is idempotent — a re-read after a crash changes nothing", async () => {
     await processEmail(deps(), userId, await email("fixture-001"));
     const second = await processEmail(deps(), userId, await email("fixture-001"));

@@ -119,10 +119,24 @@ export function jobRoutes(repo: Repository, clock: () => Date = () => new Date()
         ranked.map(async (r) => toJob(r, toProvenance(await repo.listProvenance(req.userId, r.job.id)), now)),
       );
 
+      // Stats describe the **pipeline**, not the current tab. Computing them
+      // from `ranked` made "Live applications" count archived jobs while the
+      // Archived tab was open — a card labelled "live" showing 5 when 3 are
+      // live. The words mean something specific, so they are always measured
+      // against the active, unfiltered set.
+      const active =
+        query.status === "active" && !query.stage
+          ? ranked
+          : rankJobs(await repo.listJobs(req.userId, { status: "active" }), {
+              now,
+              timeZone: req.timeZone,
+              includeTerminal: false,
+            });
+
       const sync = await repo.getSyncState(req.userId);
       res.json({
         jobs,
-        stats: pipelineStats(ranked, {
+        stats: pipelineStats(active, {
           needsReview: (await repo.listPendingReview(req.userId)).length,
           emailsRead: sync?.emailsReadTotal ?? 0,
         }),
