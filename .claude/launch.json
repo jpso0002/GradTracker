@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gradtracker-client",
+      "runtimeExecutable": "/Users/jidds/.bun/bin/bunx",
+      "runtimeArgs": ["vite", "--config", "packages/client/vite.config.ts", "packages/client"],
+      "port": 5173
+    }
+  ]
+}

@@ -64,6 +64,9 @@ function toRawEmail(record: HarvestRecord): RawEmail {
 
 async function main(): Promise<void> {
   const path = process.argv[2];
+  // The mailbox being harvested. Defaults to the T3.9 account so an existing
+  // harvest command keeps behaving identically.
+  const ownAddress = process.env["HARVEST_OWN_ADDRESS"] ?? "jpso0002@student.monash.edu";
   const url = process.env["DATABASE_URL"] ?? "file:./dev.db";
 
   if (!path) {
@@ -82,7 +85,7 @@ async function main(): Promise<void> {
     existing ??
     (await identity.createUser({
       googleSub: "harvest-student",
-      email: "jpso0002@student.monash.edu",
+      email: ownAddress,
       displayName: "Jordan",
       refreshTokenCiphertext: "harvest-no-token",
       refreshTokenIv: "harvest-no-iv",
@@ -100,7 +103,7 @@ async function main(): Promise<void> {
       {
         repo,
         classifier: new HarvestClassifier(records),
-        ownAddress: "jpso0002@student.monash.edu",
+        ownAddress,
         reviewThreshold: 0.75,
       },
       userId,
