@@ -19,7 +19,7 @@ when its dependencies are checked off.
 | 2 — Harness | 2–3 | T2.1–T2.8 | ◐ T2.1–T2.7 done · T2.8 blocked on B3 |
 | 3 — Pipeline | 3–5 | T3.1–T3.7 | ✅ **Complete** — 307 tests green · T3.8 deferred |
 | 4 — API | 5–6 | T4.4–T4.8 | ◐ T4.4, T4.5, T4.8 done · T4.6 partial · auth deferred |
-| 5 — Dashboard | 6–8 | T5.1–T5.9 | ☐ Not started |
+| 5 — Dashboard | 6–8 | T5.1–T5.9 | ◐ T5.1–T5.3, T5.5, T5.6 done · T5.7 partial · T5.4 deferred |
 | 6 — Human-in-the-loop | 8–9 | T6.1–T6.5 | ☐ Not started |
 | 7 — Live adapters | 9–11 | T7.1–T7.6 | ⏸ Deferred — harvest replaces |
 | 8 — Traceability | 11–12 | T8.1–T8.5 | ⏸ Deferred |
@@ -140,6 +140,8 @@ the documents right now.
 | C3 | `implementation.md §7.4` constrains JSON via tool-use schema. | Use `output_config.format` with `zodOutputFormat(ClassificationSchema)` and `messages.parse()` — same Zod schema, API-validated, typed return. | T2.3 |
 | C4 | Cost model assumed prompt caching would apply. Haiku 4.5's minimum cacheable prefix is 4,096 tokens; a classifier system prompt is far below it. | No caching on the classifier path. Use the **Batches API for initial scans** instead — 50% discount, and the scan is not latency-sensitive. | T7.4 |
 | C5 | D10 was marked open in all four documents. | Now closed — six stages. Update the four docs. | T1.1 |
+| C8 | The shared `ListJobsQuerySchema` put `timezone` in the query string; the server has always read the `x-timezone` **header**. Two descriptions of one contract, and the schema held the wrong one. Nothing caught it because no client had ever consumed the schema. | Timezone is a header on every request — one place, every route, rather than each route remembering to ask for it. Removed from the query schema; `jobs.ts` now consumes `ListJobsQuerySchema` instead of a local copy. | **T5.3** Fixed |
+| C9 | `MeResponseSchema` required `email`, `displayName` and `reviewThreshold`, none of which `/api/me` returned, and omitted `timeZone` and `demoMode`, which it did. | The schema is the contract, so the server was brought up to it — new `repository.findUser`, which selects no credential columns — and the two demo-mode fields were added to the contract. | **T5.3** Fixed |
 | ~~C7~~ | **Fixed 2026-08-18 by T4.8.** ~~`email_events` stores `detected_stage`, `detected_deadline_at` and `detected_next_action` but **no detected company or role**. So a review card can only show a sender domain and a confidence — `GET /api/review` returns `company: null, role: null`, and `POST /:id/confirm` must 400 unless the student types both from memory. The queue is unusable as specified. | Add `detected_company` and `detected_role` to `email_events`. These are *extracted fields*, not raw content — `jobs` already stores both — so SM-6 is unaffected. Migration + repository + `ReviewItem` mapping + fixtures.~~ | ~~**T4.8**~~ Done |
 | C6 | Gmail `gmail.readonly` is a Google-restricted scope: production verification needs a paid third-party security assessment. Not a blocker (test-user mode allows 100 users) but it means the app cannot be publicly launched as specified. | State it as a documented limitation. | T8.2 |
 
@@ -659,45 +661,83 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
 
 ## Phase 5 — Dashboard *(weeks 6–8)*
 
-- [ ] **T5.1 — Design system integration** · Lane C · needs T1.2
+- [x] **T5.1 — Design system integration** · Lane C · needs T1.2 — *done 2026-08-18*
   Import `styles.css`, wire the components, thin `src/ds/` re-export layer, dark-mode toggle
   via `data-theme`.
   *Done when:* a page renders `Button`, `StageBadge` and `DeadlinePill` correctly in both
   themes, with no hardcoded colour anywhere in `packages/client`.
+  *Verified:* the pipeline renders all three in light and dark, checked in a browser. The
+  design system is **vendored** into `src/ds/vendor/` — it lives at the repo root in a
+  folder with a space in its name, outside every package — and `ds.sync.test.ts` fails if
+  the copy drifts from the source, the same guard the two schema dialects use.
+  `src/ds/index.ts` re-exports only; nothing is wrapped or restyled.
+  `no-hardcoded-colour.test.ts` sweeps every `.ts`/`.tsx` outside `vendor/` for hex,
+  `rgb()`, `hsl()` and named colours, and asserts it found source to check so an empty
+  sweep cannot pass vacuously. Theme is `data-theme` on `<html>` and nothing else.
 
-- [ ] **T5.2 — App shell and routing** · Lane C · needs T5.1
+- [x] **T5.2 — App shell and routing** · Lane C · needs T5.1 — *done 2026-08-18*
   `SidebarNav` (240px), `TopBar` (56px), routes per
   [app-flow.md §1.1](app-flow.md), theme toggle, `Toast` host.
   *Done when:* all five routes render and the detail panel is deep-linkable.
+  *Verified:* clicking a row navigates to `/pipeline/:jobId` and the URL is bookmarkable;
+  browser-back closes the panel rather than leaving the pipeline. Calendar and Archive are
+  in the sidebar and lead to a view that says no design exists yet — blank means blank
+  (design.md §9), not a placeholder that reads as broken.
 
-- [ ] **T5.3 — Typed API client** · Lane C · needs T1.3
+- [x] **T5.3 — Typed API client** · Lane C · needs T1.3 — *done 2026-08-18*
   Fetch wrapper consuming the shared Zod types. Sends the browser's IANA timezone on
   pipeline requests **(C2)**.
   *Done when:* the client compiles against server types with no local interface definitions.
+  *Verified:* every response type is inferred from a shared Zod schema and **parsed** at
+  runtime, not cast — an unexpected payload fails next to the request rather than three
+  components deep. `NetworkError` is separate from `ApiError` so "could not reach the
+  server" and "the server said no" reach different surfaces. Satisfying this exposed two
+  contract defects, both fixed — see **C8** and **C9**.
 
-- [ ] **T5.4 — Connect view** · Lane C · needs T5.2
+- [ ] **T5.4 — Connect view** · Lane C · needs T5.2 — ⏸ *deferred with T4.1–T4.3*
   Wordmark, value line, the explicit permissions block with `lock`, "Continue with Google".
   No mesh — product surfaces never get it.
   *Done when:* it states plainly what is and is not accessed, and a denied consent returns
   here with an explanation rather than a dead end.
+  *Deferred:* the done-when is entirely about the OAuth consent round-trip, and T4.1–T4.3
+  are deferred on the demo track. A Connect screen with a "Continue with Google" button that
+  cannot connect would misrepresent what the demo does. The app announces demo mode in the
+  sidebar instead. Reinstate with T7.1.
 
-- [ ] **T5.5 — Pipeline view** · Lane C · needs T5.2, T5.3
+- [x] **T5.5 — Pipeline view** · Lane C · needs T5.2, T5.3 — *done 2026-08-18*
   Four `StatCard`s, Active/Archived tabs, stage filter chips, ranked `ApplicationRow` list,
   hairline separation, keyboard-navigable rows.
   *Done when:* a seeded 25-job pipeline renders in correct urgency order and filters
   re-filter without re-sorting.
+  *Verified:* rendered live against the seeded database — 23 active, overdue first, stage
+  badges and urgency-coloured deadline pills correct. A test feeds a deliberately
+  non-alphabetical, non-date order and asserts the DOM preserves it, so any client-side
+  sort fails. Filters are sent to the server, which re-ranks; the client never reorders what
+  it holds. There is no `?sort=` control. Counts render as **—** until known, because
+  "0 due this week" is a claim and "not loaded yet" is not.
 
-- [ ] **T5.6 — Detail panel** · Lane C · needs T5.5
+- [x] **T5.6 — Detail panel** · Lane C · needs T5.5 — *done 2026-08-18*
   Company, role, stage control, extracted fields with `ConfidenceMeter`, `DeadlinePill`,
   next action, event timeline, withdraw.
   *Done when:* the timeline renders real `email_events` with sender-domain provenance and a
   Gmail deep link.
+  *Verified:* the timeline shows each event's stage, date, detected company and role (T4.8)
+  and links to `rfc822msgid:` in Gmail — a deep link, because GradTracker stores no subject
+  or body and sending the student to their own inbox is the only honest way to show a source
+  (SM-6). The AI-vs-human contract is tested three ways: meter for `ai`, "Edited" tag for
+  `human`, and **neither when the field has no value**. That third case was a real bug found
+  by using the app: a withdrawn job showed a 94% meter beside "Nothing outstanding", which
+  reads as "94% sure there is nothing to do" — a claim the product never made.
 
-- [ ] **T5.7 — Empty and error states** · Lane C · needs T5.5
+- [ ] **T5.7 — Empty and error states** · Lane C · needs T5.5 — ◐ *partial 2026-08-18*
   All seven empty states from [app-flow.md §6](app-flow.md), the offline banner, the
   disconnected banner.
   *Done when:* every state in the table renders, including "synced, none found" routing to the
   threshold setting.
+  *Partial:* the pipeline has four — empty, filtered-to-nothing, offline and error — each
+  distinguishable from the others, plus a row-shaped loading skeleton rather than a spinner.
+  The remaining states from app-flow.md §6 and the disconnected banner are not built, and
+  "synced, none found" cannot route to a threshold setting that does not exist yet (T6.5).
 
 - [ ] **T5.8 — Responsive behaviour** · Lane C · needs T5.5, T5.6
   Four breakpoints per [design.md §11](design.md). Below 768px the table becomes stacked

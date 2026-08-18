@@ -11,8 +11,10 @@ import { LIMITS, CONFIDENCE } from "./classification.js";
  * (rules.md → Naming Conventions).
  */
 
-/** IANA timezone, sent by the client on every pipeline request so the server
- *  can compute `daysLeft` and rank with one clock (defect C2). */
+/** IANA timezone, sent by the client on **every** request as the `x-timezone`
+ *  header — not a query parameter — so the server can compute `daysLeft` and
+ *  rank with one clock (defect C2). A header applies to every route without
+ *  each one having to remember to ask for it. */
 export const TimezoneSchema = z
   .string()
   .min(1)
@@ -26,7 +28,6 @@ export const ListJobsQuerySchema = z.object({
   /** Multi-select stage filter chips. Filters re-filter but never re-sort:
    *  urgency order is the product's one opinion (rules.md → Ranking). */
   stage: z.array(StageEnum).optional(),
-  timezone: TimezoneSchema,
 });
 
 export type ListJobsQuery = z.infer<typeof ListJobsQuerySchema>;
@@ -141,6 +142,13 @@ export const MeResponseSchema = z.object({
   displayName: z.string().nullable(),
   gmailConnected: z.boolean(),
   reviewThreshold: z.number().min(0).max(1).default(CONFIDENCE.DEFAULT_REVIEW_THRESHOLD),
+  /** The timezone the server actually used, echoed back. If the client sent
+   *  something unparseable it will not match what was sent — which is how the
+   *  client finds out, rather than silently ranking against Melbourne. */
+  timeZone: TimezoneSchema,
+  /** True while T4.1–T4.3 are deferred. The client must be able to say so out
+   *  loud; a demo that looks like a logged-in product is a demo that misleads. */
+  demoMode: z.boolean(),
   sync: SyncStatusResponseSchema,
 });
 

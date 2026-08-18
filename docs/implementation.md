@@ -614,6 +614,45 @@ dynamically, so it covered the two new columns without being edited.
 
 ---
 
+## 9.2 Client architecture *(T5.1–T5.6, 18 August 2026)*
+
+Vite 7 + React 19 + `react-router-dom` 7, bundled — not built by `tsc`. The client is the
+one package using `moduleResolution: "Bundler"`: `NodeNext` would demand explicit `.js`
+extensions on every relative import, which the vendored design-system `.jsx` files cannot
+satisfy because they ship `.d.ts` siblings, not `.js` ones.
+
+**The design system is vendored**, not imported. It lives at the repository root in a folder
+whose name contains a space, outside every package. `scripts/sync-ds.mjs` copies
+`components/`, `tokens/`, `assets/logo/` and `styles.css` into `src/ds/vendor/`, and
+`ds.sync.test.ts` fails on any byte of drift — the same guard the two schema dialects use.
+`src/ds/index.ts` re-exports and nothing more; no component is wrapped or restyled.
+
+**Icons are bundled, not fetched.** The design system's `Icon` loads Lucide from a CDN when
+`window.lucide` is absent. `src/ds/icons.ts` populates it first from the npm package, so the
+app has no runtime network dependency for its own chrome — a product that ships an offline
+banner should not need the network to draw it. Only the ~32 referenced glyphs are bundled
+rather than all 2,021 (716 kB → 330 kB), and `icons.test.ts` walks the source for every icon
+name in both the app and the vendored components, so trimming the set cannot produce a blank
+square at runtime.
+
+**React 19 removed the global `JSX` namespace**; the vendored `.d.ts` files declare
+`JSX.Element` returns. `src/jsx-shim.d.ts` aliases it back rather than editing 26 vendored
+files that the drift test would then reject.
+
+**One clock.** `daysLeft` is computed server-side from the `x-timezone` header and arrives on
+the payload. `src/format.ts` does no date arithmetic at all — only formatting — because a
+client that recomputed it could disagree with the rank the server assigned (defect C2).
+
+### Version constraint worth knowing
+
+`@vitejs/plugin-react@6` requires Vite 8; Vitest 3 pins Vite below 8. Both cannot be
+satisfied at once, so the client runs `@vitejs/plugin-react@5` with Vite 7. On plugin-react 6
+the dev server fails every transform with ``Missing field `moduleType` `` from its rolldown
+refresh wrapper. The production build still succeeds, so the failure appears only in
+`npm run dev:client` — which is exactly the kind of breakage that looks like your own code.
+
+---
+
 ## 10. Security implementation *(SM-5)*
 
 | Requirement | Implementation | Test |

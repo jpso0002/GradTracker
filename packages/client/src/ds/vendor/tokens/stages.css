@@ -1,0 +1,18 @@
+/* Six application stages. Each has a fill, a text colour, and a dot colour;
+   all pairings clear WCAG AA (>=4.5:1) on their own fill in both themes. */
+:root{
+--stage-applied-bg:#eef2f7;--stage-applied-fg:#3f5675;--stage-applied-dot:#64748d;
+--stage-assessment-bg:#fdf2e0;--stage-assessment-fg:#8a5a1f;--stage-assessment-dot:#c58a2c;
+--stage-interview-bg:#ebe9ff;--stage-interview-fg:#3d2fc4;--stage-interview-dot:var(--indigo-500);
+--stage-offer-bg:#e2f4ef;--stage-offer-fg:#0b6b58;--stage-offer-dot:var(--jade);
+--stage-rejected-bg:#fdeaf1;--stage-rejected-fg:#ab0f46;--stage-rejected-dot:var(--ruby);
+--stage-withdrawn-bg:#f2f4f7;--stage-withdrawn-fg:#5c6b80;--stage-withdrawn-dot:#93a1b3;
+}
+[data-theme="dark"]{
+--stage-applied-bg:#1c3049;--stage-applied-fg:#b6c8dc;--stage-applied-dot:#8ba1bb;
+--stage-assessment-bg:#3a2c17;--stage-assessment-fg:#f0c98a;--stage-assessment-dot:#e0a94f;
+--stage-interview-bg:#231f5e;--stage-interview-fg:#c3bcff;--stage-interview-dot:#8b81ff;
+--stage-offer-bg:#0f3a32;--stage-offer-fg:#8fd9c6;--stage-offer-dot:#2fae92;
+--stage-rejected-bg:#41152a;--stage-rejected-fg:#ffa8c4;--stage-rejected-dot:#f2497f;
+--stage-withdrawn-bg:#1e2b3a;--stage-withdrawn-fg:#9aabbf;--stage-withdrawn-dot:#6f8199;
+}

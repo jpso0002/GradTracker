@@ -5,7 +5,7 @@ export default defineConfig({
     // The scaffold ships with a schema test (T1.3), but this keeps `npm test`
     // green in any package that does not yet have one — the T1.2 done-when.
     passWithNoTests: true,
-    include: ["packages/*/src/**/*.test.ts", "fixtures/**/*.test.ts"],
+    include: ["packages/*/src/**/*.test.ts", "packages/*/src/**/*.test.tsx", "fixtures/**/*.test.ts"],
     environment: "node",
   },
 });

@@ -124,6 +124,22 @@ Keep entries concise. One line per decision when possible.
 - **Extracted fields are not raw content.** Company, role, stage, deadline and next action may be persisted per-email; subject, body and sender address may not. The line is "did the model derive this", not "did it come from the email".
 - **`demoContext` is the only unauthenticated seam, and it is loud about it:** it throws under `NODE_ENV=production` and refuses to start without `ALLOW_UNAUTHENTICATED=1`. Restoring real auth replaces that one function and nothing else.
 
+### Client
+
+- **The design system is vendored, never edited.** `scripts/sync-ds.mjs` copies it in; `ds.sync.test.ts` fails on any byte of drift. If a component needs changing, change it at the source and re-sync — a local edit is a silent fork.
+- **Everything imports from `src/ds`, never from `src/ds/vendor` directly.** One place to see what the app uses, one place to shim, one path to change if the system ever ships as a package.
+- **No hardcoded colour in `packages/client`** — no hex, no `rgb()`, no `hsl()`, no named colours. Enforced by `no-hardcoded-colour.test.ts`, which also asserts it found source to check so it cannot pass vacuously.
+- **The app sets `data-theme` and picks no colours.** The design system defines both palettes; choosing one is the app's whole job.
+- **The client never re-sorts the pipeline.** Order is the server's single opinion about what matters today. Filters are sent to the server, which re-ranks. There is no `?sort=` and no client-side comparator.
+- **`format.ts` does no date arithmetic.** `daysLeft` arrives on the payload, computed server-side from the `x-timezone` header. A client that recomputes it can disagree with the rank it was given — that is defect C2 exactly.
+- **A count renders as `—` until it is known, never as `0`.** "0 due this week" is a claim; "not loaded yet" is not.
+- **A field shows a confidence meter, an "Edited" tag, or neither — never two.** Neither is correct when the field has no value: a meter beside "Nothing outstanding" claims confidence in an absence.
+- **"Could not reach the server" and "the server said no" are different states.** `NetworkError` is a separate class from `ApiError` and reaches a different surface.
+- **Loading states have the shape of the thing loading.** Rows for a list, not a spinner.
+- **A surface with no design says so.** Blank means blank; a plausible placeholder reads as a broken feature rather than an unbuilt one.
+- **Icons are bundled, not fetched.** A product with an offline banner must not need the network to draw it. `icons.test.ts` proves the bundled subset covers every name referenced in source.
+- **Responses are parsed, not cast.** A `fetch` returning something unexpected must fail next to the request, not three components deep.
+
 ## Business Logic
 
 ### Stages and progression

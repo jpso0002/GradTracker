@@ -15,7 +15,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --build",
+    "typecheck": "tsc --build && tsc -p packages/client/tsconfig.json --noEmit",
     "typecheck:clean": "tsc --build --clean",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -25,7 +25,9 @@
     "db:seed": "node --env-file-if-exists=.env packages/server/dist/db/seed-cli.js",
     "dev:server": "node --env-file-if-exists=.env packages/server/dist/server.js",
     "harvest": "node --env-file-if-exists=.env packages/server/dist/harvest/import.js",
-    "db:reset": "node -e \"require('node:fs').rmSync('dev.db',{force:true})\" && npm run db:migrate && npm run db:seed"
+    "db:reset": "node -e \"require('node:fs').rmSync('dev.db',{force:true})\" && npm run db:migrate && npm run db:seed",
+    "dev:client": "vite --config packages/client/vite.config.ts packages/client",
+    "build:client": "vite build --config packages/client/vite.config.ts packages/client"
   },
   "overrides": {
     "@esbuild-kit/core-utils": {

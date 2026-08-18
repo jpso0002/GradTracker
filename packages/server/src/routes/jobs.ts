@@ -2,8 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import {
   UpdateJobBodySchema,
-  StageEnum,
-  JobStatusEnum,
+  ListJobsQuerySchema,
   type Job,
   type FieldProvenance,
   type EmailEvent,
@@ -27,13 +26,17 @@ import { validateBody, validateQuery, validated, param } from "../middleware/val
  *     which is the thing this product exists to replace.
  */
 
-const ListQuerySchema = z.object({
-  status: JobStatusEnum.default("active"),
-  stage: z
-    .union([StageEnum, z.array(StageEnum)])
-    .optional()
-    .transform((v) => (v === undefined ? undefined : Array.isArray(v) ? v : [v])),
-});
+/**
+ * The shared contract, widened at exactly one point: Express parses
+ * `?stage=applied` to a string and `?stage=applied&stage=offer` to an array,
+ * so a single value is lifted to an array before the shared schema sees it.
+ * The *shape* still comes from `@gradtracker/shared` — no second definition.
+ */
+const ListQuerySchema = z.preprocess((raw) => {
+  const q = raw as Record<string, unknown>;
+  const stage = q["stage"];
+  return stage === undefined || Array.isArray(stage) ? q : { ...q, stage: [stage] };
+}, ListJobsQuerySchema);
 
 type DbJob = Awaited<ReturnType<Repository["listJobs"]>>[number];
 

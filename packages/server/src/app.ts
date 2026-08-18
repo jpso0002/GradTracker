@@ -1,5 +1,5 @@
 import express, { type Express, type Request, type Response } from "express";
-import type { UserId } from "@gradtracker/shared";
+import { CONFIDENCE, type MeResponse, type UserId } from "@gradtracker/shared";
 import type { Database } from "./db/client.js";
 import { createRepository } from "./db/repository.js";
 import { demoContext } from "./middleware/context.js";
@@ -38,9 +38,15 @@ export function createApp(options: AppOptions): Express {
   });
 
   app.get("/api/me", async (req: Request, res: Response) => {
-    const sync = await repo.getSyncState(req.userId);
-    res.json({
+    const [sync, user] = await Promise.all([
+      repo.getSyncState(req.userId),
+      repo.findUser(req.userId),
+    ]);
+    const response: MeResponse = {
+      email: user?.email ?? "",
+      displayName: user?.displayName ?? null,
       gmailConnected: sync?.historyId != null,
+      reviewThreshold: CONFIDENCE.DEFAULT_REVIEW_THRESHOLD,
       timeZone: req.timeZone,
       demoMode: true,
       sync: {
@@ -50,7 +56,8 @@ export function createApp(options: AppOptions): Express {
         progress: null,
         lastError: sync?.lastError ?? null,
       },
-    });
+    };
+    res.json(response);
   });
 
   app.use("/api/jobs", jobRoutes(repo, options.clock));

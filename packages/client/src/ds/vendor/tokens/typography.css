@@ -1,0 +1,51 @@
+:root{
+--font-core:"Inter","SF Pro Display",system-ui,-apple-system,sans-serif; /* @kind font */
+--font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace; /* @kind font */
+--weight-thin:300; /* @kind font */
+--weight-regular:400; /* @kind font */
+--weight-medium:500; /* @kind font */
+/* display tier — always weight 300, always negative tracking */
+--display-xxl-size:56px; /* @kind font */
+--display-xxl-lh:1.03; /* @kind other */
+--display-xxl-ls:-1.4px; /* @kind other */
+--display-xl-size:48px; /* @kind font */
+--display-xl-lh:1.15; /* @kind other */
+--display-xl-ls:-.96px; /* @kind other */
+--display-lg-size:32px; /* @kind font */
+--display-lg-lh:1.1; /* @kind other */
+--display-lg-ls:-.64px; /* @kind other */
+--display-md-size:26px; /* @kind font */
+--display-md-lh:1.12; /* @kind other */
+--display-md-ls:-.26px; /* @kind other */
+--heading-lg-size:22px; /* @kind font */
+--heading-lg-lh:1.1; /* @kind other */
+--heading-lg-ls:-.22px; /* @kind other */
+--heading-md-size:20px; /* @kind font */
+--heading-md-lh:1.4; /* @kind other */
+--heading-md-ls:-.2px; /* @kind other */
+--heading-sm-size:18px; /* @kind font */
+--heading-sm-lh:1.4; /* @kind other */
+--heading-sm-ls:0px; /* @kind other */
+/* body tier */
+--body-lg-size:16px; /* @kind font */
+--body-lg-lh:1.4; /* @kind other */
+--body-lg-ls:0px; /* @kind other */
+--body-md-size:15px; /* @kind font */
+--body-md-lh:1.4; /* @kind other */
+--body-md-ls:0px; /* @kind other */
+--body-tabular-size:14px; /* @kind font */
+--body-tabular-lh:1.4; /* @kind other */
+--body-tabular-ls:-.42px; /* @kind other */
+--button-md-size:16px; /* @kind font */
+--button-sm-size:14px; /* @kind font */
+--caption-size:13px; /* @kind font */
+--caption-lh:1.4; /* @kind other */
+--caption-ls:-.39px; /* @kind other */
+--micro-size:11px; /* @kind font */
+--micro-lh:1.4; /* @kind other */
+--micro-cap-size:10px; /* @kind font */
+--micro-cap-lh:1.15; /* @kind other */
+--micro-cap-ls:.1px; /* @kind other */
+--feature-core:"ss01"; /* @kind font */
+--feature-numeric:"tnum","ss01"; /* @kind font */
+}

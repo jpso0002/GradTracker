@@ -286,6 +286,21 @@ export function createRepository(db: Database) {
       return row;
     },
 
+    // ── the caller themselves ───────────────────────────────────────────────
+
+    /** The signed-in user's own row. Scoped like everything else — this can
+     *  only ever return the caller, never anyone else. Credential columns are
+     *  not selected: nothing outside the OAuth path has any business reading
+     *  them, and a response body is exactly where they must not appear. */
+    async findUser(userId: UserId) {
+      const [row] = await db
+        .select({ id: users.id, email: users.email, displayName: users.displayName })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      return row;
+    },
+
     // ── sync state ──────────────────────────────────────────────────────────
 
     async getSyncState(userId: UserId) {

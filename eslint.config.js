@@ -3,10 +3,27 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "GradTracker Design System/**"],
+    /* The design system is vendored verbatim into the client and verified
+       against its source by ds.sync.test.ts. Linting it would demand edits
+       that the drift test would then reject — so it is not ours to lint. */
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "GradTracker Design System/**",
+      "packages/client/src/ds/vendor/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    /* Plain .mjs build scripts run in Node. They are typechecked by the
+       client tsconfig (allowJs), so no-undef here is redundant noise — but
+       declaring the globals is cheaper than an exception. */
+    files: ["**/*.mjs"],
+    languageOptions: {
+      globals: { process: "readonly", console: "readonly" },
+    },
+  },
   {
     rules: {
       "@typescript-eslint/consistent-type-imports": "error",

@@ -1,12 +1,29 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./dist",
+    /* The client is bundled by Vite, not built by tsc. `NodeNext` would demand
+     * explicit `.js` extensions on every relative import, which the vendored
+     * design-system `.jsx` files cannot satisfy — they have `.d.ts` siblings,
+     * not `.js` ones. `Bundler` matches how the code is actually loaded. */
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+
+    /* Not a composite project: nothing references the client, and `noEmit`
+     * is incompatible with `composite`. Typechecked directly — see the root
+     * `typecheck` script. */
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+
+    "allowJs": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@gradtracker/shared": ["../shared/src/index.ts"]
+    }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "dist"],
-  "references": [{ "path": "../shared" }]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.mjs"],
+  "exclude": ["dist", "src/ds/vendor/**/*.jsx"]
 }
