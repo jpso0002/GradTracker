@@ -6,7 +6,9 @@ when its dependencies are checked off.
 
 **Companion docs:** [masterplan.md](masterplan.md) (why) · [implementation.md](implementation.md)
 (how) · [design.md](design.md) (look) · [app-flow.md](app-flow.md) (behaviour) ·
-[decision-record.md](decision-record.md) (choices)
+[decision-record.md](decision-record.md) (choices) ·
+[revision-plan.md](revision-plan.md) (what changes, and why) ·
+[project-context.md](project-context.md) (full context, for a fresh chat)
 
 ---
 
