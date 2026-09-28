@@ -38,32 +38,12 @@ export function App() {
             }
           />
           <Route
-            path="/calendar"
-            element={
-              <BlankView
-                title="Calendar"
-                icon="calendar-clock"
-                description="No design exists for this yet, so there is nothing here. Blank means blank."
-              />
-            }
-          />
-          <Route
-            path="/archive"
-            element={
-              <BlankView
-                title="Archive"
-                icon="archive"
-                description="Rejected and withdrawn applications are on the Archived tab of your pipeline."
-              />
-            }
-          />
-          <Route
             path="/settings"
             element={
               <BlankView
                 title="Settings"
                 icon="settings"
-                description="Settings arrive with T6.5. The review threshold is currently a constant."
+                description="Settings arrive with T6.4. The review threshold is currently a constant."
               />
             }
           />

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, inArray, desc } from "drizzle-orm";
+import { TERMINAL_STAGES } from "@gradtracker/shared";
 import type { UserId, Stage, JobStatus, ReviewStatus, ExtractableField, ProvenanceSource, ClassifierModel } from "@gradtracker/shared";
 import type { Database } from "./client.js";
 import { users, jobs, emailEvents, jobFieldProvenance, syncState } from "./schema.sqlite.js";
@@ -75,6 +76,7 @@ export interface NewJob {
   lastEventAt: Date;
 }
 
+/** No `status` field, deliberately — see `statusFor()`. */
 export interface JobPatch {
   company?: string;
   companyNormalised?: string;
@@ -83,7 +85,20 @@ export interface JobPatch {
   deadlineAt?: Date | null;
   nextAction?: string | null;
   lastEventAt?: Date;
-  status?: JobStatus;
+}
+
+/**
+ * A job's status is a function of its stage: terminal stages are archived,
+ * every other stage is active. It is never set on its own.
+ *
+ * Ranking drops terminal stages from the Active tab, and the Archived tab
+ * filters on status — so if the two ever disagree, an application is on
+ * neither tab. That happened three times, on three code paths, while the rule
+ * lived at the call sites (defect C11). Every stage write passes through
+ * `insertJob` or `updateJob`, so this is the one place it can live.
+ */
+function statusFor(stage: Stage): JobStatus {
+  return TERMINAL_STAGES.has(stage) ? "archived" : "active";
 }
 
 export interface NewEmailEvent {
@@ -147,6 +162,7 @@ export function createRepository(db: Database) {
           companyNormalised: input.companyNormalised,
           role: input.role,
           stage: input.stage,
+          status: statusFor(input.stage),
           deadlineAt: input.deadlineAt ?? null,
           nextAction: input.nextAction ?? null,
           senderDomain: input.senderDomain ?? null,
@@ -161,9 +177,15 @@ export function createRepository(db: Database) {
     /** Returns undefined when the job does not belong to this user — the
      *  caller cannot tell "not yours" from "does not exist", by design. */
     async updateJob(userId: UserId, jobId: string, patch: JobPatch) {
+      // `status` is not part of JobPatch, so typed callers cannot pass one. It
+      // is also discarded at runtime, because test files and plain JavaScript
+      // are not typechecked — the invariant must not depend on who is calling.
+      const { status: _discarded, ...fields } = patch as JobPatch & { status?: unknown };
+      const derived = fields.stage !== undefined ? { status: statusFor(fields.stage) } : {};
+
       const [row] = await db
         .update(jobs)
-        .set({ ...patch, updatedAt: new Date() })
+        .set({ ...fields, ...derived, updatedAt: new Date() })
         .where(and(eq(jobs.userId, userId), eq(jobs.id, jobId)))
         .returning();
       return row;

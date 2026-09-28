@@ -169,3 +169,50 @@ describe("idempotency", () => {
     await expect(insert()).rejects.toThrow();
   });
 });
+
+describe("status mirrors stage (T4.9)", () => {
+  // Ranking drops terminal stages from Active; the Archived tab filters on
+  // status. If the two ever disagree, an application is on neither tab. The
+  // repository is the one path every stage write shares, so the rule lives
+  // here and nowhere else.
+
+  const rejectedJob = () =>
+    repo.insertJob(alice, {
+      company: "Deloitte",
+      companyNormalised: "deloitte",
+      role: "Audit Graduate Program",
+      stage: "rejected",
+      confidence: 0.9,
+      firstSeenAt: new Date("2026-05-01T00:00:00Z"),
+      lastEventAt: new Date("2026-05-01T00:00:00Z"),
+    });
+
+  it("archives a job inserted at a terminal stage", async () => {
+    expect((await rejectedJob())!.status).toBe("archived");
+  });
+
+  it("keeps a job inserted at a live stage active", async () => {
+    expect((await seedJob(alice)).status).toBe("active");
+  });
+
+  it("derives status whenever an update sets the stage, in both directions", async () => {
+    const job = await seedJob(alice);
+    expect((await repo.updateJob(alice, job.id, { stage: "withdrawn" }))!.status).toBe("archived");
+    expect((await repo.updateJob(alice, job.id, { stage: "offer" }))!.status).toBe("active");
+  });
+
+  it("leaves status alone when an update does not touch the stage", async () => {
+    const job = await rejectedJob();
+    const row = await repo.updateJob(alice, job!.id, { nextAction: "Ask for feedback" });
+    expect(row!.status).toBe("archived");
+  });
+
+  it("refuses a status passed by an untyped caller", async () => {
+    // JobPatch has no `status`, so typed code cannot set one — asserted in
+    // repository.typecheck.ts. Test files and plain JavaScript are not
+    // typechecked, so the repository also discards it at runtime.
+    const job = await seedJob(alice);
+    const row = await repo.updateJob(alice, job.id, { status: "archived" } as never);
+    expect(row!.status).toBe("active");
+  });
+});

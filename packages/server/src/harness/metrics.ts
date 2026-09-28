@@ -69,7 +69,12 @@ export const recall = (m: ConfusionMatrix): number =>
  * points, so "96.3%" and "91%" are not distinguishable by this corpus. Quoting
  * the point estimate alone would overstate what has been measured.
  */
-export function wilsonInterval(successes: number, n: number, z = 1.96): { lower: number; upper: number } {
+export interface Interval {
+  lower: number;
+  upper: number;
+}
+
+export function wilsonInterval(successes: number, n: number, z = 1.96): Interval {
   if (n === 0) return { lower: 0, upper: 0 };
 
   const z2 = z * z;
@@ -82,6 +87,48 @@ export function wilsonInterval(successes: number, n: number, z = 1.96): { lower:
     lower: Math.max(0, centre - spread),
     upper: Math.min(1, centre + spread),
   };
+}
+
+/**
+ * One reported figure (T2.9).
+ *
+ * Every proportion the harness states carries its own denominator and its own
+ * interval, so none can be quoted without its uncertainty. RQ-03 requires this
+ * of accuracy, precision, recall and false negatives; decision D33 extends it
+ * to every proportion reported. Before T2.9 only accuracy had one (defect C12).
+ */
+export interface Proportion {
+  /** The point estimate. 0 when `n` is 0 — which is why `n` travels with it. */
+  value: number;
+  successes: number;
+  n: number;
+  /** Wilson 95%. Null when `n` is 0: an empty denominator has no interval, for
+   *  the same reason T2.7 refuses to pass SM-3 on 0/0. */
+  interval: Interval | null;
+}
+
+export function proportion(successes: number, n: number): Proportion {
+  return {
+    value: ratio(successes, n),
+    successes,
+    n,
+    interval: n === 0 ? null : wilsonInterval(successes, n),
+  };
+}
+
+/** Every figure the report prints, each with its interval. */
+export interface Figures {
+  accuracy: Proportion;
+  precision: Proportion;
+  recall: Proportion;
+  /** Missed applications as a share of the applications that exist — SM-2
+   *  stated as a figure, not only as a count. The complement of recall. */
+  falseNegativeRate: Proportion;
+  deadlineDetection: Proportion;
+  deadlineExactTime: Proportion;
+  company: Proportion;
+  role: Proportion;
+  stage: Proportion;
 }
 
 // ── Deadline detection (SM-3) ───────────────────────────────────────────────
@@ -257,8 +304,10 @@ export const THRESHOLDS = Object.freeze({
 
 export interface Report {
   matrix: ConfusionMatrix;
+  /** Every printed proportion with its interval (T2.9). The scalar fields
+   *  below are what the gate compares against its thresholds. */
+  figures: Figures;
   accuracy: number;
-  accuracyInterval: { lower: number; upper: number };
   precision: number;
   recall: number;
   deadlines: DeadlineScore;
@@ -287,15 +336,29 @@ export function buildReport(scored: Scored[]): Report {
   const passedDeadlines =
     deadlines.denominator > 0 && deadlineRate >= THRESHOLDS.DEADLINE_DETECTION;
 
+  const fields = fieldAccuracy(scored);
+  const applications = matrix.truePositives + matrix.falseNegatives;
+  const predictedApplications = matrix.truePositives + matrix.falsePositives;
+
   return {
     matrix,
+    figures: {
+      accuracy: proportion(matrix.truePositives + matrix.trueNegatives, matrix.total),
+      precision: proportion(matrix.truePositives, predictedApplications),
+      recall: proportion(matrix.truePositives, applications),
+      falseNegativeRate: proportion(matrix.falseNegatives, applications),
+      deadlineDetection: proportion(deadlines.correctDate, deadlines.denominator),
+      deadlineExactTime: proportion(deadlines.correctTime, deadlines.denominator),
+      company: proportion(fields.company, fields.denominator),
+      role: proportion(fields.role, fields.denominator),
+      stage: proportion(fields.stage, fields.denominator),
+    },
     accuracy: acc,
-    accuracyInterval: wilsonInterval(matrix.truePositives + matrix.trueNegatives, matrix.total),
     precision: precision(matrix),
     recall: recall(matrix),
     deadlines,
     deadlineRate,
-    fields: fieldAccuracy(scored),
+    fields,
     missed: missedApplications(scored),
     falseAlarms: falseAlarms(scored),
     deadlineFailures: deadlineFailures(scored),

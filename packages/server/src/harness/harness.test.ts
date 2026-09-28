@@ -62,6 +62,65 @@ describe("harness self-test", () => {
   });
 });
 
+describe("an interval on every printed figure (T2.9)", () => {
+  /** Every line that states a percentage, paired with the line after it. */
+  function percentageLines(output: string): [string, string][] {
+    const lines = output.split("\n");
+    return lines.flatMap((line, i): [string, string][] =>
+      /\d+\.\d %/.test(line) && !line.includes("95% CI") ? [[line, lines[i + 1] ?? ""]] : [],
+    );
+  }
+
+  const CI = /95% CI (\d+\.\d % – \d+\.\d % {2}\(Wilson, n=\d+\)|— {2}\(n=0: nothing to measure\))/;
+
+  it.each([
+    ["the self-test", undefined],
+    ["the demo run, with errors injected", demoCorruption],
+  ])("follows every percentage with its interval in %s", async (_label, corrupt) => {
+    const { output } = await runHarness({
+      classifier: new FakeEmailClassifier({ fixtures, ...(corrupt ? { corrupt } : {}) }),
+      fixtures,
+      model: "fake",
+      isSelfTest: true,
+    });
+
+    const pairs = percentageLines(output);
+    // Accuracy, precision, recall, false-negative rate, deadline detection,
+    // exact time, company, role, stage. A sweep finding fewer has missed some.
+    expect(pairs.length).toBe(9);
+    for (const [figure, next] of pairs) {
+      expect(next, `no interval after: ${figure.trim()}`).toMatch(CI);
+    }
+  });
+
+  it("names the false-negative rate, so SM-2 is a figure and not only a count", async () => {
+    const { output } = await runHarness({
+      classifier: new FakeEmailClassifier({ fixtures, corrupt: demoCorruption }),
+      fixtures,
+      model: "fake",
+      isSelfTest: true,
+    });
+    expect(output).toMatch(/False-negative rate\s+\d+\.\d %/);
+  });
+
+  it("says there is nothing to measure rather than printing 0.0 % for 0/0", async () => {
+    // Only fixtures without deadline language: deadline detection has an
+    // empty denominator. Printing "0.0 %" there would claim a result.
+    const noDeadlines = fixtures.filter((f) => !f.expected.hasExplicitDeadlineLanguage);
+    const { output } = await runHarness({
+      classifier: new FakeEmailClassifier({ fixtures: noDeadlines }),
+      fixtures: noDeadlines,
+      model: "fake",
+      isSelfTest: true,
+    });
+
+    const deadlineLine = output.split("\n").find((l) => l.startsWith("Deadline detection"))!;
+    expect(deadlineLine).not.toContain("0.0 %");
+    expect(deadlineLine).toContain("—");
+    expect(output).toContain("95% CI —  (n=0: nothing to measure)");
+  });
+});
+
 describe("the gate fails on a broken classifier", () => {
   it("fails when everything is inverted", async () => {
     const { passed, output } = await runHarness({

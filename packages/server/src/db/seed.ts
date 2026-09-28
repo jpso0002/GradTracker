@@ -31,7 +31,6 @@ export interface SeedSpec {
   confidence: number;
   /** Fields the student has corrected. These must survive a later sync. */
   humanVerified?: ("company" | "role" | "stage" | "deadline_at" | "next_action")[];
-  archived?: boolean;
 }
 
 /**
@@ -79,10 +78,10 @@ export const SEED_JOBS: SeedSpec[] = [
   { company: "IBM", role: "Graduate Consultant", stage: "assessment", deadlineInDays: 8, lastEventDaysAgo: 6, nextAction: "Complete cognitive assessment", senderDomain: "ibm.com", confidence: 0.61, humanVerified: ["deadline_at"] },
   { company: "Accenture", role: "Technology Graduate", stage: "applied", deadlineInDays: null, lastEventDaysAgo: 9, nextAction: "Wait for response", senderDomain: "accenture.com", confidence: 0.64, humanVerified: ["next_action", "stage"] },
 
-  // ── Terminal — excluded from the Active tab, still needed for the badges ─
-  { company: "Amazon", role: "SDE Intern", stage: "rejected", deadlineInDays: null, lastEventDaysAgo: 14, nextAction: null, senderDomain: "amazon.com", confidence: 0.98, archived: true },
-  { company: "Bain & Company", role: "Associate Consultant Intern", stage: "rejected", deadlineInDays: null, lastEventDaysAgo: 30, nextAction: null, senderDomain: "bain.com", confidence: 0.96, archived: true },
-  { company: "Qantas", role: "Graduate Program", stage: "withdrawn", deadlineInDays: null, lastEventDaysAgo: 25, nextAction: null, senderDomain: "qantas.com.au", confidence: 0.9, archived: true },
+  // ── Terminal — archived by the repository, still needed for the badges ────
+  { company: "Amazon", role: "SDE Intern", stage: "rejected", deadlineInDays: null, lastEventDaysAgo: 14, nextAction: null, senderDomain: "amazon.com", confidence: 0.98 },
+  { company: "Bain & Company", role: "Associate Consultant Intern", stage: "rejected", deadlineInDays: null, lastEventDaysAgo: 30, nextAction: null, senderDomain: "bain.com", confidence: 0.96 },
+  { company: "Qantas", role: "Graduate Program", stage: "withdrawn", deadlineInDays: null, lastEventDaysAgo: 25, nextAction: null, senderDomain: "qantas.com.au", confidence: 0.9 },
 ];
 
 /** Low-confidence detections awaiting review — they have no job yet. */
@@ -147,10 +146,6 @@ export async function seed(db: Database, today: Date = new Date()): Promise<Seed
       lastEventAt,
     });
     if (!job) continue;
-
-    if (spec.archived) {
-      await repo.updateJob(userId, job.id, { status: "archived" });
-    }
 
     const human = new Set(spec.humanVerified ?? []);
     for (const field of ["company", "role", "stage", "deadline_at", "next_action"] as const) {

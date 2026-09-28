@@ -205,12 +205,10 @@ export function jobRoutes(repo: Repository, clock: () => Date = () => new Date()
       return;
     }
 
-    // Withdrawing sets BOTH the stage and the archived status. The stage is
-    // what the timeline and badge show; the status is what the Active tab
-    // filters on. Setting only one leaves the job visible in a list it should
-    // have left — the gap the harvest surfaced on the rejected KPMG job.
+    // A human-locked `withdrawn` stage, so no later email can revive it. The
+    // repository archives the job as part of the same write — status is
+    // derived from stage there, never set separately (T4.9).
     await applyCorrection(repo, req.userId, jobId, { stage: "withdrawn" });
-    await repo.updateJob(req.userId, jobId, { status: "archived" });
 
     res.json({ ok: true });
   });

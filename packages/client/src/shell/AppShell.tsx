@@ -6,19 +6,16 @@ import { useTheme } from "../theme/theme";
 /**
  * The app shell: 240px sidebar, then whatever the route renders.
  *
- * Calendar and Archive are in the sidebar and go nowhere on purpose. The brief
- * defines no design for them, and design.md §9 says blank means blank rather
- * than filled with placeholder content — so they are listed (the product does
- * intend to have them) and lead to a view that says so.
+ * Calendar and Archive were listed here until 28 September (decision D29). The
+ * deadline pill on every row already shows what is due and overdue — which is
+ * what a calendar was for — and Archive only duplicated the pipeline's
+ * Archived tab. A sidebar entry should lead somewhere the product has built.
  */
 
 const NAV: SidebarNavItem[] = [
   { section: "Pipeline" },
   { id: "/pipeline", label: "Applications", icon: "layers" },
   { id: "/review", label: "Needs review", icon: "sparkles" },
-  { section: "Coming soon" },
-  { id: "/calendar", label: "Calendar", icon: "calendar-clock" },
-  { id: "/archive", label: "Archive", icon: "archive" },
   { section: "Account" },
   { id: "/settings", label: "Settings", icon: "settings" },
   { id: "/docs", label: "Documentation", icon: "book-open" },

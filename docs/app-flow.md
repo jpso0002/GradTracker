@@ -31,9 +31,9 @@ Five surfaces, matching the design system's app UI kit exactly.
                         └─────────────┘
 ```
 
-**Calendar and Archive appear in the sidebar but are deliberately blank** — the brief
-defines no design for them, and [design.md §9](design.md) says blank means blank rather than
-filled with placeholder content.
+**Calendar and Archive were removed from the sidebar on 28 September 2026** (decision D29).
+The deadline pill on every row already shows what is due and overdue, and Archive only
+duplicated the pipeline's Archived tab.
 
 ### 1.1 Routes
 
@@ -55,7 +55,7 @@ back closes the panel rather than leaving the pipeline.
 ## 2. Navigation model
 
 **Sidebar** (240px, persistent): Wordmark · Pipeline · Needs review *(count badge)* ·
-Calendar *(blank)* · Archive *(blank)* · Settings. Theme toggle bottom-left.
+Settings · Documentation. Theme toggle bottom-left.
 
 **Top bar** (56px): view title · search · "Sync inbox" with last-synced timestamp · avatar.
 
@@ -133,6 +133,10 @@ advances only inside the committing transaction.
     │
     ├──edit + confirm──► confirmed  (edited fields → human)
     │
+    ├──"same application"──► confirmed  (attached to the suggested job — D26)
+    │
+    ├──"new application"───► confirmed  (a new job; suggestion declined — D26)
+    │
     └──dismiss──────────► dismissed (never resurfaces)
 ```
 
@@ -191,20 +195,25 @@ has recreated their spreadsheet.
 
 **Goal:** fix a wrong value without leaving the dashboard, permanently.
 
-1. Student notices "Deloite" in the company column — the field shows a `ConfidenceMeter`, so
-   it is AI-extracted.
-2. Clicks the field → becomes an `Input` in place, pre-filled, focused, text selected.
-3. Types "Deloitte", presses `Enter`.
-4. Optimistic update. `PATCH /api/jobs/:id`.
+*Revised 28 September 2026 — panel edit mode (decision D27).*
+
+1. Student opens the Deloitte application; the company reads "Deloite", beside a
+   `ConfidenceMeter` — so it is AI-extracted.
+2. Clicks **Edit** in the detail panel. All five fields become editable in place; nothing is
+   saved yet.
+3. Corrects "Deloite" to "Deloitte", leaving the other four untouched.
+4. Clicks **Save**. `PATCH /api/jobs/:id` carries **only the company** — the untouched fields
+   keep their AI provenance and their meters.
 5. Server validates, writes the value, sets provenance `source = 'human'`, clears confidence.
-6. Field returns to display type. **The meter is replaced by an "Edited" tag.** Toast:
-   "Company updated".
+6. The panel returns to display mode. **The company's meter is replaced by an "Edited"
+   tag.** Toast: "Application updated".
 7. On the next sync, an email carrying "Deloite" again **does not overwrite it** — and
    because human values are the matching key, that email lands on the corrected job.
 
-**Escape** cancels and restores the original. **Validation failure** keeps focus, shows the
-error beneath, and never discards what was typed. **Request failure** rolls back the
-optimistic update and shows an error toast with "Try again".
+**Cancel** discards every pending change. **Validation failure** keeps the panel in edit
+mode, shows the error beneath the field, and never discards what was typed. **If an ingest
+changed the application while the panel was open**, Save says so and asks before
+overwriting. **Request failure** keeps the edits and shows an error toast with "Try again".
 
 ### 4.4 Journey D — Review queue *(workflow 6, low-confidence path)*
 
@@ -227,7 +236,19 @@ optimistic update and shows an error toast with "Try again".
 should be able to say so — per-field confidence and per-field confirmation is what makes
 this a review rather than an all-or-nothing accept.
 
+**Suggested applications** *(28 September 2026, D26)*. When an email matches an existing
+application on company and sender alone, with a clearly different role, it lands here
+instead of being merged. The card names the suggestion — *"Same application as Macquarie
+Group — Graduate Program 2027, Technology?"* — and the student answers **Same application**
+or **New application** before confirming. Until then, that application's row on the pipeline
+carries a "Review required" marker linking back to the card.
+
 ### 4.5 Journey E — Manual sync *(workflow 7)*
+
+*Demo track, 28 September 2026 (D25):* until hosted Gmail access is built, **Refresh ingests
+new files from a drop folder** — harvest JSON, `.mbox` or `.eml` — instead of fetching from
+`history_id`. Step 3 becomes "`POST /api/sync` → ingest the new files, pipeline over new mail
+only"; every other step is unchanged, and a second click while one is running is refused.
 
 1. Student clicks "Sync inbox" in the top bar.
 2. Button enters a loading state; the label becomes "Syncing…".
@@ -242,7 +263,7 @@ Sync is non-blocking: the pipeline stays readable and interactive throughout.
 ### 4.6 Journey F — Withdraw
 
 1. Student opens a job's detail panel, clicks "Withdraw".
-2. `Dialog` confirms: "Withdraw your Deloitte application? It moves to Archive and stops
+2. `Dialog` confirms: "Withdraw your Deloitte application? It moves to the Archived tab and stops
    appearing in your pipeline."
 3. Confirm → `stage = 'withdrawn'`, `status = 'archived'`, provenance `human` (so no future
    email revives it).
@@ -284,7 +305,8 @@ Rows are keyboard-navigable buttons. Selected rows take `--surface-selected`.
 Company and role (both editable) · `StageBadge` with a stage `Select` · extracted fields
 with `ConfidenceMeter` or "Edited" tag · deadline (editable, `DeadlinePill`) · next action
 (editable) · **timeline** of `email_events` (stage, date, sender domain, "View in Gmail")
-· "Withdraw".
+· "Withdraw". Editing is **panel edit mode** — Edit, then Save or Cancel; Save sends only
+the fields changed (D27). Authored emails show a "Synthetic" tag and no Gmail link (D24).
 
 **The timeline is provenance made visible.** It is how a student answers "why does it think
 this?" — and it works precisely because event rows are metadata-only, so showing the history
@@ -293,13 +315,17 @@ never means showing stored email content.
 ### 5.4 Needs review
 
 Header explaining the ask · one card per pending item with per-field confidence and source ·
-Confirm / Edit / Not an application · empty state as §4.4.
+Confirm / Edit / Not an application · empty state as §4.4. An item carrying a suggested
+application asks **same application, or new?** before confirming (D26).
 
 ### 5.5 Settings
 
-Gmail connection (account, last sync, Disconnect) · detection (review threshold slider,
-described as "How sure GradTracker must be before adding an application automatically") ·
+Detection — review threshold slider, described as "How sure GradTracker must be before
+adding an application automatically", **stating that it applies to new mail only** (D28) ·
 follow-up reminder thresholds · profile · theme.
+
+*Gmail connection and Disconnect are deferred with hosted OAuth (D23) — with no stored token
+there is nothing to disconnect. The behaviour below applies once OAuth is built.*
 
 **Disconnect** confirms via `Dialog`, deletes the encrypted refresh token and `sync_state`,
 and **keeps the pipeline data** — the student's corrections are theirs. State this in the
@@ -319,7 +345,6 @@ Every one admits the gap rather than filling space ([design.md §9](design.md)).
 | Archived tab | Empty | `archive` · "Nothing archived" |
 | Needs review | Empty | `mail-check` · "Nothing to review" · "GradTracker was confident about everything it found." |
 | Detail timeline | One event | The single event — never "no history" |
-| Calendar / Archive | Always | "Not built yet" — deliberately blank |
 
 The "synced, none found" state routes the student to the threshold rather than leaving them
 stuck, because that state most often means the gate is too high.

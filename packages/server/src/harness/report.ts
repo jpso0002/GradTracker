@@ -1,4 +1,4 @@
-import type { Report } from "./metrics.js";
+import type { Proportion, Report } from "./metrics.js";
 import { THRESHOLDS } from "./metrics.js";
 
 /** Formats the accuracy report. Separated from the arithmetic so the numbers
@@ -8,6 +8,16 @@ const RULE = "─".repeat(72);
 
 const pct = (value: number, places = 1): string => `${(value * 100).toFixed(places)} %`;
 const pad = (label: string, width = 26): string => label.padEnd(width);
+
+/** The point estimate — or a dash where there was nothing to measure, since
+ *  printing "0.0 %" for 0/0 would claim a result that does not exist. */
+const figure = (p: Proportion): string => (p.n === 0 ? "—" : pct(p.value));
+
+/** The interval line printed beneath every figure (T2.9). */
+const intervalLine = (p: Proportion): string =>
+  p.interval === null
+    ? `${pad("")}95% CI —  (n=0: nothing to measure)`
+    : `${pad("")}95% CI ${pct(p.interval.lower)} – ${pct(p.interval.upper)}  (Wilson, n=${p.n})`;
 
 export interface ReportContext {
   promptVersion: string;
@@ -45,58 +55,64 @@ export function formatReport(report: Report, context: ReportContext): string {
   );
   lines.push("");
 
+  // Every percentage below is followed by its interval (T2.9). A figure without
+  // one would overstate what a corpus of this size can measure.
+  const f = report.figures;
+
   // ── SM-1 ──────────────────────────────────────────────────────────────────
-  const ci = report.accuracyInterval;
-  const accuracyDetail = `(${m.truePositives + m.trueNegatives}/${m.total})`;
   lines.push(
     pad("Accuracy") +
-      pct(report.accuracy).padEnd(12) +
-      accuracyDetail.padEnd(26) +
+      figure(f.accuracy).padEnd(12) +
+      `(${f.accuracy.successes}/${f.accuracy.n})`.padEnd(26) +
       `target ≥${THRESHOLDS.ACCURACY * 100}%   ${report.passedAccuracy ? "PASS" : "FAIL"}`,
   );
+  lines.push(intervalLine(f.accuracy));
   lines.push(
-    `${pad("")}95% CI ${pct(ci.lower)} – ${pct(ci.upper)}  (Wilson, n=${m.total})`,
+    `${pad("Precision")}${figure(f.precision).padEnd(12)}(${f.precision.successes}/${f.precision.n} predicted)`,
   );
+  lines.push(intervalLine(f.precision));
   lines.push(
-    `${pad("Precision")}${pct(report.precision)}     (${m.truePositives}/${
-      m.truePositives + m.falsePositives
-    } predicted)`,
+    `${pad("Recall")}${figure(f.recall).padEnd(12)}(${f.recall.successes}/${f.recall.n} actual)`,
   );
-  lines.push(
-    `${pad("Recall")}${pct(report.recall)}     (${m.truePositives}/${
-      m.truePositives + m.falseNegatives
-    } actual)`,
-  );
+  lines.push(intervalLine(f.recall));
+  lines.push("");
+
+  // ── SM-2 ──────────────────────────────────────────────────────────────────
   lines.push(
     `${pad("False negatives")}${String(m.falseNegatives).padStart(6)}      ◄ missed applications        [SM-2]`,
   );
+  lines.push(
+    `${pad("False-negative rate")}${figure(f.falseNegativeRate).padEnd(12)}(${
+      f.falseNegativeRate.successes
+    }/${f.falseNegativeRate.n} actual)`,
+  );
+  lines.push(intervalLine(f.falseNegativeRate));
   lines.push(`${pad("False positives")}${String(m.falsePositives).padStart(6)}`);
   lines.push("");
 
   // ── SM-3 ──────────────────────────────────────────────────────────────────
   const d = report.deadlines;
-  const deadlineDetail = `(${d.correctDate}/${d.denominator} deadline-bearing)`;
   lines.push(
     pad("Deadline detection") +
-      pct(report.deadlineRate).padEnd(12) +
-      deadlineDetail.padEnd(26) +
+      figure(f.deadlineDetection).padEnd(12) +
+      `(${d.correctDate}/${d.denominator} deadline-bearing)`.padEnd(26) +
       `target ≥${THRESHOLDS.DEADLINE_DETECTION * 100}%   ${report.passedDeadlines ? "PASS" : "FAIL"}`,
   );
+  lines.push(intervalLine(f.deadlineDetection));
   lines.push(
-    `${pad("")}exact time ${d.correctTime}/${d.denominator} · missed ${d.missed} · invented ${d.hallucinated}`,
+    `${pad("  exact time")}${figure(f.deadlineExactTime).padEnd(12)}(${d.correctTime}/${d.denominator})`,
   );
+  lines.push(intervalLine(f.deadlineExactTime));
+  lines.push(`${pad("")}missed ${d.missed} · invented ${d.hallucinated}`);
   lines.push("");
 
   // ── Field accuracy ────────────────────────────────────────────────────────
   if (report.fields.denominator > 0) {
     lines.push(`Field accuracy (on ${report.fields.denominator} true positives)`);
     for (const field of ["company", "role", "stage"] as const) {
-      const correct = report.fields[field];
-      lines.push(
-        `  ${pad(field, 24)}${pct(correct / report.fields.denominator)}     (${correct}/${
-          report.fields.denominator
-        })`,
-      );
+      const p = f[field];
+      lines.push(`  ${pad(field, 24)}${figure(p).padEnd(12)}(${p.successes}/${p.n})`);
+      lines.push(intervalLine(p));
     }
     lines.push("");
   }

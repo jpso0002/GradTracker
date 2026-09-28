@@ -7,9 +7,9 @@ does not get built.
 | | |
 |---|---|
 | **Project** | GradTracker — AI-powered graduate recruitment tracking dashboard |
-| **Unit** | FIT3163, Monash University |
+| **Unit** | FIT3162 / FIT3164 / FIT3189 Software Project Part 2, Monash University *(FIT3161 / FIT3163 / FIT3188 in semester 1)* |
 | **Team** | 3 students, 12-week semester |
-| **Client / supervisor** | FIT3163 teaching team |
+| **Client / supervisor** | The unit's teaching team |
 | **Status** | Pre-implementation. Architecture agreed 16 August 2026 (see [decision-record.md](decision-record.md)) |
 | **Companion docs** | [implementation.md](implementation.md) · [design.md](design.md) · [app-flow.md](app-flow.md) |
 
@@ -94,7 +94,7 @@ product gets *one screen* and a few seconds to be useful.
 correction teaches the student that the tool cannot be relied on, and the spreadsheet comes
 back.
 
-### 3.3 Secondary — FIT3163 teaching team *(supervisor / client / evaluator)*
+### 3.3 Secondary — the unit's teaching team *(supervisor / client / evaluator)*
 *At milestone reviews.*
 
 Needs **requirements traceability**: evidence that classification accuracy, deadline

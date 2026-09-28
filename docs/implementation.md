@@ -436,6 +436,9 @@ land on the corrected job. This is what "the correction persists" means operatio
 Unmatched → new job. Over-merging is worse than a duplicate: a duplicate is visible and
 correctable, a wrong merge silently destroys a real application's history.
 
+*Revision 3 (28 September): a domain-only match with low role similarity no longer merges —
+it goes to review. See §15.2.*
+
 ### 7.7 F4 — Correct the AI *(workflow 6)*
 
 **Requirement.** Clicking any extracted field makes it inline-editable. On save the value is
@@ -460,6 +463,9 @@ six. Rejection returns 400 with the field name.
 **Visual contract** is [design.md §7](design.md): human-verified fields show an "Edited" tag
 and drop the confidence meter; AI fields show `ConfidenceMeter`.
 
+*Revision 3 (28 September): correction happens in panel edit mode, and a correction that sets
+a terminal stage archives the application. See §15.3.*
+
 ### 7.8 F5 — Review queue *(confidence gate)*
 
 Emails classified below `users.review_threshold` (default 0.75) create an `email_events` row
@@ -467,6 +473,9 @@ with `review_status = 'pending'` and **no** job. They appear in Needs review wit
 confidence. The student **confirms** (creates or updates the job, all confirmed fields
 marked `human`), **edits then confirms**, or **dismisses** (`review_status = 'dismissed'`;
 never resurfaces — the unique constraint on `gmail_message_id` guarantees it).
+
+*Revision 3 (28 September): `users.review_threshold` exists but nothing reads it yet — the
+pipeline is handed the constant. See §15.3.*
 
 ### 7.9 F6 — See the pipeline *(workflow 4)*
 
@@ -502,6 +511,8 @@ Deadline-bearing actions render with the date appended: "Complete online assessm
 `POST /api/sync` triggers an incremental fetch, re-runs the pipeline over new mail only, and
 returns a summary. Concurrent syncs for one user are rejected with 409 — `sync_state.state`
 is the lock. The button shows progress and the timestamp updates to "Synced just now".
+
+*Revision 3 (28 September): on the demo track, Refresh ingests a drop folder. See §15.1.*
 
 ---
 
@@ -809,3 +820,57 @@ npm run accuracy          # the SM-1/SM-2/SM-3 gate
 No database server, no Google account, and no API key is required for any of the above.
 That property is a requirement, not a convenience — it is how a marker verifies the project
 on a machine that has never seen it.
+
+---
+
+## 15. Revision 3 — planned changes *(28 September 2026)*
+
+Agreed, not yet built. Reasoning is in [decision-record.md](decision-record.md) D22–D33;
+order in the Plan of record in [tasks.md](tasks.md). Where this section and §7–§9 disagree,
+this section is the plan, and §7–§9 describe what exists or the original design.
+
+### 15.1 Hybrid local ingestion *(D23, D24, D25)*
+
+```
+harvest JSON ─┐
+.mbox export ─┼─► reader ─► RawEmail (+ source) ─► processEmail ─► database
+.eml files   ─┘                                        ▲  unchanged
+                                              live classifier (T7.3)
+```
+
+- **Readers, not new pipelines.** The harvest reader exists; the mailbox reader (T7.8)
+  parses `.mbox` and `.eml` through a MIME library. Both produce `RawEmail`, so the pipeline,
+  the retention boundary and the duplicate protection are untouched.
+- **Every event records its `source`** — `connector`, `export` or `synthetic` (T7.7). The
+  timeline builds the Gmail link per id format and shows none for synthetic mail.
+- **One mailbox, one path.** Connector events carry Gmail API ids and exports carry RFC 822
+  Message-IDs; the unique constraint cannot see that two ids name one email.
+- **Refresh** (`POST /api/sync`) ingests new files in a configured drop folder.
+  `sync_state.state` is the lock, and a concurrent request returns 409 (T3.8, T4.6).
+- **Demo modes are databases**: `DATABASE_URL` selects which one an ingest fills.
+
+### 15.2 Matching: a third outcome *(D26)*
+
+`findMatch` returns **match**, **ambiguous** or **none**. Ambiguous — company and sender
+domain agree, role similarity is actively low — creates a pending review item with
+`email_events.suggested_job_id` set, instead of merging. Supersedes the sender-domain
+tiebreak in §7.6.
+
+### 15.3 Correction and settings *(D27, D28)*
+
+- **Panel edit mode.** `PATCH /api/jobs/:id` carries only the changed fields, and Save
+  detects an application changed by an ingest while the panel was open.
+- ✅ **Built 28 September (T4.9, defect C11).** A job's status is derived from its stage inside the
+  repository, on every insert and update; `JobPatch` has no `status` field. Every path that
+  writes a stage — correction, withdraw, review confirm, the pipeline, the seed — is covered
+  by the one rule.
+- **`GET` / `PATCH /api/settings`** read and write `users.review_threshold` (T4.10). Ingest
+  passes each user's own value; changes apply to newly ingested mail only.
+
+### 15.4 Harness *(D32, D33)*
+
+- ✅ **Built 28 September (T2.9).** A Wilson interval on every reported proportion — nine
+  figures, including a new false-negative rate — with 0/0 printed as "nothing to measure".
+- A next-action acceptance rate from post-hoc judgements (T2.10).
+- A labelling toolkit — inventory, export to spreadsheet, import to fixtures — that writes
+  real content outside the repository (T2.11).

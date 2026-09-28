@@ -352,3 +352,88 @@ describe("the gate", () => {
     expect(report.passed).toBe(false);
   });
 });
+
+describe("an interval on every figure (T2.9)", () => {
+  // RQ-03 requires accuracy, precision, recall and false negatives "each with a
+  // stated confidence interval". Before T2.9 only accuracy had one (defect C12).
+  //
+  // An asymmetric matrix — TP 50, FP 2, FN 5, TN 23 — so each figure has a
+  // different denominator. A figure computed over the wrong one cannot land on
+  // the hand-computed interval by accident.
+  const block = (n: number, actual: boolean, predicted: boolean): Scored[] =>
+    Array.from({ length: n }, () => ({
+      fixture: fixture({ isApplication: actual }),
+      predicted: predict({ isApplication: predicted }),
+    }));
+  const report = buildReport([
+    ...block(50, true, true),
+    ...block(2, false, true),
+    ...block(5, true, false),
+    ...block(23, false, false),
+  ]);
+
+  it("puts precision's interval over what was predicted — n = 52", () => {
+    // centre = (50 + 1.9208)/55.8416 = 0.929787
+    // spread = (1.96/55.8416)·√(50·2/52 + 0.9604) = 0.035099 × 1.698080 = 0.059601
+    const p = report.figures.precision;
+    expect(p.n).toBe(52);
+    expect(p.interval!.lower).toBeCloseTo(0.8702, 3);
+    expect(p.interval!.upper).toBeCloseTo(0.9894, 3);
+  });
+
+  it("puts recall's interval over the applications that exist — n = 55", () => {
+    // centre = (50 + 1.9208)/58.8416 = 0.882383
+    // spread = (1.96/58.8416)·√(50·5/55 + 0.9604) = 0.033310 × 2.346456 = 0.078160
+    const r = report.figures.recall;
+    expect(r.n).toBe(55);
+    expect(r.interval!.lower).toBeCloseTo(0.8042, 3);
+    expect(r.interval!.upper).toBeCloseTo(0.9605, 3);
+  });
+
+  it("reports false negatives as a rate with an interval, the complement of recall", () => {
+    // 5/55. Wilson is symmetric under complement, so this is recall's interval
+    // reflected: [1 − 0.96054, 1 − 0.80422].
+    const fn = report.figures.falseNegativeRate;
+    expect(fn.successes).toBe(5);
+    expect(fn.n).toBe(55);
+    expect(fn.value).toBeCloseTo(5 / 55);
+    expect(fn.interval!.lower).toBeCloseTo(0.0395, 3);
+    expect(fn.interval!.upper).toBeCloseTo(0.1958, 3);
+  });
+
+  it("gives deadline detection its own interval over deadline-bearing fixtures", () => {
+    // 20 of 26: centre = 21.9208/29.8416 = 0.734572
+    // spread = (1.96/29.8416)·√(20·6/26 + 0.9604) = 0.065680 × 2.361310 = 0.155091
+    const scored: Scored[] = Array.from({ length: 26 }, (_, i) => ({
+      fixture: fixture({
+        isApplication: true,
+        deadlineAt: "2026-05-23T13:59:00+00:00",
+        hasDeadlineLanguage: true,
+      }),
+      predicted: predict({
+        isApplication: true,
+        deadlineAt: i < 20 ? "2026-05-23T13:59:00.000Z" : null,
+      }),
+    }));
+    const d = buildReport(scored).figures.deadlineDetection;
+    expect(d.n).toBe(26);
+    expect(d.interval!.lower).toBeCloseTo(0.5795, 3);
+    expect(d.interval!.upper).toBeCloseTo(0.8897, 3);
+  });
+
+  it("covers exact-time deadlines and every field accuracy, not just the headline", () => {
+    const f = report.figures;
+    for (const p of [f.deadlineExactTime, f.company, f.role, f.stage]) {
+      expect(p).toHaveProperty("interval");
+    }
+    // Field accuracy is scored on true positives only.
+    expect(f.company.n).toBe(50);
+  });
+
+  it("has no interval where there is nothing to measure — 0/0 is not a number", () => {
+    // No deadline-bearing fixtures in this matrix. The same rule T2.7 set for
+    // the gate: an empty denominator is not a result of zero.
+    expect(report.figures.deadlineDetection.n).toBe(0);
+    expect(report.figures.deadlineDetection.interval).toBeNull();
+  });
+});

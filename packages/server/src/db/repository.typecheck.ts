@@ -53,6 +53,16 @@ export function assertUserIdMustBeBranded(): void {
   void repo.getSyncState("some-user-id");
 }
 
+export function assertStatusCannotBeSetDirectly(): void {
+  // T4.9 / defect C11. `status` is derived from `stage` inside the repository,
+  // so no caller may set one without the other. Before this, the rule
+  // "terminal stage → archived" was repeated at four call sites and missing at
+  // two, and each missing copy left an application visible on neither tab.
+
+  // @ts-expect-error — status is not a field of JobPatch; set the stage instead.
+  void repo.updateJob(userId, jobId, { status: "archived" });
+}
+
 export function assertCorrectUsageCompiles(): void {
   // The positive control. If these ever stop compiling, the assertions above
   // are passing for the wrong reason.

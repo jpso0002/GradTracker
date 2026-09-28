@@ -1,13 +1,16 @@
 # GradTracker — Architecture & Scope Decision Record
 
 **Project:** GradTracker — AI-powered graduate recruitment tracking dashboard
-**Unit:** FIT3163 · Team of 3 · 12-week semester
-**Status:** Agreed, pre-implementation. No code written at the time of writing.
+**Unit:** FIT3162 / FIT3164 / FIT3189 Software Project Part 2 *(FIT3161 / FIT3163 / FIT3188
+in semester 1)* · Team of 3
+**Status:** Revisions 1–2 agreed before implementation began. Revision 3 records decisions
+taken mid-build, reconciled against the working repository.
 
 | Revision | Date | Covers |
 |---|---|---|
 | 1 | 16 August 2026 | Initial architecture and scope decisions — D1–D15 |
-| **2** | **16 August 2026** | **Post-documentation-review. Resolves D10; adds D16–D21; records six defects found reviewing the specification against itself; adds the measured cost model and the statistical-power finding.** |
+| 2 | 16 August 2026 | Post-documentation-review. Resolves D10; adds D16–D21; records six defects found reviewing the specification against itself; adds the measured cost model and the statistical-power finding. |
+| **3** | **28 September 2026** | **Mid-build. Reconciles the condensed RTM (v3) and the September team meetings against the repository. Adds D22–D33; records defects C10–C15, found by inspecting the built system; updates the risks, open items and build order.** |
 
 This document records every architectural and scope decision taken before the build
 started, including the options that were rejected and why. It exists so the choices are
@@ -309,6 +312,209 @@ cannot block each other.
 
 ---
 
+### Revision 3 — decisions taken mid-build *(28 September 2026)*
+
+Taken after reconciling the condensed RTM (v3, 24 August) and the team's September meetings
+against the working repository. The build order these produce is the Plan of record in
+[tasks.md](tasks.md).
+
+### D22 — One implementation: this repository *(Revision 3)*
+
+**Chosen:** all three lanes build in this single repository, and every plan is reconciled
+against its actual state.
+
+**Reasoning:** three people building against shared contracts — the Zod schemas and the two
+ports — in one codebase cannot drift into incompatible implementations; the tests and the
+type system arbitrate. Where any plan or document disagrees with the code, the code is the
+authority.
+
+### D23 — Ingestion: hybrid and local, classified live *(Revision 3)*
+
+**Chosen:** mail enters through one ingest path that accepts two kinds of input — harvest
+files produced by reading a mailbox through the team's Claude Gmail connector, and Gmail
+exports (a Google Takeout `.mbox`, or individual `.eml` files). Every email is classified by
+the live model. The three demo modes — a single real account, a dedicated test inbox, or
+both — are simply different databases filled from different inputs.
+
+**Rejected:**
+
+| Option | Why not |
+|---|---|
+| Gmail API with OAuth in Google's testing mode | Free for up to 100 named test users, so cost is not the obstacle. About two weeks of work — OAuth, sessions, token encryption, a live Gmail client, incremental sync — for a capability the local demo does not need. **Deferred on effort, not cost.** |
+| IMAP with an app password | Stores a credential, which RQ-01 forbids. |
+| Replaying pre-classified data only | Demonstrates everything except the classifier — the component the product exists to show. |
+
+**Reasoning:** the pipeline takes a `RawEmail` and has never cared where it came from, so a
+second reader is small work and the three demo modes cost nothing extra. The export route has
+a property the harvest lacks: every step from raw email to dashboard is GradTracker's own
+code, reproducible from the same file on demand. The harvest remains the quickest way to show
+a real account.
+
+**Consequences:**
+- **One mailbox, one path.** The connector yields Gmail API ids and exports yield RFC 822
+  Message-IDs, so the same email arriving both ways would become two events, invisibly to the
+  duplicate protection.
+- Every event records its source (T7.7), which also fixes defect C10.
+- RQ-01 stays "Deferred — justified", with its justification amended to say that
+  testing-mode OAuth was considered and deferred on effort (§4.4).
+
+### D24 — Demo data: real job-board mail plus authored applications, marked synthetic *(Revision 3)*
+
+**Chosen:** a dedicated test inbox subscribed to graduate job boards supplies realistic
+*negative* mail. Application emails — confirmations, assessments, interviews, offers,
+rejections — are **authored as `.eml` files** with realistic applicant-tracking-system
+senders, as the 80 fixtures are. Authored emails are tagged synthetic at ingest, and shown
+with a visible "Synthetic" tag and no Gmail link.
+
+**Rejected:**
+
+| Option | Why not |
+|---|---|
+| Job-board mail alone | Produces an empty dashboard. Job ads are exactly what the classifier is built to reject — a job alert naming real companies and a deadline is one of its designed hard negatives. |
+| Fabricated emails sent from a second Gmail account | Every sender becomes `gmail.com`: "Detected from" says nothing, and sender-domain matching merges different roles at one company. |
+| Mail sent from employers' real domains | Fails SPF and DKIM and lands in spam — and is not something to do. |
+
+**Reasoning:** realism on both sides. The negatives are genuinely real; the positives carry
+realistic senders, which delivered mail could not.
+
+**Consequence:** authored emails **never** count toward the headline accuracy figure (D32),
+and the demo never presents them as real.
+
+### D25 — Refresh ingests a drop folder *(Revision 3)*
+
+**Chosen:** the dashboard's Refresh runs `POST /api/sync`, which ingests any new files placed
+in a configured folder. `sync_state.state` is the lock, so a concurrent request returns 409;
+processed files are recorded and skipped thereafter.
+
+**Rejected:** a browser upload control — upload handling and size limits, for no gain on a
+local demo; and leaving ingestion as a terminal command, which would leave RQ-02's on-demand
+clause unmet.
+
+**Consequence:** T3.8 is reinstated in this local form and T4.6 completes with it. The
+Gmail-API form of T3.8 moves to T7.2 and stays deferred.
+
+### D26 — Ambiguous matches go to review *(Revision 3)*
+
+**Chosen:** when an email matches an existing application on company and sender domain
+alone, with role similarity actively low, it is **not merged**. It becomes a pending review
+item carrying a suggested application. The review card asks whether it is the same
+application or a new one, and the suggested application's row shows a "Review required"
+marker linking to the item.
+
+**Rejected:**
+
+| Option | Why not |
+|---|---|
+| Tighten the rule — low similarity always creates a new application | Right in the Macquarie case, wrong whenever an employer renames a role between emails; the student would merge the duplicates by hand. |
+| Leave matching as it is | The 18 August harvest silently merged two genuinely separate Macquarie applications — Technology, and Data (Sydney) — into one. |
+
+**Reasoning:** the product's own principle: when it is unsure, it asks. A silent merge
+destroys an application's history; a question costs the student one click.
+
+**Consequence:** supersedes the §6 assumption that sender domain acts as a tiebreak. A new
+`suggested_job_id` column (T3.10) and a row marker (T6.6).
+
+### D27 — Correction editing: panel edit mode with Save/Cancel *(Revision 3)*
+
+**Chosen:** the detail panel switches into edit mode with all five extractable fields
+editable. Changes are held until **Save** commits them in one request, or **Cancel**
+discards them. Save sends **only the fields actually changed**, and warns if an ingest
+updated the application while the panel was open.
+
+**Rejected:** per-field inline editing with Enter and Escape (the original T6.1); per-field
+auto-save with Undo.
+
+**Reasoning:** an explicit commit is easier to reason about and to demonstrate. The
+changed-fields rule is what keeps it compatible with provenance: sending all five would mark
+every field human-edited — locking each against future classification — though the student
+changed nothing.
+
+**Consequence:** T4.9 must land first, since the panel exposes a stage control.
+
+### D28 — Review threshold: a per-user slider *(Revision 3)*
+
+**Chosen:** the confidence below which extractions go to review is a per-user setting, set
+by a slider in Settings; "review everything" is the slider at its maximum. The column,
+`users.review_threshold`, has existed since T1.4 — it simply is not read yet. A change
+applies to **newly ingested mail only**.
+
+**Rejected:** a two-way toggle — less control, and the API contract already carries a numeric
+`reviewThreshold`; and a fixed constant.
+
+**Reasoning:** re-routing mail already processed would un-assert applications the student
+may already have acted on.
+
+### D29 — Calendar and Archive leave the navigation *(Revision 3)*
+
+**Chosen:** both sidebar items, and their placeholder routes, are removed.
+
+**Reasoning:** the deadline pill on every row already shows what is due and overdue, which is
+what a calendar view was for; Archive only duplicated the pipeline's Archived tab. Calendar
+integration was already out of scope.
+
+### D30 — Company search that keeps rank order *(Revision 3)*
+
+**Chosen:** a search box narrows the pipeline by company or role while preserving the
+server's order. Resolves the flag the RTM placed on the old R09 company filter.
+
+**Reasoning:** the tension the RTM identified is with **re-sorting**, not with filtering. A
+filter that keeps order is the rule the stage chips already follow. A sort control remains
+excluded.
+
+### D31 — Scope boundaries confirmed *(Revision 3)*
+
+- **No manual "add application".** Applications enter from email; "adding" in a walkthrough
+  means confirming an item from the review queue.
+- **No GradTracker login for the demo.** The local demo is operated by the team.
+- **"Upcoming jobs to apply for" is a stretch goal after the MVP** (backlog S1). It would need
+  a new classification category, table and view, and would persist extracted content from
+  non-application email for the first time — a privacy change to be decided deliberately,
+  not drifted into.
+
+### D32 — Evaluation dataset protocol *(Revision 3)*
+
+**Chosen:**
+
+| Set | Contents | Purpose |
+|---|---|---|
+| **Tuning** | The 80 authored fixtures, plus ~40 real emails | Iterate the prompt and threshold here — never on held-out |
+| **Held-out** | ~200 real emails: about half application emails from the three members' own inboxes, half real negatives weighted toward the hard ones | The headline figure |
+| *Excluded from the headline* | Authored emails; public datasets | — |
+
+Each member exports their **own** mail; nobody reads anyone else's inbox. Labelling uses a
+spreadsheet template with a converter back to fixtures, against a one-page guide whose stage
+definitions are the classifier prompt's own. About 25 emails are labelled by two people
+independently and their agreement is reported. **The held-out set is frozen before any model
+sees it.** Its final size is set from an inventory of what the exports actually contain.
+Real email content never enters git.
+
+**Rejected:**
+
+| Option | Why not |
+|---|---|
+| The model pre-labels, humans verify | Circular: a held-out set shaped by the model's own guesses inflates that model's measured accuracy. |
+| Authored emails in the headline | Partly measures the classifier against the team's own writing. |
+| Public datasets | None known for graduate-recruitment email; searching costs time for little return. |
+| A natural, unenriched sample | About 98% negatives, where a classifier answering "no" to everything scores about 98%. Enrichment is declared, and precision and recall are reported separately. |
+
+**Reasoning:** the 80 fixtures already shaped the prompt, so they are tuning data by
+definition (defect C14) — which frees every new label for the held-out set.
+
+**Consequence:** next action, being free text, is judged acceptable or not after each run
+rather than labelled in advance (T2.10, defect C13).
+
+### D33 — How the accuracy claim is stated *(Revision 3)*
+
+**Chosen:** every reported proportion — accuracy, precision, recall, false-negative rate,
+deadline detection, next-action acceptance — carries its Wilson 95% interval. The claim is a
+**point estimate with its interval**, not a guaranteed floor.
+
+**Reasoning:** at n≈200 and about 97% measured accuracy, the interval runs roughly
+93.6–98.6%. A lower bound at 95% would need about 98% measured. The point estimate with its
+interval is the honest claim; presenting 95% as a floor would over-claim.
+
+---
+
 ## 3. Defects found reviewing the specification *(Revision 2)*
 
 Six defects found reviewing the four specification documents against each other. Each is
@@ -323,6 +529,22 @@ they are recorded because the correction is itself a decision.
 | **C4** | The cost model assumed prompt caching would offset the system-prompt cost. Haiku 4.5's minimum cacheable prefix (4,096 tokens) is far above a classifier prompt. | Cost model corrected; Batches API adopted as the offset — see D16 and D20. | T7.4 |
 | **C5** | D10 was recorded as open in all four documents. | Now resolved; the four documents are updated. | T1.1 |
 | **C6** | `gmail.readonly` is a Google *restricted* scope. Production verification requires a paid third-party security assessment. | Not a blocker — test-user mode permits 100 users with no verification — but it means the app **cannot be publicly launched as specified**. Recorded as a documented limitation. | T8.2 |
+
+### Defects found inspecting the built system *(Revision 3)*
+
+Defects C7–C9, found while building the API and client, are recorded in
+[tasks.md](tasks.md). Revision 3 adds six more, each found by checking the running system or
+the RTM against the code, rather than documents against each other.
+
+| # | Defect | Resolution | Task |
+|---|---|---|---|
+| **C10** | Every timeline "Open in Gmail" link searches `rfc822msgid:`, which matches an email's RFC 822 `Message-ID` header — but events store Gmail API ids. Every link in the real-inbox demo searched for something that does not exist. The test checked only the link's shape. | Record each event's source and build the link per id format; no link for authored emails; verify by clicking against real Gmail. | T7.7 |
+| **C11** | A correction setting a terminal stage left the application `active`, so it vanished from both tabs — the defect fixed in the pipeline on 18 August, surviving on a second code path. | **Fixed** at the repository, which now derives status from stage on every write, so no path can disagree — including a third affected path, review confirm. | T4.9 |
+| **C12** | RQ-03 requires an interval on accuracy, precision, recall and false negatives; the harness printed one for accuracy only. | **Fixed** — an interval on every reported proportion (D33). | T2.9 |
+| **C13** | RQ-04 compares every extracted field against ground truth, but next action is free text with no scoring method. | Judged acceptable or not after each live run (D32). | T2.10 |
+| **C14** | RQ-03 requires a dataset the classifier was not tuned against; the 80 fixtures shaped the prompt. | They become the tuning set; a new held-out set is frozen before any model run (D32). | T8.3 |
+| **C15** | Documents gave the unit as FIT3163 — the semester-1 code. | Both semesters' codes recorded. **Fixed.** | — |
+| **C16** | Confirming a review item that matches an existing application applied every detected field as a human correction: an older, lower-stage email moved the stage and `lastEventAt` backwards and locked all five fields, so no later email could move the application again. Found by probe while fixing C11. | A match applies the email as the pipeline would; only fields the student edited become human. | T3.11 |
 
 ---
 
@@ -339,9 +561,10 @@ recruitment emails look like.
 
 Compounding this, at n=80 the measurement itself is imprecise: **±5 percentage points at
 95% confidence** (see D17). The ≥95% claim becomes defensible only once the team hand-labels
-roughly 300 real emails. The harness accepts them as a directory drop-in, prints a
-confidence interval alongside every figure, and this limitation is stated in the project
-documentation.
+roughly 300 real emails. The harness accepts them as a directory drop-in, and this
+limitation is stated in the project documentation. *Revision 3:* the harness prints an
+interval beside accuracy only, not every figure — defect C12, fixed by T2.9. The protocol for
+the real corpus is D32.
 
 ### 4.2 The application cannot be publicly launched as specified
 
@@ -356,6 +579,22 @@ discovered.
 Choosing Haiku 4.5 for cost (D16) means that a sub-95% result has two candidate explanations:
 the prompt, or the model. The per-model benchmark in T2.8 exists to separate them.
 
+### 4.4 The RQ-01 justification invites one fair question *(Revision 3)*
+
+The RTM defers hosted OAuth because publishing `gmail.readonly` beyond Google's 100-user
+allowlist requires a paid security assessment. That is true — but the same allowlist means
+testing-mode OAuth for **one demo account costs nothing**, so an assessor can fairly ask why
+the demo did not use it. The honest answer is effort, not cost: roughly two weeks for a
+capability the local demo does not need, since ingesting a connector read or user-exported
+files means no credential is ever handled (D23). The RTM should say so.
+
+### 4.5 The demo inbox contains authored emails *(Revision 3)*
+
+Application emails in the test-inbox demo are written by the team (D24). They are marked
+synthetic in the product and excluded from the accuracy figure, and the demo must say so
+aloud. Presenting authored mail as real is the one thing an assessor could fairly call
+misleading.
+
 ---
 
 ## 5. Open items
@@ -363,11 +602,14 @@ the prompt, or the model. The per-model benchmark in T2.8 exists to separate the
 | # | Item | Status |
 |---|---|---|
 | 1 | D10 stage taxonomy | ✅ **Resolved in Revision 2** — six computed stages |
-| 2 | Google Cloud OAuth consent screen and test-user allowlist | Scheduled as task T0.1, week 1 |
-| 3 | Real labelled email corpus (~300 emails) | Scheduled as task T8.3, starting week 3 |
-| 4 | Classifier model choice | ✅ **Resolved in Revision 2** — Haiku 4.5 + Sonnet 5 escalation |
+| 2 | Google Cloud OAuth consent screen and test-user allowlist | ⏸ **Deferred in Revision 3**, with hosted OAuth (D23) |
+| 3 | Real labelled email corpus | **Protocol agreed in Revision 3** (D32); the held-out size is set after the inventory |
+| 4 | Classifier model choice | ✅ **Resolved in Revision 2** — Haiku 4.5 + Sonnet 5 escalation; **measurement pending** (T2.8) |
+| 5 | Anthropic API key | **Open** — created, not yet verified (blocker B3) |
+| 6 | Mailbox exports from all three members | **Open** — blocker B6 |
 
-**No item now blocks the start of implementation.**
+Items 5 and 6 block the live classifier and the evidence chain respectively. **Neither blocks
+the first two steps of the build order.**
 
 ---
 
@@ -378,9 +620,10 @@ All reversible; recorded for transparency.
 - **Job identity:** normalised company name plus fuzzy role-title match (Dice coefficient
   ≥ 0.6 on bigrams) within a single user, with sender domain as a tiebreak. Over-merging is
   treated as worse than duplication: a duplicate is visible and correctable, a wrong merge
-  silently destroys an application's history.
+  silently destroys an application's history. *Revision 3: the sender-domain tiebreak is
+  superseded by D26 — a domain-only match with low role similarity goes to review.*
 - **Review-queue threshold:** starts at confidence 0.75, to be tuned against the fixture
-  corpus. Escalation to Sonnet 5 triggers below 0.6.
+  corpus. Escalation to Sonnet 5 triggers below 0.6. *Revision 3: a per-user setting (D28).*
 - **Stage progression:** stages only advance forward, except that `rejected` and
   `offer received` may arrive from any stage. `withdrawn` is never AI-assigned.
 - **Initial scan bound:** the first scan reads the most recent **2,000 messages or 180 days**,
@@ -420,3 +663,7 @@ per-task completion criteria.
 **T8.3 (real labelled corpus) sits off the critical path but starts in week 3.** A late start
 there is the difference between "we measured 96%" and "we measured 96% on emails we wrote
 ourselves."
+
+**Revision 3.** The current build order — seven steps by dependency, with the evaluation
+dataset running alongside — is the Plan of record in [tasks.md](tasks.md). The live
+classifier and the labelled corpus are now on the critical path.

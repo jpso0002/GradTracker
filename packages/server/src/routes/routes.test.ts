@@ -93,8 +93,10 @@ describe("GET /api/jobs", () => {
   });
 
   it("excludes terminal stages from Active but shows them on Archived", async () => {
-    await seedJob(userId, { stage: "rejected", status: "archived" });
-    await repo.updateJob(userId, (await repo.listJobs(userId))[0]!.id, { status: "archived" });
+    // No status is passed: a job inserted at a terminal stage is archived by
+    // the repository itself (T4.9). This test used to set the status by hand,
+    // which masked the defect instead of testing the behaviour.
+    await seedJob(userId, { stage: "rejected" });
 
     expect((await request(app).get("/api/jobs")).body.jobs).toHaveLength(0);
     expect((await request(app).get("/api/jobs?status=archived")).body.jobs).toHaveLength(1);
@@ -104,13 +106,11 @@ describe("GET /api/jobs", () => {
     // "Live applications" must mean live applications. Measured against the
     // filtered list it counted archived jobs while the Archived tab was open.
     await seedJob(userId, { company: "Live Co", companyNormalised: "live co" });
-    const rejected = await seedJob(userId, {
+    await seedJob(userId, {
       company: "Gone Co",
       companyNormalised: "gone co",
       stage: "rejected",
     });
-    // insertJob does not take `status`; archiving is an update.
-    await repo.updateJob(userId, rejected!.id, { status: "archived" });
 
     const active = await request(app).get("/api/jobs").expect(200);
     const archived = await request(app).get("/api/jobs?status=archived").expect(200);
@@ -240,6 +240,30 @@ describe("PATCH /api/jobs/:id", () => {
     await request(app).patch(`/api/jobs/${theirs!.id}`).send({ company: "Hacked" }).expect(404);
     expect((await repo.findJob(otherUserId, theirs!.id))?.company).toBe("KPMG");
   });
+
+  // ── T4.9 / defect C11 ─────────────────────────────────────────────────────
+  it("archives an application when a correction sets a terminal stage", async () => {
+    // Before T4.9 the status stayed 'active'. Ranking drops terminal stages
+    // from Active and the Archived tab filters on status — so the application
+    // was on neither tab.
+    const job = await seedJob(userId);
+    await request(app).patch(`/api/jobs/${job!.id}`).send({ stage: "rejected" }).expect(200);
+
+    expect((await request(app).get("/api/jobs")).body.jobs).toHaveLength(0);
+    const archived = await request(app).get("/api/jobs?status=archived");
+    expect(archived.body.jobs.map((j: { id: string }) => j.id)).toEqual([job!.id]);
+  });
+
+  it("returns an application to Active when a correction reverses a terminal stage", async () => {
+    // The undo path: a mistaken "rejected" must be recoverable by correcting it.
+    const job = await seedJob(userId);
+    await request(app).patch(`/api/jobs/${job!.id}`).send({ stage: "rejected" }).expect(200);
+    await request(app).patch(`/api/jobs/${job!.id}`).send({ stage: "interview" }).expect(200);
+
+    const active = await request(app).get("/api/jobs");
+    expect(active.body.jobs.map((j: { id: string }) => j.id)).toEqual([job!.id]);
+    expect((await request(app).get("/api/jobs?status=archived")).body.jobs).toHaveLength(0);
+  });
 });
 
 describe("POST /api/jobs/:id/withdraw", () => {
@@ -368,6 +392,17 @@ describe("review routes", () => {
     expect(job!.company).toBe("Boutique Consulting Co");
     // The role was not corrected, so the detected value stands.
     expect(job!.role).toBe("Graduate Analyst");
+  });
+
+  it("archives an application confirmed from review at a terminal stage (T4.9)", async () => {
+    // Defect C11 on a third path: a low-confidence rejection email, confirmed
+    // by the student, created an application that appeared on neither tab.
+    const pending = await seedPending({ detectedStage: "rejected" });
+    const res = await request(app).post(`/api/review/${pending!.id}/confirm`).send({}).expect(200);
+
+    expect((await request(app).get("/api/jobs")).body.jobs).toHaveLength(0);
+    const archived = await request(app).get("/api/jobs?status=archived");
+    expect(archived.body.jobs.map((j: { id: string }) => j.id)).toEqual([res.body.jobId]);
   });
 
   it("dismisses without deleting, so the email can never resurface", async () => {

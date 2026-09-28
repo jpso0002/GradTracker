@@ -17,18 +17,78 @@ when its dependencies are checked off.
 | Phase | Weeks | Tasks | Status |
 |---|---|---|---|
 | 0 — De-risk | 1 | T0.1–T0.3 | ⏸ Descoped for the demo track |
-| 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** — 127 tests green |
-| 2 — Harness | 2–3 | T2.1–T2.8 | ◐ T2.1–T2.7 done · T2.8 blocked on B3 |
-| 3 — Pipeline | 3–5 | T3.1–T3.7 | ✅ **Complete** — 307 tests green · T3.8 deferred |
-| 4 — API | 5–6 | T4.4–T4.8 | ◐ T4.4, T4.5, T4.8 done · T4.6 partial · auth deferred |
-| 5 — Dashboard | 6–8 | T5.1–T5.9 | ◐ T5.1–T5.3, T5.5, T5.6 done · T5.7 partial · T5.4 deferred |
-| 6 — Human-in-the-loop | 8–9 | T6.1–T6.5 | ☐ Not started |
-| 7 — Live adapters | 9–11 | T7.1–T7.6 | ⏸ Deferred — harvest replaces |
-| 8 — Traceability | 11–12 | T8.1–T8.5 | ⏸ Deferred |
+| 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** |
+| 2 — Harness | 2–3 | T2.1–T2.12 | ◐ T2.1–T2.7, **T2.9** done · T2.8 waits on B3 · T2.10–T2.12 open |
+| 3 — Pipeline | 3–5 | T3.1–T3.11 | ◐ T3.1–T3.7, T3.9 done · **T3.8 reinstated** as drop-folder sync · **T3.10, T3.11 new** |
+| 4 — API | 5–6 | T4.1–T4.10 | ◐ T4.4, T4.5, T4.8, **T4.9** done · T4.6 partial · T4.10 open · auth deferred |
+| 5 — Dashboard | 6–8 | T5.1–T5.12 | ◐ T5.1–T5.3, T5.5, T5.6, **T5.10** done · T5.7 partial · T5.4 deferred · T5.11, T5.12 open |
+| 6 — Human-in-the-loop | 8–9 | T6.1–T6.6 | ☐ Not started · **T6.1, T6.3, T6.4 redefined** · **T6.6 new** |
+| 7 — Ingestion & live classifier | 9–11 | T7.1–T7.10 | ◐ **T7.3 reinstated** · **T7.7–T7.10 new** · T7.1, T7.2, T7.4–T7.6 deferred |
+| 8 — Traceability | 11–12 | T8.1–T8.5 | ◐ **T8.3 reinstated** · the rest deferred |
+
+**387 tests green.** Step 1 of the Plan of record is complete (28 September 2026); every
+other task marked **new** or **reinstated** above is open.
+
+---
+
+## Plan of record *(28 September 2026)*
+
+Agreed after reconciling the condensed RTM (v3, 24 August) and the team's September
+meetings against this repository. **The repository is the authority on what exists** — where
+any other document describes work as done, check here. Reasoning for every choice below is in
+[decision-record.md](decision-record.md), **D22–D33**.
+
+### What changed
+
+| | Before | Now |
+|---|---|---|
+| Classification | In-session, replayed from a harvest file | **Live model** (T7.3), on every ingestion path |
+| Ingestion | Connector harvest only | **Hybrid** — connector harvest JSON *and* Gmail export `.mbox`/`.eml`, one ingest path (D23) |
+| Demo data | One real inbox | A real account, a test inbox, or both — each its own database (D23, D24) |
+| Refresh | `POST /api/sync` returns 501 | **Drop folder** — Refresh ingests new files (D25) |
+| Ambiguous matches | Merged on sender domain | **Routed to review** with a suggested application (D26) |
+| Editing | Per-field inline | **Panel edit mode**, Save/Cancel (D27) |
+| Review threshold | The constant 0.75 | **Per-user slider** in Settings (D28) |
+| Sidebar | Calendar and Archive placeholders | **Removed** (D29) |
+| Company filter (old R09) | Flagged, undecided | **Search box that keeps rank order** (D30) |
+| Test set | ~300 real labels, "later" | **Protocol agreed**; size set after an inventory (D32) |
+
+### Build order
+
+By dependency, not deadline. Steps 1 and 2 need nothing external; step 3 waits on **B3**.
+
+| Step | Tasks | What | Waits on |
+|---|---|---|---|
+| **1** ✅ | T4.9 · T5.10 · T2.9 | Stage-correction archive bug (**C11**) · remove Calendar and Archive · an interval on every reported figure (**C12**) — *done 28 Sep* | — |
+| **2** | T2.11 · T2.12 | Labelling toolkit and guide — early, because labelling is human time | — |
+| **3** | T7.3 · T2.8 | Live classifier, then the Haiku-vs-Sonnet benchmark | **B3** |
+| **4** | T7.7 · T7.8 · T7.9 · T7.10 · T3.8 · T4.6 | Hybrid ingestion: event source and correct Gmail links (**C10**), mailbox reader, unlabelled harvest, one ingest command, drop-folder sync | T7.3 |
+| **5** | T3.10 · T3.11 | Ambiguous matches routed to review · confirming onto an existing application applies the email, not a correction (**C16**) | — |
+| **6** | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search | T4.9, T3.10 |
+| **7** | T5.7 · T5.8 · T6.5 · T4.7 · T5.12 · T5.9 | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
+| **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run | **B6**, T2.11, T7.3 |
+
+### Demo modes
+
+One pipeline, three ways to fill it. Each is its own database, selected with `DATABASE_URL`:
+
+| Mode | Contents |
+|---|---|
+| **Single account** | One team member's real inbox, by connector harvest or export |
+| **Test inbox** | Real job-board mail from a dedicated test account, plus authored application emails, marked synthetic |
+| **Hybrid** | Both, in one pipeline |
+
+**One mailbox, one path.** The connector yields Gmail API ids; exports yield RFC 822
+Message-IDs. The same email arriving both ways gets two ids, so the duplicate protection
+cannot recognise it. Never ingest one mailbox through both.
 
 ---
 
 ## Demo track *(adopted 16 August 2026)*
+
+> **Revised 28 September 2026.** Classification is no longer in-session and Refresh is no
+> longer a gap. The Plan of record above supersedes this section where they differ; it is
+> kept because it records why the demo track was adopted.
 
 **Goal changed:** get a working local demo running against the student's *real* inbox, to
 judge whether GradTracker is worth completing, before spending weeks on auth and sync.
@@ -61,18 +121,17 @@ Phase 3 does **not** shrink. The pipeline is the product; without it the demo is
 spreadsheet that renders nicely.
 
 **Deferred, not deleted** — every task below stays in this file with its acceptance
-criteria intact, so the FIT3163 traceability story remains available if the project
+criteria intact, so the unit's traceability deliverable remains available if the project
 continues:
 
-| Deferred | Why it is safe to defer for a demo |
-|---|---|
-| T3.8 sync orchestrator | The harvest replaces it. Crash-safety still matters for a real product. |
-| T4.1–T4.3 auth, sessions, token cipher | No login on a local single-user demo. |
-| T7.1–T7.6 live adapters | Superseded by the in-session harvest. |
-| T8.1–T8.5 traceability | Reinstate if the FIT3163 deliverable is resumed. |
+| Deferred | Why it was safe to defer for a demo | Status, 28 September |
+|---|---|---|
+| T3.8 sync orchestrator | The harvest replaced it. Crash-safety still matters for a real product. | **Reinstated** as drop-folder ingestion (D25) |
+| T4.1–T4.3 auth, sessions, token cipher | No login on a local single-user demo. | Still deferred |
+| T7.1–T7.6 live adapters | Superseded by the in-session harvest. | **T7.3 reinstated**; T7.7–T7.10 added; the rest still deferred |
+| T8.1–T8.5 traceability | Reinstate if the unit's traceability deliverable is resumed. | **T8.3 reinstated**; the rest still deferred |
 
-**Still required for the demo:** T3.1–T3.7, T4.4–T4.6 (routes, without auth), T4.8 ✅,
-T5.1–T5.9, T6.1–T6.5.
+**Still required for the demo:** see the Plan of record above.
 
 ### Harvest scope
 
@@ -97,6 +156,9 @@ Three things the real mailbox will test that the fixtures do not:
   and newsletter subjects of the form "An interview with …".
 Extracted fields are persisted; **subject and body are not**, exactly as the retention
 boundary requires, which makes SM-6 demonstrable by inspection during the demo.
+
+**From T7.9, harvest files carry no labels** — each email is classified live at import.
+Replaying stored classifications remains available for tests only.
 
 ---
 
@@ -130,6 +192,30 @@ Settled, no longer open. Full reasoning in [decision-record.md](decision-record.
 
 ---
 
+## Decisions locked (28 September 2026)
+
+Full reasoning, including the options rejected, in [decision-record.md](decision-record.md)
+**D22–D33**.
+
+- **This repository is the single implementation.** All work lands here (D22).
+- **Hybrid local ingestion, classified live** — connector harvest and Gmail exports through
+  one path. Hosted OAuth stays deferred, on effort rather than cost (D23).
+- **Demo data:** real job-board mail in a test inbox, plus authored application emails that
+  are **visibly marked synthetic** and excluded from the headline accuracy figure (D24).
+- **Refresh ingests a drop folder** (D25).
+- **Ambiguous matches go to review** with a suggested application, and that application's row
+  carries a "Review required" marker (D26).
+- **Panel edit mode with Save/Cancel.** Save sends only the fields actually changed (D27).
+- **The review threshold is a per-user slider**, applying to newly ingested mail (D28).
+- **Calendar and Archive leave the sidebar** (D29).
+- **A company search that keeps rank order** resolves the old R09 flag (D30).
+- **Not building:** manual "add application"; a GradTracker login for the demo. **Stretch:** an
+  "upcoming jobs to apply for" module (D31).
+- **The evaluation protocol is agreed**; the held-out size is set after the inventory (D32).
+- **Every reported figure carries its confidence interval** (D33).
+
+---
+
 ## Corrections to apply
 
 Defects found in the docs during review. **These are tasks, not notes** — they are wrong in
@@ -146,6 +232,13 @@ the documents right now.
 | C9 | `MeResponseSchema` required `email`, `displayName` and `reviewThreshold`, none of which `/api/me` returned, and omitted `timeZone` and `demoMode`, which it did. | The schema is the contract, so the server was brought up to it — new `repository.findUser`, which selects no credential columns — and the two demo-mode fields were added to the contract. | **T5.3** Fixed |
 | ~~C7~~ | **Fixed 2026-08-18 by T4.8.** ~~`email_events` stores `detected_stage`, `detected_deadline_at` and `detected_next_action` but **no detected company or role**. So a review card can only show a sender domain and a confidence — `GET /api/review` returns `company: null, role: null`, and `POST /:id/confirm` must 400 unless the student types both from memory. The queue is unusable as specified. | Add `detected_company` and `detected_role` to `email_events`. These are *extracted fields*, not raw content — `jobs` already stores both — so SM-6 is unaffected. Migration + repository + `ReviewItem` mapping + fixtures.~~ | ~~**T4.8**~~ Done |
 | C6 | Gmail `gmail.readonly` is a Google-restricted scope: production verification needs a paid third-party security assessment. Not a blocker (test-user mode allows 100 users) but it means the app cannot be publicly launched as specified. | State it as a documented limitation. | T8.2 |
+| C10 | Every timeline "Open in Gmail" link searches `rfc822msgid:` — an operator that matches an email's RFC 822 `Message-ID` header — but events store **Gmail API ids** (`1977c612af22f96a`). Every link in the real-inbox demo searches for something that does not exist. The test checked only the link's shape; nobody clicked one against real Gmail. | Record each event's source; build the link per id format; show **no** link for authored emails, which were never in a mailbox. Verify by clicking against real Gmail. | **T7.7** |
+| ~~C11~~ | **Fixed 28 September 2026 by T4.9** — at the repository, which covered a third affected path (review confirm). ~~`PATCH /api/jobs/:id` setting a terminal stage leaves `status = 'active'`, so the application vanishes from **both** tabs — the bug fixed in the pipeline on 18 August, surviving on a second code path. Invisible only because no UI can set a stage yet; T6.1 would expose it.~~ | ~~A correction that sets a terminal stage archives, exactly as the pipeline and the withdraw route do.~~ | ~~**T4.9**~~ Done |
+| ~~C12~~ | **Fixed 28 September 2026 by T2.9.** ~~RQ-03 requires a confidence interval on accuracy, precision, recall **and** false negatives. The harness prints one for accuracy only.~~ | ~~A Wilson interval on every reported proportion.~~ | ~~**T2.9**~~ Done |
+| C13 | RQ-04 compares "every extracted field" against ground truth, but next action is free text with no scoring method. | Model outputs judged acceptable or not after each live run, reported as a rate with its interval. | **T2.10** |
+| C14 | RQ-03 requires a dataset the classifier "was not tuned against". The 80 fixtures shaped the prompt, so they are not held-out. | They become the tuning set; the held-out set is new, real, and frozen before any model run (D32). | **T8.3** |
+| ~~C15~~ | **Fixed 28 September 2026.** ~~Docs gave the unit as FIT3163 — the semester-1 code — for a project now in FIT3162 / FIT3164 / FIT3189 (Software Project Part 2).~~ | ~~Both semesters' codes recorded.~~ | Done |
+| C16 | Confirming a review item that **matches an existing application** writes every detected field as a human correction. An older, low-confidence "application received" email confirmed onto an application at interview moves its stage **back** to applied, moves `lastEventAt` **back** from 14 to 2 August, and locks all five fields — so a later offer or rejection can never move it again. Found 28 September by a probe while fixing C11 on the same code path. Latent today — no seeded review item matches an existing application — but T3.10 routes more items through exactly this path. | A match applies the email as the pipeline would; only fields the student edited become human. | **T3.11** |
 
 ---
 
@@ -158,9 +251,10 @@ task** — it is a task's precondition, and it belongs to a person, not a lane.
 |---|---|---|---|---|
 | ~~B1~~ | ~~Node.js is not installed.~~ **Cleared 2026-08-16** — Node v24.19.0 / npm 11.17.0 installed. PowerShell's execution policy blocks `npm.ps1`; use `npm.cmd`, which needs no policy change. | — | — | Resolved. |
 | ~~B2~~ | ~~No Google Cloud project.~~ **Descoped for the demo track 16 August 2026** — the Gmail connector on the team's Claude account replaces it. Reinstate if live OAuth is resumed (T7.1). | — | — | Not blocking. |
-| ~~B3~~ | ~~No Anthropic API key.~~ **Descoped for the demo track 16 August 2026** — classification runs in-session. Still required for T2.8, the measured Haiku-vs-Sonnet benchmark, which remains the only way to validate decision D16. | T2.8 only | Team | Optional. ~$1.30 settles D16 with evidence rather than pricing estimates. |
+| **B3** | **Anthropic API key — reopened 28 September 2026.** Descoped on 16 August while classification ran in-session; back on the critical path now that every ingestion path classifies live (D23). A key has been created but not yet verified. | T7.3, T2.8, the measurement step of T8.3 | Jordan | Verify with one minimal request before T7.3 starts. A 200–300-email set across two models with tuning runs costs several times the original $1.30 estimate — price it from current rates before any run. |
 | ~~B5~~ | ~~No application emails in the connected mailbox.~~ **Resolved 2026-08-16, superseded 2026-08-18.** The mailbox survey was run twice more. `jiddan2016@gmail.com` holds only grad-recruitment marketing. `jpso0002@student.monash.edu` holds 2 applications / 15 emails and **no offer at any point**. `jordanpsomas@gmail.com` holds ~12 graduate and vacation applications across ~60 emails, 9+ ATS domains, and **two complete offer journeys** (NAB 2025/26 Summer Intern, NAB 2027 Graduate — the latter accepted and ongoing). It is the source of record. The 16 August conclusion naming `jpso0002` was correct on the evidence then available and wrong once the third mailbox was checked. | — | — | Resolved — use `jordanpsomas@gmail.com`. |
 | ~~B4~~ | ~~`docs/` is not under version control.~~ **Withdrawn 2026-08-16 — the claim was wrong.** All eight `docs/` files were already tracked and committed in `b6d846f`; the repo had three commits, not one. The claim was made without running `git ls-files`. Uncommitted work was doc *modifications* plus the new scaffold, now committed as `0056599` on branch `setup/scaffold-and-shared-schemas`. | — | — | Resolved. |
+| **B6** | **Mailbox exports from all three members** *(added 28 September 2026)*. Each member runs two Gmail searches in their own inbox — application senders and subjects; job boards — labels the results, and exports that label via Google Takeout. Nobody reads anyone else's mail. | T8.3 | All three | About 15 minutes each, once the T2.11 toolkit exists to receive the files. |
 
 ---
 
@@ -421,10 +515,51 @@ weeks to improve it.
   silently passing would let someone delete the deadline fixtures while the gate still
   reported success.
 
-- [ ] **T2.8 — Live-model benchmark mode** · Lane B · needs T2.6, T0.3
+- [ ] **T2.8 — Live-model benchmark mode** · Lane B · needs T2.6, T7.3, **B3**
   `npm run accuracy -- --live --model=<id>` runs the corpus against the real API and prints
   token cost. Default stays fake.
   *Done when:* Haiku 4.5 and Sonnet 5 both have a recorded accuracy-and-cost figure.
+
+- [x] **T2.9 — An interval on every figure** · Lane B · needs T2.7 · ✅ **2026-09-28**
+  A Wilson interval beside precision, recall and the false-negative rate, not only accuracy.
+  Fixes **C12** — this is what RQ-03's verification method literally requires.
+  *Done when:* every proportion the harness prints carries `95% CI … (Wilson, n=…)`, checked
+  against hand-computed values as T2.7 was.
+  *Verified:* every figure is now a `Proportion` — value, successes, n and a Wilson interval
+  that is **null when n = 0**. Nine figures carry intervals: accuracy, precision, recall, the
+  **false-negative rate** (new — SM-2 as a figure, not only a count), deadline detection,
+  exact time, and company, role and stage accuracy. Precision (50/52), recall (50/55), the
+  false-negative rate (5/55) and deadline detection (20/26) match hand-computed Wilson values
+  from an asymmetric matrix, so a figure over the wrong denominator cannot pass. 0/0 now prints
+  "—" and "nothing to measure" instead of "0.0 %". The output sweep was **broken on purpose** —
+  precision's interval line deleted — and failed naming the exact line. The gate is unchanged:
+  a normal run exits 0, `--invert` exits 1. The demo run shows why this matters: deadline
+  detection reads 88.5%, a pass against 80%, but its interval runs **71.0–96.0%** — 26
+  fixtures cannot rule out a true rate below target.
+
+- [ ] **T2.10 — Next-action acceptability** · Lane B · needs T7.3, T2.11 · *new 28 Sep*
+  Next action is free text, so exact matching means nothing. After a live run, each
+  model-written next action is judged acceptable or not in the labelling spreadsheet, and the
+  harness reports the acceptance rate with its interval. Fixes **C13**.
+  *Done when:* `npm run accuracy` reports a next-action acceptance rate for any run with
+  judgements recorded — and says plainly when none exist, rather than printing 0%.
+
+- [ ] **T2.11 — Labelling toolkit** · Lane B · needs T2.5 · *new 28 Sep*
+  Three commands. **Inventory:** counts per export — candidate positives, negatives, sender
+  domains, date range — so the held-out size is chosen from real numbers. **Export to
+  spreadsheet:** `.mbox`/`.eml` → one row per email with subject, sender domain, date and a
+  body excerpt, a dropdown for stage and a column per field. **Import from spreadsheet:** →
+  fixture files the harness reads. Anything containing real email content is written
+  **outside the repository**.
+  *Done when:* a Takeout `.mbox` round-trips to a spreadsheet and back into fixtures the
+  harness scores, and a test proves the export refuses to write inside the repository.
+
+- [ ] **T2.12 — Labelling guide** · Lane B · needs T2.3 · *new 28 Sep*
+  One page: what counts as an application email, the six stage definitions **taken from
+  `prompt.ts`** so labellers and the model share one definition, how to label deadlines, and
+  worked examples of the hard negatives.
+  *Done when:* it is the only reference used for T8.3's labelling, and the agreement measured
+  there is recorded against it.
 
 ---
 
@@ -581,12 +716,38 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   the dashboard is correct, but `listJobs({status:'active'})` still returns the rejected
   KPMG job. Two overlapping notions of "done" — worth reconciling before Phase 5.
 
-- [ ] **T3.8 — Sync orchestrator** · Lane B · needs T3.4
-  Lock → list → fetch → classify → single transaction committing events, jobs, provenance
-  **and `history_id` together**. Token bucket, exponential backoff with jitter, expired-cursor
-  fallback.
-  *Done when:* `sync.test.ts` proves a crash mid-sync loses nothing, a re-read is idempotent,
-  and 429s back off. A skipped email is a missed application.
+- [ ] **T3.8 — Sync orchestrator: drop folder** · Lane B · needs T3.4, T7.10 · *reinstated 28 Sep*
+  **Redefined for local ingestion (D25).** Lock → list new files in the configured drop
+  folder → ingest each through the T7.10 path → record the file as processed → release.
+  `sync_state.state` is the lock. `emails_read_total` and `last_full_scan_at` are written —
+  which also fixes the dashboard reading "Emails read: 0" after an ingest.
+  The Gmail-API form of this task — `history_id`, token bucket, 429 backoff — moves to T7.2
+  and stays deferred with it.
+  *Done when:* `sync.test.ts` proves a crash mid-ingest loses nothing, re-reading a file is
+  idempotent, a concurrent run is refused, and a processed file is skipped. A skipped email is
+  a missed application.
+
+- [ ] **T3.10 — Ambiguous matches go to review** · Lane A · needs T3.1, T4.5 · *new 28 Sep*
+  **D26.** `findMatch` returns three outcomes, not two: **match** (company plus role
+  similarity), **ambiguous** (company plus sender domain alone, with role similarity actively
+  low), or **none**. An ambiguous email becomes a pending review item carrying a
+  `suggested_job_id` (new column on `email_events`); nothing is merged. `GET /api/jobs` marks
+  rows that have a pending suggestion. Supersedes the "sender domain as a tiebreak" assumption.
+  *Done when:* replaying the 18 August harvest yields **one** Macquarie application and **one**
+  review item suggesting it, never a silent merge; both answers to a suggestion are tested; and
+  the retention guard passes unmodified.
+
+- [ ] **T3.11 — Confirming onto an existing application applies the email** · Lane A · needs T4.5 · *new 28 Sep*
+  Fixes **C16**. When a confirmed review item matches an existing application, apply it the
+  way the pipeline applies any email: the stage through the stage engine (forward-only, human
+  locks respected), `lastEventAt` only ever moving forward, and fields the student did not
+  touch written as AI with the item's confidence, skipping human-locked ones. **Only fields the
+  student actually changed on the card become human.** Creating a *new* application from a
+  card is unchanged — there the card *is* the application, so every confirmed field is human
+  (T4.8). Pairs with T3.10, whose "same application" answer runs through this path.
+  *Done when:* confirming an older, lower-stage email onto an application at interview leaves
+  its stage, `lastEventAt` and field provenance unchanged, and a later offer email still moves
+  it — all asserted.
 
 ---
 
@@ -637,6 +798,8 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   returns **501, not a faked 202** — T3.8 (the sync orchestrator) is deferred on the demo
   track, so there is nothing to start. The 409-on-concurrent path therefore has no test and
   the done-when is **not** satisfied. Do not tick this until T3.8 lands.
+  *28 Sep:* T3.8 is reinstated as drop-folder ingestion (D25), so this completes with it —
+  `POST /api/sync` runs the drop-folder ingest and returns 409 while one is already running.
 
 - [x] **T4.8 — Detected company & role on review items** · Lane A · needs T4.5 — *done 2026-08-18*
   Add `detected_company` / `detected_role` to `email_events`, populate them in
@@ -654,10 +817,41 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   reachable. **Verified in the failing direction** — the pipeline's `detectedCompany` write
   was replaced with `null` and the guard fired before being restored. Closes defect **C7**.
 
+- [x] **T4.9 — Stage corrections archive terminal stages** · Lane A · needs T4.4 · ✅ **2026-09-28**
+  A correction that sets `rejected` or `withdrawn` also sets `status = 'archived'` — the rule
+  the pipeline and the withdraw route already follow. Fixes **C11**. **Must land before T6.1**,
+  which puts a stage control in front of the student.
+  *Done when:* a `PATCH` to a terminal stage moves the application from Active to Archived,
+  and a `PATCH` from a terminal stage back to a live one returns it to Active.
+  *Verified:* both, plus more than the task asked. The rule had been **written by hand at four
+  call sites and missing from two**, which is exactly how C11 happened — so it now lives in the
+  one place every stage write shares. The repository derives `status` from `stage` on every
+  insert and update; `JobPatch` has **no `status` field**, so no caller can set one without the
+  other (asserted at type level in `repository.typecheck.ts`), and a status passed by an untyped
+  caller is discarded at runtime. The four copies — two in the pipeline, one in the withdraw
+  route, one in the seed — are deleted. Fixing the chokepoint also fixed a **third path** found
+  on the way: confirming a review item whose detected stage is `rejected` created an application
+  on neither tab. Tests written first and seen failing: five repository, two `PATCH`, one
+  review-confirm. Two existing tests had been setting `status` by hand, **masking the defect** —
+  those workarounds are removed and the tests pass without them. The reseeded demo database
+  has identical stage and status pairs, with no archive step anywhere in the seed.
+
+- [ ] **T4.10 — Settings API** · Lane A · needs T4.4 · *new 28 Sep*
+  `GET` / `PATCH /api/settings` reading and writing `users.review_threshold`. The column has
+  existed since T1.4 (default 0.75) but **nothing reads it**: `/api/me` reports the constant
+  and the harvest importer hard-codes 0.75. Ingest passes each user's own threshold instead.
+  **Applies to newly ingested mail only** — re-routing mail already processed would un-assert
+  applications the student may have acted on (D28).
+  *Done when:* changing the threshold changes the routing of the next ingest and nothing
+  already stored, both asserted.
+
 - [ ] **T4.7 — Security test suite** · Lane B · needs T4.1–T4.6
   Consolidates: no password column, token encryption, HTTPS, session flags, validation,
   cross-user isolation, read-only scope.
   *Done when:* `security.test.ts` covers every clause of SM-5 and is green.
+  *28 Sep:* write it now for what exists — no credential column, validation on every editable
+  field, cross-user isolation returning 404 — and add the transport, session and token clauses
+  if T4.1–T4.3 are reinstated. RQ-08 is marked Partial on exactly this basis.
 
 ---
 
@@ -684,7 +878,8 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   *Verified:* clicking a row navigates to `/pipeline/:jobId` and the URL is bookmarkable;
   browser-back closes the panel rather than leaving the pipeline. Calendar and Archive are
   in the sidebar and lead to a view that says no design exists yet — blank means blank
-  (design.md §9), not a placeholder that reads as broken.
+  (design.md §9), not a placeholder that reads as broken. *28 Sep:* both are removed by T5.10
+  (D29).
 
 - [x] **T5.3 — Typed API client** · Lane C · needs T1.3 — *done 2026-08-18*
   Fetch wrapper consuming the shared Zod types. Sends the browser's IANA timezone on
@@ -754,17 +949,45 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   *Done when:* `/docs` renders all five pages inside the app shell, and editing a file in
   `docs/` changes the rendered page with no second edit.
 
+- [x] **T5.10 — Remove Calendar and Archive** · Lane C · needs T5.2 · ✅ **2026-09-28**
+  **D29.** Deadline pills already show due and overdue on every row, which is what a calendar
+  was for; Archive only duplicated the Archived tab. Their placeholder routes go too.
+  *Done when:* neither appears in the sidebar and neither route resolves to a placeholder.
+  *Verified:* four tests written first, three seen failing — the positive control, that every
+  remaining destination is still there, passed throughout, so an empty sidebar cannot satisfy
+  the others. In the browser the sidebar reads Applications · Needs review · Settings ·
+  Documentation, with no empty "Coming soon" heading; `/calendar` and `/archive` resolve to Not
+  found; no console errors. Also corrected the Settings placeholder, which said settings arrive
+  with T6.5 — Settings is T6.4.
+
+- [ ] **T5.11 — Search that keeps rank order** · Lane C · needs T5.5 · *new 28 Sep*
+  **D30**, resolving the old R09 flag. A search box narrows the list by company or role; the
+  order stays the server's — the same rule the stage chips already follow.
+  *Done when:* a test types a query and asserts the surviving rows keep their server order,
+  and that clearing it restores the full list unchanged.
+
+- [ ] **T5.12 — Performance measurement** · Lane B · needs T5.5 · *new 28 Sep*
+  RQ-09's performance clause and SM-8: time the pipeline render and an edit round-trip on the
+  seeded 25-application database. The lower-priority part of RQ-09.
+  *Done when:* `performance.test.ts` records both timings against a stated budget.
+
 ---
 
 ## Phase 6 — Human-in-the-loop *(weeks 8–9)*
 
 The product's most important feature. Every task here serves SM-7.
 
-- [ ] **T6.1 — Inline field editing** · Lane C · needs T5.6, T4.4
-  Click → `Input`/`Select` in place, pre-filled and focused. Enter saves, Escape cancels.
-  Optimistic with rollback.
-  *Done when:* all five extractable fields are editable without leaving the dashboard, and a
-  validation failure keeps focus **without discarding what was typed**.
+- [ ] **T6.1 — Panel edit mode** · Lane C · needs T5.6, T4.4, **T4.9** · *redefined 28 Sep*
+  **D27.** The detail panel switches into edit mode and all five extractable fields become
+  editable together. Changes are held in a temporary state: **Save** commits them in one
+  request, **Cancel** discards them. Two rules that are easy to get wrong:
+  - **Save sends only the fields actually changed.** Sending all five would stamp every field
+    "Edited" and lock it against the classifier for good, though the student changed nothing.
+  - **If an ingest updated the application while the panel was open, Save warns before
+    overwriting**, rather than silently replacing a value the student never saw.
+  *Done when:* all five fields are editable without leaving the dashboard; an untouched Save
+  changes no provenance; a validation failure keeps the student's typing; and the stale-edit
+  warning is tested.
 
 - [ ] **T6.2 — AI-vs-human visual contract** · Lane C · needs T6.1
   Per [design.md §7](design.md): AI field shows `ConfidenceMeter`; human field shows an
@@ -772,63 +995,106 @@ The product's most important feature. Every task here serves SM-7.
   *Done when:* provenance is distinguishable while scanning, without interaction, and carried
   by a text tag rather than colour alone.
 
-- [ ] **T6.3 — Review queue view** · Lane C · needs T4.5, T5.2
+- [ ] **T6.3 — Review queue view** · Lane C · needs T4.5, T5.2, T3.10
   Per-item cards with per-field confidence and source. Confirm / Edit and confirm / Not an
-  application. Sidebar count.
-  *Done when:* confirming creates or updates a job with confirmed fields marked `human`, and
-  the item animates out with focus moving to the next.
+  application. Sidebar count. *28 Sep:* an item carrying a suggested application (T3.10) asks
+  **same application, or a new one?** before confirming.
+  *Done when:* confirming creates or updates a job with confirmed fields marked `human`, both
+  answers to a suggestion are tested, and the item animates out with focus moving to the next.
 
-- [ ] **T6.4 — Settings view** · Lane C · needs T5.2
-  Gmail connection, review-threshold slider ("How sure GradTracker must be before adding an
-  application automatically"), follow-up thresholds, theme, disconnect.
-  *Done when:* disconnect deletes the encrypted token and sync state, **keeps pipeline data**,
-  and says so in the dialog.
+- [ ] **T6.4 — Settings view** · Lane C · needs T5.2, T4.10 · *redefined 28 Sep*
+  Review-threshold slider ("How sure GradTracker must be before adding an application
+  automatically"), stating that it applies to new mail only (D28) · theme. Gmail connection
+  and Disconnect are deferred with T4.1–T4.3 — there is no stored token to disconnect.
+  *Done when:* moving the slider persists through `PATCH /api/settings`, and the next ingest
+  routes by the new threshold.
 
 - [ ] **T6.5 — Accessibility pass** · Lane C · needs T6.1–T6.4
   Per [design.md §10](design.md): keyboard paths, `role="meter"` with text alternative,
   `aria-live` regions, focus management in dialogs and inline editors, 200% zoom.
   *Done when:* the primary journey is completable by keyboard alone with no trap, and every
-  stage and deadline signal survives colour removal.
+  stage and deadline signal survives colour removal. *28 Sep:* RQ-09 names **WCAG 2.1 AA** —
+  record the audit against it, including a contrast check, since nothing in the repository
+  checks contrast today.
+
+- [ ] **T6.6 — "Review required" marker on rows** · Lane C · needs T3.10, T6.3 · *new 28 Sep*
+  A row with a pending suggestion (T3.10) carries a small marker linking to that item in the
+  review queue — the concrete meaning of the marker proposed on 1 September.
+  *Done when:* the marker appears exactly while a pending suggestion exists, disappears once
+  it is resolved, and is announced to assistive technology rather than carried by colour.
 
 ---
 
-## Phase 7 — Live adapters *(weeks 9–11)*
+## Phase 7 — Ingestion and live classifier *(weeks 9–11)*
 
-De-risked by T0.1–T0.2, so this is implementation rather than discovery.
+**Revised 28 September 2026 (D23).** The live classifier (T7.3) is reinstated — every
+ingestion path now classifies live. Hosted Gmail access (T7.1, T7.2) stays deferred; mail
+arrives through the hybrid local path instead (T7.7–T7.10). T7.4–T7.6 stay deferred with it.
 
-- [ ] **T7.1 — Google OAuth flow** · Lane B · needs T4.3, T0.1
+- [ ] **T7.1 — Google OAuth flow** · Lane B · needs T4.3, T0.1 — ⏸ *deferred (D23)*
   PKCE, `state` in an httpOnly cookie, code exchange, user upsert by `google_sub`, encrypted
   refresh token, session issued.
   *Done when:* a real sign-in produces a session and an encrypted token, with the plaintext
   never touching a log or a response body.
 
-- [ ] **T7.2 — Live Gmail client** · Lane B · needs T7.1, T2.1
+- [ ] **T7.2 — Live Gmail client** · Lane B · needs T7.1, T2.1 — ⏸ *deferred (D23)*
   Implements `GmailClient` against Gmail API v1. Full scan bounded to 2,000 messages or 180
   days. Token refresh, typed `HISTORY_ID_EXPIRED`.
   *Done when:* it satisfies the same interface as the fake and **`sync.test.ts` still passes
   against the fake, unchanged**.
 
-- [ ] **T7.3 — Live Claude classifier** · Lane B · needs T2.3
+- [ ] **T7.3 — Live Claude classifier** · Lane B · needs T2.3, **B3** · *reinstated 28 Sep*
   Haiku 4.5 default, Sonnet 5 escalation, `messages.parse()` with the shared schema, retry on
-  429/529.
+  429/529. The adapter sits in `adapters/classifier/` beside the fake; nothing downstream
+  changes. Check the SDK's current structured-output API before writing it (defect **C3**).
   *Done when:* real recruitment emails classify correctly and `npm run accuracy -- --live`
   runs the full corpus.
 
-- [ ] **T7.4 — Batches API for initial scans** · Lane B · needs T7.3
+- [ ] **T7.4 — Batches API for initial scans** · Lane B · needs T7.3 — ⏸ *deferred; revisit if a labelled-set run proves costly*
   Route the initial full scan through the Batches API — 50% cheaper, and the scan is not
   latency-sensitive **(C4)**. Incremental syncs stay synchronous.
   *Done when:* a full scan runs as a batch, results keyed by `custom_id`, cost halved and
   recorded.
 
-- [ ] **T7.5 — Progressive first-scan UI** · Lane C · needs T7.2, T4.6
+- [ ] **T7.5 — Progressive first-scan UI** · Lane C · needs T7.2, T4.6 — ⏸ *deferred with T7.2*
   Rows appear as they classify. Live honest count: "Reading your inbox — 341 of 1,204 emails".
   *Done when:* the first run shows real progress rather than a spinner, and closing the tab
   does not stop the scan.
 
-- [ ] **T7.6 — End-to-end live test** · All lanes · needs T7.1–T7.5
+- [ ] **T7.6 — End-to-end live test** · All lanes · needs T7.1–T7.5 — ⏸ *deferred with T7.1*
   Real account, real inbox, full scan, incremental sync, correct a field, sync again, confirm
   the correction survived.
   *Done when:* the full loop works against a real inbox for all three team members.
+
+- [ ] **T7.7 — Event source and correct Gmail links** · Lane A · needs T1.4 · *new 28 Sep*
+  A new `source` column on `email_events`: `connector`, `export` or `synthetic`. The timeline
+  builds each Gmail link from it — the Gmail API id form for connector events, `rfc822msgid:`
+  for exports — and shows **no** link for synthetic emails, plus a visible "Synthetic" tag.
+  Fixes **C10**.
+  *Done when:* each link type is tested, **and one link of each real type is clicked against
+  real Gmail and opens the right email** — the step skipped the first time.
+
+- [ ] **T7.8 — Mailbox file reader** · Lane B · needs T2.1 · *new 28 Sep*
+  Reads a Google Takeout `.mbox` and individual `.eml` files into `RawEmail` through an
+  established MIME parsing library: multipart bodies, quoted-printable and base64, HTML-only
+  emails reduced to text — many ATS emails are HTML-only. The RFC 822 `Message-ID` is the
+  message id; the Gmail thread id is used where the export carries one.
+  *Done when:* fixtures covering multipart, HTML-only, encoded and non-ASCII emails parse
+  correctly, and a malformed message is skipped and counted rather than aborting the file.
+
+- [ ] **T7.9 — Unlabelled harvest files** · Lane B · needs T7.3 · *new 28 Sep*
+  The harvest schema's `classification` becomes optional. Absent → classified live; present →
+  replayed, kept for tests and for re-running a past harvest reproducibly.
+  *Done when:* an unlabelled harvest file ingests through the live classifier and a labelled
+  one still replays, both tested.
+
+- [ ] **T7.10 — One ingest command** · Lane B · needs T7.7, T7.8, T7.9 · *new 28 Sep*
+  `npm run ingest -- [--synthetic] <files or folders>` accepts any mix of harvest JSON, `.mbox`
+  and `.eml`, records each event's source, and runs one pipeline pass into the database named
+  by `DATABASE_URL` — which is how the three demo modes are chosen. `--synthetic` marks
+  authored emails (D24).
+  *Done when:* a mixed folder ingests in one run, re-running it creates nothing new, and
+  authored emails are tagged synthetic.
 
 ---
 
@@ -845,11 +1111,24 @@ De-risked by T0.1–T0.2, so this is implementation rather than discovery.
   constraint **(C6)**, and any metric not fully met.
   *Done when:* the honest caveats are in writing before review, not raised in the Q&A.
 
-- [ ] **T8.3 — Real labelled corpus** · All lanes · needs T2.6 · *starts week 3, runs throughout*
-  Each member hand-labels ~100 real emails from their own inbox into `fixtures/real/`. **Start
-  this in week 3, not week 11** — it is the only thing that makes SM-1 defensible.
-  *Done when:* ~300 real labelled emails exist and `npm run accuracy -- --corpus=real` reports
-  against them with a confidence interval.
+- [ ] **T8.3 — Real labelled corpus** · All lanes · needs T2.11, T2.12, **B6** · *reinstated and redefined 28 Sep*
+  **The protocol (D32):**
+  1. **Export.** Each member labels and exports their own application emails and hard
+     negatives (B6).
+  2. **Inventory.** T2.11 counts what the three exports actually contain. **The held-out size
+     is set here, from real numbers** — the working target is ~200, about half positives.
+  3. **Composition.** Held-out: real application emails, and real negatives weighted toward
+     the hard ones — job-board ads, recruiter marketing, "application" false friends. Tuning:
+     the 80 authored fixtures plus ~40 real. Authored emails never enter the headline figure.
+  4. **Label** in the T2.11 spreadsheet against the T2.12 guide; **~25 emails labelled by two
+     people independently**, and the agreement reported.
+  5. **Freeze** the held-out set — before any model sees it.
+  6. **Measure** with T7.3 and T2.8; report every figure with its interval (D33).
+  Real email content lives **outside the repository**, whatever its visibility. Positives are
+  deliberately enriched to about half, and the report says so — on a natural inbox, a
+  classifier that answers "no" to everything scores ~98%.
+  *Done when:* the frozen held-out set exists, `npm run accuracy -- --corpus=real` reports
+  against it with intervals, and the agreement figure is recorded.
 
 - [ ] **T8.4 — README and setup guide** · Lane A · needs T7.6
   Clone to running in under five minutes, with no database server, Google account or API key.
@@ -862,18 +1141,40 @@ De-risked by T0.1–T0.2, so this is implementation rather than discovery.
 
 ---
 
+## Backlog and exclusions *(28 September 2026)*
+
+| | Item | Status |
+|---|---|---|
+| **S1** | "Upcoming jobs to apply for" — a module built from job-board ads | **Stretch goal after the MVP.** Needs a new classification category, table and view, and would persist extracted content from non-application email for the first time — a privacy change to decide deliberately, not drift into. Nothing is built until RQ-01 to RQ-09 are complete. |
+| — | Manual "add application" | **Not building.** Adding means confirming an item from the review queue (D31). |
+| — | A GradTracker login for the demo | **Not building.** The local demo is operated by the team (D31). |
+
+---
+
 ## Critical path
 
 The chain that determines the finish date. Slip here and the deadline moves.
+
+**Current (28 September 2026)** — two chains, one for the demo and one for the evidence:
+
+```
+Demo:      B3  → T7.3       → T7.10  → T3.8    → the demo
+           key   classifier   ingest   refresh
+
+Evidence:  B6      → T2.11   → T8.3   → T2.8      → accuracy evidence
+           exports   toolkit   labels   benchmark
+```
+
+The evidence chain is the longer: it depends on three people's exports and on human
+labelling time. That is why the toolkit (T2.11) is step 2 of the build order, ahead of work
+that needs nothing but code.
+
+**Original (16 August 2026)** — kept for the record; T0.1 and T7.6 are now deferred:
 
 ```
 T0.1 → T1.4 → T2.1 → T2.6 → T3.4 → T4.4 → T5.5 → T6.1 → T7.6 → T8.1
 OAuth   schema  ports  harness pipeline API   pipeline edit  live   traceability
 ```
-
-**T8.3 (real corpus) is off the critical path but starts in week 3.** It is the longest-lead
-item in the project and the only one that converts the accuracy number from a demonstration
-into evidence. Treat a late start on it as the schedule risk it is.
 
 ---
 

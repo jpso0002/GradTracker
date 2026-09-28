@@ -2,11 +2,15 @@
 
 > **What this file is.** A self-contained context payload for a fresh Claude chat that has
 > **no access to this repository**. Everything needed is stated inline; nothing here relies
-> on being able to open a file. Written to be blunt rather than diplomatic — if you are
-> using this to help explain the project to teammates, soften it yourself.
+> on opening a file. Written to be blunt rather than diplomatic — if you use it to help
+> explain the project to teammates, soften it yourself.
 >
-> **Accurate as of:** 24 August 2026. Last commit `ea9ae44`, 18 August 2026.
-> **Repo state:** clean apart from documentation edits made 24 August.
+> **Accurate as of:** 28 September 2026. Code last changed 18 August 2026; documentation
+> updated 28 September to record the current Plan of record.
+>
+> **On meeting minutes.** Treat any team meeting minutes as **reference, not fact.** They may
+> describe work that does not exist in the repository, or plans since changed. When minutes
+> and repository disagree, the repository wins — and ask Jordan rather than guessing.
 
 ---
 
@@ -17,15 +21,15 @@
 A final-year university student applies to 20–40 graduate programs and internships in a
 season. Every application generates a scatter of emails from different systems — the
 employer's own address, plus Workday, Greenhouse, Lever, SmartRecruiters, Criteria Corp,
-PageUp. Deadlines arrive buried in bodies. Applications sit in different stages
-simultaneously. The student loses track, and the failure mode is silent: a missed
-assessment window looks exactly like nothing happening.
+PageUp. Deadlines arrive buried in bodies. Applications sit in different stages at once.
+The student loses track, and the failure is silent: a missed assessment window looks exactly
+like nothing happening.
 
-The existing answer is a spreadsheet the student maintains by hand and stops maintaining
-by week three.
+The existing answer is a spreadsheet the student maintains by hand and stops maintaining by
+week three.
 
-**What GradTracker does:** reads the student's Gmail, uses an LLM to decide which emails are
-job applications, extracts **company, role, stage, deadline and next action** from each one,
+**What GradTracker does:** reads the student's email, uses an LLM to decide which emails are
+job applications, extracts **company, role, stage, deadline and next action** from each,
 groups emails into applications, and renders a **single pipeline ranked by urgency**.
 
 **The product's one opinion:** what you should do next. There is deliberately no sort
@@ -36,7 +40,7 @@ exists to replace.
 
 `applied` · `assessment` · `interview` · `offer` · `rejected` · `withdrawn`
 
-Progression is forward-only, except `rejected` and `offer` which apply from any stage.
+Progression is forward-only, except `rejected` and `offer`, which apply from any stage.
 `withdrawn` is **never** AI-assigned — only a human sets it.
 
 ---
@@ -45,377 +49,395 @@ Progression is forward-only, except `rejected` and `offer` which apply from any 
 
 ### 2.1 The headline
 
-**The backend is finished and tested. The dashboard works. There is no live classifier.**
+**The backend is built and tested. The dashboard works. There is still no live classifier.**
 
 `packages/server/src/adapters/classifier/` contains exactly two files: `fake.ts` and
-`prompt.ts`. The fake replays pre-written labels from a fixture corpus. **No adapter calls
-a real model.**
+`prompt.ts`. The fake replays pre-written labels. **No adapter calls a real model.**
 
-The demo that reads a real inbox works because 32 emails were classified **by a human
-operating a model in a chat session**, written into a JSON file, and replayed through the
-real pipeline. Everything downstream of classification — matching, stage progression,
-provenance, ranking, retention — is genuine and tested. Classification itself is a
-human-in-the-loop stand-in.
+The demo that reads a real inbox works because 32 emails were classified **by a model
+operated in a chat session**, written to a file, and replayed through the real pipeline.
+Everything downstream of classification is genuine; classification itself is a stand-in.
 
-Three consequences, stated plainly:
+Consequences:
 
-1. **The product cannot classify an email on its own.**
-2. **The risk register's "misclassification of emails" critical risk is currently
-   unmeasurable.** You cannot misclassify if you are not classifying.
-3. **The 100% accuracy figure printed by the harness is a self-test** — the fake classifier
-   replays the corpus labels, so it scores the corpus against itself. The harness output
-   says so explicitly. It proves the harness works. It proves nothing about a model.
+1. **The product cannot yet classify an email on its own.**
+2. **The "misclassification" risk is unmeasurable** until a model runs.
+3. **The 100% accuracy the harness prints is a self-test** — the fake scores the corpus
+   against itself. The output says so. It proves the harness, not a model.
 
-The unblock is an **Anthropic API key**, at roughly **$1.30** for the benchmark.
+**The unblock is an Anthropic API key.** One has been created as of late September but **not
+yet verified** (blocker B3). Verifying it is the first thing that unlocks the classifier lane.
+
+**On 28 September the classifier moved onto the critical path**: every ingestion path the
+team chose classifies live (D23, §4).
 
 ### 2.2 Status by phase
 
 | Phase | Scope | Status |
 |---|---|---|
-| **0 — De-risk** | Google Cloud project, API key, spike | ⏸ Descoped for the demo track |
+| **0 — De-risk** | Google Cloud, API key spike | ⏸ Descoped |
 | **1 — Foundation** | Monorepo, shared Zod schemas, DB schema, migrations, repository, seed | ✅ Complete |
-| **2 — Harness** | Ports, fake adapters, prompt, fixture corpus, accuracy harness, Wilson intervals | ✅ T2.1–T2.7 · T2.8 blocked on API key |
-| **3 — Pipeline** | Matching, stage engine, provenance, classification pipeline, ranking, harvest | ✅ Complete · T3.8 sync orchestrator deferred |
-| **4 — API** | Job routes, review routes, sync routes, detected company/role | ✅ T4.4, T4.5, T4.8 · ◐ T4.6 partial · ⏸ T4.1–T4.3 auth deferred · ☐ T4.7 security suite |
-| **5 — Dashboard** | Design system, shell, API client, pipeline view, detail panel | ✅ T5.1–T5.3, T5.5, T5.6 · ◐ T5.7 partial · ⏸ T5.4 deferred · ☐ T5.8, T5.9 |
-| **6 — Human-in-the-loop** | Inline editing, review queue view, settings | ☐ Not started |
-| **7 — Live adapters** | **Real Gmail client, real Claude classifier** | ⏸ Deferred |
-| **8 — Traceability** | Traceability doc, limitations doc, 300 real labelled emails | ⏸ Deferred |
+| **2 — Harness** | Ports, fakes, prompt, 80-fixture corpus, accuracy harness, Wilson intervals | ✅ T2.1–T2.7, **T2.9** · T2.8 benchmark waits on B3 · ☐ T2.10–T2.12 |
+| **3 — Pipeline** | Matching, stage engine, provenance, pipeline, ranking, harvest | ✅ T3.1–T3.7, T3.9 · **T3.8 reinstated** as drop-folder sync · ☐ **T3.10, T3.11 new** |
+| **4 — API** | Job, review and sync routes | ✅ T4.4, T4.5, T4.8, **T4.9** · ◐ T4.6 · ☐ T4.10 · ⏸ T4.1–T4.3 auth · ☐ T4.7 |
+| **5 — Dashboard** | Design system, shell, API client, pipeline, detail panel | ✅ T5.1–T5.3, T5.5, T5.6, **T5.10** · ◐ T5.7 · ⏸ T5.4 · ☐ T5.8, T5.9, T5.11, T5.12 |
+| **6 — Human-in-the-loop** | Editing, review queue, settings, accessibility | ☐ Not started · **T6.1, T6.3, T6.4 redefined** · **T6.6 new** |
+| **7 — Ingestion & live classifier** | Live classifier, hybrid ingestion | ☐ **T7.3 reinstated** · **T7.7–T7.10 new** · ⏸ hosted Gmail (T7.1, T7.2) |
+| **8 — Traceability** | Real labelled corpus, traceability, limitations | ☐ **T8.3 reinstated** · rest deferred |
 
 ### 2.3 Hard numbers
 
 | | |
 |---|---|
-| Tests | **365 passing**, 21 files |
-| Source | ~10,161 lines TypeScript/TSX (excludes vendored design system and build output) |
-| Fixture corpus | 80 labelled emails — 55 application / 25 not |
-| Deadline-bearing fixtures | 26, across eight distinct phrasings |
-| Hard negatives | 15 (8 name companies with live applications; 1 from a genuine ATS domain) |
+| Tests | **387 passing**, 22 files |
+| Source | ~10,160 lines of TypeScript/TSX (excludes the vendored design system and build output) |
+| Fixture corpus | 80 labelled emails — 55 application / 25 not; 26 deadline-bearing; 15 hard negatives |
 | Real emails harvested | 32 → 8 applications, 20 updates, 4 correctly rejected |
-| Gates | `npm test`, `npm run lint`, `npm run typecheck`, `npm run accuracy` — all green |
+| Gates | `test`, `lint`, `typecheck`, `accuracy` — all green |
+| Commits | All 21 by Jordan (`jpso0002`); a single repository (D22) |
 
 ---
 
 ## 3. What "completed" looks like
 
-The finished product, per the masterplan:
+### 3.1 The full product vision
 
-A student signs in with Google once, granting **read-only** Gmail access. GradTracker scans
-the inbox, classifies every email, and builds a pipeline. Thereafter it syncs incrementally.
+A student signs in once, granting **read-only** Gmail access. GradTracker scans the inbox,
+classifies every email and builds a pipeline, then syncs incrementally.
 
-**One screen** shows every live application ranked by urgency: what is overdue, what is due
-this week, what has gone quiet and needs a follow-up. Each row carries company, role, a
-stage badge, the single next action, and a deadline pill coloured by how close it is.
+**One screen** shows every live application ranked by urgency — overdue, due this week, gone
+quiet. Each row carries company, role, a stage badge, the single next action and a deadline
+pill coloured by proximity.
 
-Clicking a row opens a detail panel: the extracted fields, each marked with **how the value
-was obtained** — a confidence meter if the model extracted it, an "Edited" tag if the
-student corrected it, never both. Below that, a timeline of every email in the application,
-each linking back into Gmail.
+A detail panel shows the extracted fields, each marked with **how the value was obtained** —
+a confidence meter if the model extracted it, an "Edited" tag if the student corrected it,
+never both — and a timeline of every email in the application, each linking back into Gmail.
 
-Anything the model got wrong, the student corrects inline. The correction is permanent —
-a later sync carrying a conflicting value **must not** overwrite it.
+Anything wrong is corrected in place, **permanently**: a later sync with a conflicting value
+must not overwrite it. Emails the model is unsure about never enter the pipeline as fact;
+they go to a review queue for the student to confirm.
 
-Emails the model was not confident about never enter the pipeline as fact. They go to a
-review queue where the student confirms or dismisses them.
+**Never stored:** subjects, bodies, or full sender addresses. Only extracted fields, the
+sender's domain and the message id.
 
-**What is never stored:** email subjects, bodies, or full sender addresses. Only the
-extracted fields, plus the sender's domain and the Gmail message id.
+### 3.2 What the final demo will be *(Plan of record, 28 September)*
+
+- **Local**, run by the team — the TA confirmed a locally hosted demo is acceptable.
+- **Mail comes in through hybrid ingestion**: a connector read of a real account, and/or
+  Gmail exports (`.mbox`/`.eml`). **Every email classified live.**
+- **Three demo modes**, each its own database: a single real account; a test inbox of real
+  job-board mail plus **authored** application emails, **marked synthetic**; or both.
+- **Refresh** ingests new files from a drop folder.
+- **Review queue** live, including ambiguous matches with a suggested application.
+- **Panel editing** with Save/Cancel; a per-user threshold slider; search that keeps order.
+- **Evidence**: accuracy on a frozen, real, held-out set, every figure with its interval.
 
 ### Explicitly out of scope
 
-Marketing site · administrator roles · multi-user accounts · calendar integration ·
-mobile apps · sending email on the student's behalf (the OAuth scope makes it technically
-impossible) · job-board scraping · application autofill.
+Marketing site · admin roles · calendar integration · mobile apps · sending email · job-board
+scraping · application autofill · **manual "add application"** · **a GradTracker login for
+the demo**. **Post-MVP stretch only:** an "upcoming jobs to apply for" module.
 
 ---
 
-## 4. The unit, the team, and the dates
+## 4. The Plan of record *(28 September 2026)*
+
+Twelve decisions, D22–D33, taken after reconciling RTM v3 and the September meetings against
+the repository.
+
+| | Decision | The point |
+|---|---|---|
+| **D22** | One implementation: this repository | Plans reconcile against code, not descriptions |
+| **D23** | **Hybrid local ingestion, classified live** | Connector harvest + Gmail exports, one ingest path. Hosted OAuth deferred **on effort, not cost** |
+| **D24** | Demo data: real job-board mail + **authored** applications, marked synthetic | Job-board mail alone gives an empty dashboard — ads are negatives by design |
+| **D25** | Refresh ingests a **drop folder** | Makes `POST /api/sync` real; 409 on a concurrent run |
+| **D26** | **Ambiguous matches go to review** | Fixes the Macquarie merge; the product asks when unsure |
+| **D27** | **Panel edit mode**, Save/Cancel | Save sends only changed fields; warns on a stale edit |
+| **D28** | Per-user review-threshold **slider** | Applies to new mail only |
+| **D29** | Calendar and Archive removed | Deadline pills already do the calendar's job |
+| **D30** | Search that **keeps rank order** | Filtering ≠ sorting |
+| **D31** | No manual add; no demo login; jobs module is stretch | Scope held |
+| **D32** | **Evaluation dataset protocol** | §7.3 |
+| **D33** | Every figure carries its interval | Point estimate + interval, never a 95% floor |
+
+### Build order — by dependency, not deadline
+
+| Step | What | Waits on |
+|---|---|---|
+| **1** ✅ | Stage-correction archive bug (C11) · remove Calendar/Archive · intervals on every figure (C12) — **done 28 Sep** | — |
+| **2** | Labelling toolkit and guide | — |
+| **3** | Live classifier → Haiku-vs-Sonnet benchmark | **B3** |
+| **4** | Hybrid ingestion: event source + correct Gmail links (C10), mailbox reader, unlabelled harvest, one `ingest` command, drop-folder sync | Step 3 |
+| **5** | Ambiguous matches → review | — |
+| **6** | Panel editing · review queue screen · row marker · settings API + slider · search | Steps 1, 5 |
+| **7** | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
+| **Alongside** | Evaluation dataset: export → inventory → label → freeze → measure | **B6**, step 2 |
+
+**No hard target for 7 or 9 October** — the team's position is that wherever the work has
+reached is fine.
+
+---
+
+## 5. The unit, the team, and the dates
 
 | | |
 |---|---|
-| **Unit** | FIT3161 / FIT3163 / FIT3188 Software Project, Monash University |
+| **Unit** | FIT3162 / FIT3164 / FIT3189 Software Project Part 2, Monash University *(FIT3161 / FIT3163 / FIT3188 in semester 1)* |
 | **Team** | DS-10 — William Moreton, Jordan Psomas, Athan Vass |
-| **Duration** | 12-week semester (this is semester 2; the project began in semester 1) |
-| **Client** | The teaching team. There is no external client. |
-| **Budget** | Zero. No cloud spend is provided. |
+| **Client** | The teaching team; no external client |
+| **Budget** | Zero |
 
-### Lanes, per the meeting of 19 August 2026
-
-- **William** — front-end, wireframes, risk register
-- **Jordan** — the classifier and its tuning *(this is the user of this document)*
-- **Athan** — backend and client-server architecture
-
-**⚠️ Note the divergence.** The minutes assign Athan to *"begin implementation"* of the
-backend and William to *"continue developing wireframes"*. Both largely exist already —
-the backend is complete with 365 tests and the dashboard is built against a full design
-system. The team has confirmed it is aware of the shared repository, but any plan should
-account for the fact that the minutes describe a project earlier than the one that exists.
-
-### Dates
+**Lanes, as the minutes allocate them:** Jordan — classifier and evaluation; William — front
+end and design, plus a share of labelling; Athan — backend and client-server. The user of
+this document is Jordan.
 
 | When | What |
 |---|---|
-| **19 Aug 2026** | Team meeting (source of the current action items) |
-| **25 Aug 2026** | RTM condensed from 19 requirements to 7–10 — **the only hard-dated deliverable** |
-| Week of 25 Aug | Individual sign-off; each member presents draft pitch slides |
-| **2 Sep 2026** | Next team meeting (5:30 PM Zoom) + TA sign-off |
-| Unknown | **Mid-semester pitch date is not recorded in the minutes** |
+| 24 Aug 2026 | RTM v3 — nineteen requirements condensed to nine |
+| Late Aug | Mid-semester pitch (project management and progress, not the product) |
+| 1 Sep, 19 Sep | Team meetings |
+| **7 Oct 2026** | Next team meeting, 7:30 PM Zoom |
+| **9 Oct 2026** | TA sign-off |
+| Unknown | **Final demonstration rubric not yet released** (as of 19 September) |
 
-### What the mid-semester pitch is actually about
-
-Per the TA, the pitch is **project management and progress, not the product**:
-milestone progress and methodology adaptation · current project-management and development
-issues · risk management and anticipated issues · the updated RTM with next steps.
-
-For the **final** demo the TA's framing is different: pitch it **like presenting to
-investors** — explain why each feature is useful and how it helps the target audience
-achieve their goal, not merely what was built. Function over visual polish. The demo must
-show the product solves the problem identified in semester 1.
+**For the final demo**, the TA's framing: pitch it **like presenting to investors** — why
+each feature helps the student achieve their goal, not merely what was built. Function over
+polish. It must show the product solves the problem identified in semester 1.
 
 ---
 
-## 5. Success metrics — and what evidence actually exists
+## 6. The RTM — nine requirements *(v3, 24 August 2026)*
 
-This table is the spine of the RTM and the pitch. **The right-hand column is the honest
-part.**
+This is the assessed contract. Nineteen semester-1 requirements were grouped into nine; none
+deleted. Two Complete, six Partial, one Deferred — justified.
+
+| Req | Area | Status | Where it actually stands |
+|---|---|---|---|
+| **RQ-01** | Read-only mailbox access; no credentials stored | Deferred — justified | Hosted OAuth deferred; no credential column exists (tested). Justification: `gmail.readonly` is restricted; publishing past 100 test users needs a paid assessment |
+| **RQ-02** | Ingest without manual entry; each message once; on-demand update | Partial | Ingestion and duplicate protection built and exercised on 32 real emails. Refresh returns 501 today → drop folder (D25) |
+| **RQ-03** | ≥95% accuracy on held-out data; precision, recall, FN separately, each with an interval | Partial | Pipeline, prompt and harness built. **No model measured.** Interval on accuracy only (C12). No held-out set yet (C14) |
+| **RQ-04** | Extract company, role, stage, deadline, next action; ≥80% deadline detection | Partial | Contract, stage logic and deadline scoring built. Measurement pending. Next action has no scoring method (C13) |
+| **RQ-05** | One view, ordered by urgency | **Complete** | Built and tested; order independent of arrival. R09 filter flag → resolved by D30 |
+| **RQ-06** | Review and correct every field; corrections persist and are distinguishable; low-confidence goes to review | Partial | Provenance complete and tested. **Editing UI and review screen not built** — the largest remaining user-facing work |
+| **RQ-07** | No raw email content persisted | **Complete** | The best-evidenced requirement: enforced by the type system, two guards verified in the failing direction |
+| **RQ-08** | Transit/rest protection, validation, sessions, per-user isolation | Partial | Isolation and validation built and tested; transport, sessions, tokens deferred with RQ-01; security suite unwritten |
+| **RQ-09** | Browser, mobile + desktop widths, WCAG 2.1 AA, prompt interactions | Partial | Browser, no install. Responsive, accessibility audit and performance measurement not built |
+
+### Recommended v4 amendments *(not yet applied to the RTM)*
+
+- **RQ-01** — add that testing-mode OAuth for one demo account was considered and deferred on
+  **effort, not cost**. The RTM itself cites the free 100-user allowlist, so an assessor can
+  fairly ask. Answer first.
+- **RQ-02** — deliverable becomes drop-folder refresh; remove "deliberately refuses".
+- **RQ-03** — state the evaluation protocol (§7.3); replace "≈ $1.30" (that was for 80
+  emails) with "priced from current rates before the run".
+- **RQ-04** — next action judged acceptable/unacceptable after each run.
+- **RQ-05** — R09 resolved: search that preserves order.
+- **RQ-06** — deliverable adds panel Save/Cancel, ambiguous-match review with row markers, the
+  per-user threshold.
+- **RQ-08** — write the security suite now for what exists.
+- **RQ-09 — an overclaim to fix.** It says "the design system enforces colour-contrast".
+  **Nothing in the repository tests contrast**; what is enforced is *no colour outside the
+  design tokens*. Contrast belongs to the WCAG audit.
+
+---
+
+## 7. Success metrics and evidence
+
+### 7.1 The nine metrics
 
 | ID | Metric | Target | Evidence today |
 |---|---|---|---|
-| **SM-1** | Application vs non-application classification | ≥95% accuracy, precision and recall separate | ⚠️ **Harness exists and gates CI, but has only ever run against a fake classifier.** The 100% figure is the corpus scored against itself. No model has been measured. |
-| **SM-2** | False negatives tracked as a first-class number | Reported explicitly | ✅ Counter built, printed, asserted. Same caveat as SM-1. |
-| **SM-3** | Deadline extraction from emails with explicit deadline language | ≥80% | ✅ 26 deadline-bearing fixtures across eight phrasings; scoring separates date-correct from exact-time. Same caveat. |
-| **SM-4** | Student finds their most urgent item within one screen | Top item is the right answer to "what next" | ✅ Deterministic ranking function, 14 tests, order-independence asserted. **Not yet true at mobile widths — T5.8 unbuilt.** |
-| **SM-5** | Zero credentials stored | OAuth only, tokens encrypted, HTTPS, validation, secure sessions | ⚠️ **Partially evidenced.** No password column exists (asserted by test). Token encryption, HTTPS and session flags are **unimplemented** — T4.1–T4.3 deferred. `security.test.ts` (T4.7) does not exist. |
-| **SM-6** | No raw email content persists | Only structured fields stored | ✅ **Strongest evidence in the project.** Two independent guards: a forbidden-column check across 27 column names in both SQL dialects, and a content search that runs the whole corpus through the real pipeline then searches every value of every row of all five tables for every fixture's subject, body phrases and sender address. Both verified in the failing direction. |
-| **SM-7** | Corrections persist across syncs; AI vs human visually distinct | 100% of fields editable | ✅ Provenance write-path tested: a correction survives five consecutive conflicting syncs and a later classification at confidence 1.0. UI contract tested three ways. **Inline editing UI itself is unbuilt (T6.1).** |
-| **SM-8** | Runs in a browser, responds promptly | Render and edit round-trip under load | ⚠️ Runs in a browser. `performance.test.ts` does not exist. |
-| **SM-9** | Every requirement maps to a test | 100% coverage of SM-1…SM-8 | ☐ Phase 8, deferred. This table is the closest thing that exists. |
+| **SM-1** | Application vs non-application | ≥95%, P and R separately | ⚠️ Harness gates CI but has only run the fake. No model measured. |
+| **SM-2** | False negatives tracked | First-class number | ✅ Counted and asserted. Same caveat. |
+| **SM-3** | Deadline extraction | ≥80% | ✅ 26 deadline fixtures, eight phrasings; date-correct and exact-time scored separately. Same caveat. |
+| **SM-4** | Most urgent item in one screen | Top item is the answer | ✅ Deterministic ranking, order-independence asserted. **Not yet at mobile widths.** |
+| **SM-5** | Zero credentials stored | OAuth, encryption, HTTPS, validation, sessions | ⚠️ No password column (tested). Encryption, HTTPS, sessions unimplemented; `security.test.ts` absent. |
+| **SM-6** | No raw content persists | Structured fields only | ✅ **Strongest evidence** — forbidden-column guard across 27 names, plus a content search over every value of every row. Both verified failing. |
+| **SM-7** | Corrections persist; AI vs human distinct | 100% editable | ✅ A correction survives five conflicting syncs. **Editing UI unbuilt.** |
+| **SM-8** | Browser, prompt | Measured | ⚠️ Runs in a browser; not measured. |
+| **SM-9** | Every requirement maps to a test | 100% | ☐ Deferred. |
 
-### The single most important caveat
+### 7.2 The statistical caveat
 
-**At n=80 the Wilson 95% confidence interval spans ±4.6 points.** So 96.3% and 91% are not
-distinguishable by this corpus. Any accuracy claim from the current fixtures is weaker than
-the number suggests.
+At n=80, the Wilson 95% interval spans about ±4.6 points: **96.3% and 91% are
+indistinguishable** on the current corpus. At n≈200 with ~97% measured, the interval is
+roughly **93.6–98.6%**. A lower bound at 95% needs about 98% measured. The honest claim is
+the point estimate with its interval (D33).
 
-This is why **T8.3 — 300 real labelled emails** matters, and why stating the limitation in
-the pitch is stronger than quoting a bare percentage. It demonstrates the team understands
-what its own numbers do and do not prove.
+### 7.3 The evaluation protocol *(D32)*
+
+- **Tuning set:** the 80 authored fixtures (they shaped the prompt, so they can never be
+  held-out) plus ~40 real emails.
+- **Held-out set:** ~200 real emails — about half application emails from the three members'
+  own inboxes, half real negatives weighted toward the hard ones. **Size set after an
+  inventory** of what the exports contain.
+- **Enriched to about half positives, and declared** — a natural inbox is ~98% negatives,
+  where answering "no" to everything scores ~98%.
+- **Each member exports their own mail** (labelled Gmail search → Google Takeout). Nobody
+  reads anyone else's inbox.
+- **Spreadsheet labelling** via a converter, against a one-page guide using the prompt's own
+  stage definitions. **~25 emails double-labelled**; agreement reported.
+- **Frozen before any model sees it.** The model never pre-labels held-out data.
+- **Authored emails never count** toward the headline figure.
+- **Real email content never enters git.**
+- **Next action** judged acceptable or not after each run, not labelled in advance.
+- **Human time:** roughly 4–5 hours across the team, mostly labelling.
 
 ---
 
-## 6. Architecture
+## 8. Architecture
 
 ### Stack
 
-TypeScript end-to-end. npm workspaces monorepo, three packages:
+TypeScript end-to-end, npm workspaces, three packages:
 
-- **`packages/shared`** — Zod schemas. The single source of type truth. Every type crossing
-  the client/server boundary is defined here once and inferred, never redeclared on either
-  side.
+- **`packages/shared`** — Zod schemas; the single source of type truth.
 - **`packages/server`** — Express 5 API, ports-and-adapters domain logic, Drizzle ORM.
-- **`packages/client`** — React 19 + Vite 7 + react-router 7 dashboard.
+- **`packages/client`** — React 19 + Vite 7 + react-router 7.
 
-Database: **Postgres** in production, **SQLite** in development and test. Two schema
-definitions kept in lockstep by a parity test; Postgres verified in-process with PGlite
-(real Postgres compiled to WASM), so "works on both engines" is a CI assertion rather than
-something someone once did on a laptop.
+**Postgres** in production, **SQLite** in development and test; two schema definitions kept
+in lockstep by a parity test; Postgres verified in-process with PGlite.
 
 ### Ports and adapters
 
-Two things the product depends on that it does not control: **Gmail** and **the classifier
-model**. Both sit behind an interface with a fake implementation.
-
-ESLint blocks importing `googleapis` or `@anthropic-ai/sdk` anywhere in the server outside
-`adapters/`. Verified in both directions.
-
-**A fresh clone runs and passes all tests with no database server, no Google account and no
-API key.** That property is a requirement, not a convenience.
+Gmail and the classifier each sit behind an interface with a fake. ESLint blocks the Google
+and Anthropic SDKs anywhere in the server outside `adapters/`. **A fresh clone runs every
+test with no database server, no Google account and no API key.**
 
 ### The five tables
 
 `users` · `jobs` · `email_events` · `job_field_provenance` · `sync_state`
 
-**The retention boundary is a type, not a convention.** `classifyOne()` takes a `RawEmail`
-carrying subject and body and returns a `ClassifiedEmail` that **structurally has neither**.
-Downstream code cannot persist what it cannot see.
+**The retention boundary is a type.** `classifyOne()` takes a `RawEmail` with subject and
+body and returns a `ClassifiedEmail` that structurally has neither.
 
 ### The pipeline, per email
 
-1. **Pre-filter** — cheap rejects before paying for a model call
-2. **Idempotency check** — `(user_id, gmail_message_id)` is unique, so a crashed sync is
-   always safe to re-read
-3. **Classify** — the only point that sees content; returns extracted fields only
-4. **Not an application?** Counted, never stored. No row, no id, no domain.
-5. **Below the confidence threshold?** → review queue, **no job created**. Nothing is
-   asserted as fact until a human confirms it.
-6. **Match** to an existing application, or create a new one
-7. **Stage decision** — forward-only, human-locked stages frozen
-8. **Record the event**, advance `lastEventAt`, archive if terminal
+1. **Pre-filter** — skips self-sent mail, calendar notifications and bounces only
+2. **Idempotency** — `(user_id, gmail_message_id)` is unique; a crashed run is safe to re-read
+3. **Classify** — the only step that sees content
+4. **Not an application** — counted, never stored
+5. **Below the review threshold** → review queue, **no job created**
+6. **Match** to an existing application or create one
+7. **Stage decision** — forward-only; human-locked stages frozen
+8. **Record the event**; archive if the stage is terminal
 
 ### The three algorithms
 
-**Matching.** Company names are normalised (suffix stripping, punctuation, whitespace).
-Role similarity uses the Sørensen–Dice coefficient on character bigrams, but computed on
-the *distinguishing* part of a title — `normaliseRole()` strips `graduate`, `program`,
-`intern` and intake years first. On raw titles "Graduate Engineer" and "Graduate Trader"
-score 0.60, over the threshold, and two unrelated applications at one employer would merge.
-A match requires an exact normalised company **plus** either role similarity or a shared
-sender domain. A null sender domain never matches another null.
+**Matching.** Normalised company, plus Dice similarity on the *distinguishing* part of the
+role (`normaliseRole()` strips "graduate", "program", "intern" and intake years — otherwise
+"Graduate Engineer" vs "Graduate Trader" scores 0.60 and merges). **Planned (D26):** a match
+on sender domain alone with low role similarity goes to review instead of merging.
 
-**Stage engine.** Returns a *typed reason*, not a boolean, so the timeline can explain why
-an email changed nothing. Order-independent: the same emails in three different arrival
-orders reach the same stage.
+**Stage engine.** Returns a typed reason, not a boolean; order-independent.
 
-**Ranking.** `daysUntil()` counts **calendar days in the student's timezone**, not elapsed
-time — at 11pm Sunday a 9am Monday deadline is 0.4 elapsed days away but is *tomorrow*.
-Ranking, staleness and urgency are pure functions with no I/O.
+**Ranking.** `daysUntil()` counts calendar days in the student's timezone. Pure functions.
+Staleness: applied 14 days · assessment 5 · interview 7 · offer 3.
 
-**Staleness thresholds:** applied 14 days · assessment 5 · interview 7 · offer 3.
-**Confidence:** review below 0.75; escalate to the larger model below 0.6.
+### Provenance
 
-### Provenance — how corrections survive
+`job_field_provenance` records per field whether a value is `ai` or `human`. The classifier's
+write path **skips human-locked fields**. This is SM-7's mechanism.
 
-`job_field_provenance` records, per field, whether the value came from `ai` or `human` and
-with what confidence. The classifier's write path **skips human-locked fields entirely**.
-Correcting a field sets it to `human` and clears its confidence.
+### Planned: hybrid ingestion *(D23)*
 
-This is the mechanism behind SM-7, and it is why the UI can honestly show a confidence meter
-for a machine guess and an "Edited" tag for a human fact.
+```
+harvest JSON ─┐
+.mbox export ─┼─► reader ─► RawEmail (+ source) ─► processEmail ─► database
+.eml files   ─┘                                        ▲  unchanged
+                                              live classifier
+```
+
+Every event will record its `source` — `connector`, `export` or `synthetic`. **One mailbox,
+one path**: the connector gives Gmail API ids and exports give RFC 822 Message-IDs, so the
+duplicate protection cannot see an overlap.
 
 ---
 
-## 7. Decisions that need defending
+## 9. Decisions most likely to be questioned
 
-Twenty-one decisions are recorded. The ones likely to be questioned:
-
-| | Decision | Why |
+| | Decision | Defence |
 |---|---|---|
-| **D2** | Postgres in production, SQLite in dev/test | Zero setup for a fresh clone; parity enforced by test |
-| **D4** | Build against mocks first, real credentials later | The whole system is testable before any external dependency exists |
-| **D5** | Store message id and metadata only, never body or subject | Privacy by construction, not by policy |
-| **D6** | Local development now, deployable later | See the local-hosting justification below |
-| **D9** | Confidence-gated review queue is in the MVP, not a nice-to-have | An AI product that cannot say "I'm not sure" asserts wrong things as fact |
-| **D10** | Six computed stages | Resolved after being open in all four documents |
-| **D14** | The accuracy harness is a **CI gate**, not a report | A number nobody blocks on is a number that drifts |
-| **D16** | Haiku 4.5 default, Sonnet 5 on escalation | ⚠️ **Chosen from pricing estimates, never measured.** T2.8 exists to settle this and is blocked on the API key. |
-| **D17** | 80 synthetic fixtures now, ~300 real later | See the n=80 caveat |
-| **D21** | Three parallel owner lanes | Maps to the three team members |
-
-### The local-hosting justification
-
-The TA confirmed local hosting is acceptable **provided the reasoning is documented
-convincingly in the RTM**. The reasoning is external and strong, not a matter of
-convenience:
-
-- `gmail.readonly` is a Google **restricted** scope. Production verification requires a paid
-  third-party security assessment, which a university unit with no budget cannot obtain.
-- Test-user mode caps at 100 users, so even an approved app could not be publicly launched
-  as originally specified.
-- The demo track substitutes a real Gmail read through the team's own connector, so **no
-  capability is lost** — only the hosted auth round-trip.
-
-Team decision, 24 August: **OAuth, accessibility and responsiveness all stay in the RTM**,
-with OAuth's non-implementation justified rather than the requirement deleted. That commits
-the team to actually building responsive (T5.8) and accessibility work.
-
-If a tutor rejects the deferral, implementing T4.1–T4.3 is roughly a week: OAuth with PKCE
-and verified `state`, secure sessions, AES-256-GCM refresh-token encryption, plus T4.7's
-security suite.
+| **D2** | SQLite in dev, Postgres in prod | Zero-setup clone; parity enforced by test |
+| **D5** | Never store body or subject | Privacy by construction, not policy |
+| **D9** | Review queue is MVP | An AI product that cannot say "I'm not sure" asserts wrong things as fact |
+| **D14** | Accuracy harness is a CI gate | A number nobody blocks on drifts |
+| **D16** | Haiku 4.5, escalating to Sonnet 5 | ⚠️ Chosen from pricing, **never measured** — T2.8 settles it |
+| **D23** | Hosted OAuth deferred | On **effort**, not cost — testing mode is free for one account; answer that before being asked |
+| **D24** | Authored demo emails | Marked synthetic, excluded from accuracy; say so aloud in the demo |
+| **D26** | Ambiguous → review | A silent merge destroys history; a question costs one click |
+| **D32** | Enriched, frozen held-out set | Declared enrichment; frozen before any model; never model-labelled |
 
 ---
 
-## 8. Known defects and open problems
+## 10. Known defects and open problems
 
-### Open, needing a decision
+### Recorded 28 September, not yet fixed
 
-| | Problem |
-|---|---|
-| 🔴 **Macquarie merge** | Two genuinely separate applications — "Graduate Program 2027 — Technology" and "Graduate Program 2027 — Data (Sydney)" — merged into one job because both arrived from `recruitment.macquarie.com`. The sender-domain arm of the match fired despite plainly different roles. **Contradicts the project's own rule** that every ambiguous case creates a new job, and maps onto the register's "misclassification" critical risk. Proposed fix: a shared domain is not sufficient when role similarity is *actively low*, as distinct from merely unknown. Needs a team call. |
-| ⚠️ **Ambiguous ATS domains generally** | `criteriacorp.com` sends assessment invites for KPMG, PwC **and** nbn. Sender domain is ambiguous across employers, so company extraction from the body carries the whole matching decision on those emails. A miss produces an orphan job rather than a wrong merge — the safe failure. |
-| ⚠️ **`emailsReadTotal` never written by the harvest** | The dashboard reads "Emails read: 0" immediately after ingesting 32 emails. Cosmetic but visible in a demo. |
-| ⚠️ **`POST /api/sync` returns 501** | Deliberate — the orchestrator (T3.8) is deferred and a 202 that starts nothing is worse than an honest refusal — but it is a visible gap if anyone clicks it. |
-| ⚠️ **Voice interaction** | Absent from the RTM and from every document. Team view is it is not needed; one member flagged the risk of being marked against the original brief. Assigned to Jordan to confirm with the tutor. No code implication until answered. |
+| | Problem | Fix |
+|---|---|---|
+| **C10** | Every "Open in Gmail" link in the real-inbox demo is **broken** — it searches `rfc822msgid:` with a Gmail API id. The test checked the link's shape only. | T7.7 |
+| **C13** | Next action has no scoring method. | T2.10 |
+| **C14** | The 80 fixtures are not held-out. | T8.3 |
+| **C16** | Confirming a review item onto an **existing** application moves its stage and `lastEventAt` **backwards** and locks all five fields, so no later offer or rejection can move it. Latent today; T3.10 would route more items through it. | T3.11 |
 
-### Nine specification defects found and recorded (C1–C9)
+**Fixed 28 September:** **C11** — status is now derived from stage inside the repository, so
+no code path can archive inconsistently; that also fixed a third affected path, review
+confirm. **C12** — every harness figure now prints with its interval, including a new
+false-negative rate. The demo run now shows deadline detection at 88.5% with an interval of
+71.0–96.0% — a pass at the point estimate that 26 fixtures cannot confirm.
 
-Six were found reviewing the original specification; three were found by building against it.
-Notable ones:
+Also: `users.review_threshold` exists but **nothing reads it** — `/api/me` reports the
+constant and the harvest hard-codes 0.75 (T4.10). And "Emails read: 0" after a harvest,
+because `emails_read_total` is never written (T3.8).
 
-- **C1** — the classifier returned a `reasoning` field described as "logged, never
-  persisted". Logs persist, and the field quotes the email — SM-6 violated via the log file.
-  Now dev-only, behind a flag.
-- **C2** — the server ranked by deadline while the client computed `daysLeft` locally. A row
-  could show "2 days" while ranked in the 3–7 bucket. Fixed: the client sends its IANA
-  timezone; the server computes both. **The client does no date arithmetic at all.**
-- **C7** — `email_events` stored a detected stage, deadline and next action but **no company
-  or role**, so a review card could only show a sender domain and a confidence, and
-  confirming could only ever return 400. The review queue was unusable as specified. Fixed.
-- **C8/C9** — the shared API schemas disagreed with the server in two places, undetected
-  because no client had ever consumed them. Found the moment the typed client was written.
-
-### Bugs found by using the product, not by reading the code
-
-Worth mentioning in a pitch as evidence of a working process:
-
-- Five rejected applications were **in the database and visible on no screen** — ranking
-  excluded terminal stages from Active, but nothing set `status = 'archived'`, so they never
-  reached Archived either.
-- A withdrawn application showed a **94% confidence meter beside "Nothing outstanding"** —
-  a meter describing a value no longer displayed, which reads as "94% confident there is
-  nothing to do".
-- A stat card labelled **"Live applications" showed 5 while on the Archived tab**, because
-  stats described the current filter rather than the pipeline.
-- A pre-filter rule silently dropped both Google fixtures before the classifier ever saw
-  them, because `no-?reply@google\.com` also matched `careers-noreply@google.com`.
-  **Google is both a mail provider and a major graduate employer.**
-
-### Blockers
+### Open problems
 
 | | |
 |---|---|
-| **B3 — no Anthropic API key** | **The one that matters.** Blocks T2.8 (the benchmark that settles D16) and, in practice, the entire classifier lane. ~$1.30. |
-| B1, B2, B4, B5 | All resolved or descoped. |
+| **B3** | API key created, not verified. Blocks the classifier and the benchmark. |
+| **B6** | Mailbox exports from all three members. Blocks the evaluation dataset. |
+| **Voice interaction** | Not in RTM v3. Worth written confirmation from the tutor that it is optional. |
+| **Cost** | The labelled-set runs will cost several times the old $1.30 estimate; price from current rates first. |
+
+### Bugs found by *using* the product — useful pitch evidence
+
+- Five rejected applications were **in the database and on no screen** — terminal stages left
+  Active but nothing set `archived`. Fixed in the pipeline.
+- A withdrawn application showed a **94% confidence meter beside "Nothing outstanding"**.
+- **"Live applications: 5" on the Archived tab** — stats described the filter, not the
+  pipeline.
+- A pre-filter rule **silently dropped both Google fixtures** — Google is a mail provider
+  *and* a graduate employer.
+- The Macquarie merge: two separate applications fused on a shared sender domain. Decided:
+  D26.
 
 ---
 
-## 9. The two working demos
+## 11. The demos as they stand
 
-Both run locally against separate databases and separate API servers.
+Both run locally, each with its own database and API server.
 
-**Test-data demo** — 25 seeded applications, 22 active / 3 archived, all six stages, all five
-urgency buckets, 4 items in the review queue, 8 deadlines due this week. Deadlines are
-offsets from "today" rather than fixed dates, so urgency colours stay meaningful. Best for
-demonstrating the *interface*.
+**Test-data demo** — 25 seeded applications: 22 active / 3 archived, all six stages, all five
+urgency buckets, 4 review items. Deadlines are offsets from the day the seed runs, so **the
+data ages** — re-run `npm.cmd run db:reset` on the morning of any demo, or the urgency
+colours drain to red.
 
-**Real-inbox demo** — 32 emails from the team member's actual Gmail → 8 applications,
-3 active / 5 archived, 4 hard negatives correctly rejected. Best for demonstrating that the
-*pipeline* works on real mail.
-
-Highlights from the real data:
-
-- **NAB Graduate Program 2027** — 5 events across two sender domains (`nab.com.au` and
-  `mail.pageuppeople.com`) from a verbal offer through a written offer to onboarding, all
-  reconstructed into one application
-- **PwC** — 7 events across three domains, applied → assessment → digital interview →
-  rejected
-- **Real deadlines pulled from bodies** — KPMG's "Expires on: Wednesday, March 11, 2026
-  9:55 PM AEDT" and PwC's "Deadline: Saturday, March 14 2026, 01:29 PM AEDT"
-- **Four correctly rejected hard negatives** — an ANZ "inviting you to apply" from a real
-  ATS domain, an Ausgrid talent-community signup, a share-trading account confirmation, and
-  a student-loan eCAF. All contain the word "application"; none is one.
-
-**Remember:** the classifications in the real-inbox demo were produced by a human in a chat
-session, not by the product.
+**Real-inbox demo** — 32 emails from Jordan's Gmail → 8 applications (3 active, 5 archived),
+4 hard negatives correctly rejected. NAB Graduate Program 2027 is reconstructed from 5 events
+across two sender domains; PwC from 7 across three. Real deadlines were pulled from bodies.
+**Its classifications were made in a chat session, and its Gmail links are broken (C10).**
 
 ---
 
-## 10. Commands
+## 12. Commands
 
-The developer is on **Windows with PowerShell 5.1**, where `&&` is a parser error and
-`npm.ps1` is blocked by execution policy. Use `npm.cmd`, and give one command per line.
+Windows, **PowerShell 5.1**: `&&` is a parser error and `npm.ps1` is blocked by execution
+policy. Use `npm.cmd`, one command per line.
 
 ```
-npm.cmd test              # 365 tests
+npm.cmd test              # 387 tests
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run accuracy      # the CI gate; --demo shows the report shape, --invert proves it fails
@@ -425,78 +447,81 @@ npm.cmd run dev:server    # API on :3000
 npm.cmd run dev:client    # dashboard on :5173, proxies /api to :3000
 ```
 
----
-
-## 11. Conventions and landmines
-
-Things that look like bugs but are deliberate. **Do not "fix" these.**
-
-- **A record belonging to another user returns 404, never 403.** A 403 confirms the record
-  exists, which is itself a disclosure.
-- **There is no `?sort=`.** Ranking is the product's single opinion.
-- **An empty PATCH is a 400, not a 200 no-op.** Silently accepting a request that changes
-  nothing hides a broken client.
-- **`POST /api/sync` returns 501.** Honest refusal beats a faked 202.
-- **A count renders as `—` until known, never `0`.** "0 due this week" is a claim;
-  "not loaded yet" is not.
-- **A field shows a confidence meter, an "Edited" tag, or neither — never two.** Neither is
-  correct when the field has no value.
-- **Blank means blank.** Calendar and Archive have no design, so they say so rather than
-  showing a placeholder that reads as broken.
-- **Zero denominators fail, they do not pass vacuously.** A corpus with no deadline-bearing
-  fixtures fails the deadline gate rather than scoring 0/0 as a pass.
-- **Every guard is verified in the failing direction.** The forbidden-column check, the
-  cross-user scoping assertions, the port-boundary lint rule, the accuracy gate, the icon
-  coverage test and the no-hardcoded-colour sweep were each deliberately broken, observed
-  failing, then restored.
-
-Other conventions: repository methods take a branded `UserId` **first**, so omitting it is a
-compile error · migrations are generated, never hand-written · the design system is vendored
-into the client and a drift test fails on any byte of change · no hardcoded colour anywhere
-in the client, enforced by test · icons are bundled rather than fetched from a CDN, because
-a product with an offline banner should not need the network to draw it.
+**Planned:** `npm.cmd run ingest -- [--synthetic] <files or folders>` (T7.10).
 
 ---
 
-## 12. Documentation map
+## 13. Conventions and landmines
 
-Ten documents exist in `docs/`, ~4,500 lines. If the chat later gains file access:
+Deliberate — **do not "fix" these:**
+
+- **Another user's record returns 404, never 403** — a 403 confirms it exists.
+- **No `?sort=`.** Ranking is the product's single opinion. Search narrows; it never reorders.
+- **An empty PATCH is a 400.** Silently accepting nothing hides a broken client.
+- **`POST /api/sync` returns 501** until the drop folder exists — honest refusal beats a
+  faked 202.
+- **Counts render `—` until known, never `0`.**
+- **A field shows a meter, an "Edited" tag, or neither — never two.** Neither when it has no
+  value.
+- **Zero denominators fail**, never pass vacuously.
+- **Every guard is verified in the failing direction** — broken on purpose, seen to fail,
+  restored.
+
+Planned rules that are easy to break:
+
+- **Panel Save sends only changed fields** — sending all five locks every field as "Edited".
+- **One mailbox, one ingestion path.**
+- **Authored emails are always marked synthetic** and never counted toward accuracy.
+- **Real email content never enters git.**
+- **The held-out set is frozen before any model sees it.**
+
+---
+
+## 14. Documentation map
+
+Eleven documents in `docs/`, about 5,650 lines. If the chat later gains file access:
 
 | File | What it holds |
 |---|---|
-| `masterplan.md` | Vision, user groups, the nine success metrics, product principles, scope boundaries |
-| `implementation.md` | Architecture, column-level schema, ports, pipeline, matching, ranking, API surface, harness |
-| `design.md` | Design tokens, the AI-vs-human visual contract, accessibility, responsive behaviour |
-| `app-flow.md` | Routes, state machines, six user journeys, 17 error states, 22 edge cases |
-| `tasks.md` | **The source of truth for implementation order** — every task with a concrete done-when, plus blockers and defects |
-| `decision-record.md` | D1–D21 with reasoning, plus the specification defects |
-| `rules.md` | ~130 one-line standing rules |
-| `changelog.md` | Keep a Changelog format, one entry per completed task |
-| `codebase-guide.md` | A plain-language tour for teammates who do not know React or Zod |
-| `revision-plan.md` | What changes next, derived from the 19 August minutes |
+| `tasks.md` | **The source of truth** — the Plan of record, every task with a done-when, defects, blockers |
+| `decision-record.md` | D1–D33 with reasoning and rejected options; defects C1–C15; risks |
+| `revision-plan.md` | Revision 2 (28 Sep): what changed, the RTM v4 amendments, labelling effort |
+| `rules.md` | ~180 one-line standing rules, including ingestion and evaluation |
+| `masterplan.md` | Vision, users, the nine success metrics, scope |
+| `implementation.md` | Architecture, schema, pipeline, API; §15 holds the planned changes |
+| `app-flow.md` | Routes, state machines, journeys, empty and error states |
+| `design.md` | Tokens, the AI-vs-human visual contract, accessibility, responsive rules |
+| `codebase-guide.md` | A plain-language tour for teammates |
+| `changelog.md` | Every completed change, dated |
+| `project-context.md` | This file |
 
 ---
 
-## 13. If you are helping with the pitch or the RTM
+## 15. If you are helping with the pitch or the RTM
 
-**The strongest things to claim, with evidence:**
+**Claim, with evidence:**
 
-- Privacy by construction — SM-6 has the best evidence in the project, and the retention
-  boundary is enforced by the *type system*, not by discipline
-- Corrections that survive syncs — tested against five consecutive conflicting updates
-- Real multi-domain journeys reconstructed from a genuine inbox
-- A test suite that gates on accuracy rather than reporting it
-- Nine specification defects found and documented before they shipped
+- **Privacy by construction** — SM-6 / RQ-07, the best evidence in the project; enforced by
+  the type system.
+- **Corrections that survive** — tested against five conflicting syncs.
+- **Real multi-domain journeys** reconstructed from a genuine inbox.
+- **A test suite that gates on accuracy** rather than reporting it.
+- **Fifteen specification and build defects found and recorded** before they reached a user,
+  several by using the product rather than reading the code.
+- **An evaluation protocol an assessor would respect** — frozen held-out set, declared
+  enrichment, double-labelled agreement, intervals on every figure.
 
-**The things to state as limitations rather than let an assessor find:**
+**State as limitations, before an assessor finds them:**
 
-- No live classifier yet; the demo replays human-made classifications
-- The accuracy figure is a self-test until the model runs
-- n=80 gives ±4.6 points, so the corpus cannot distinguish 96% from 91%
-- OAuth, sessions and token encryption are deferred, with external justification
-- The Macquarie merge is a known matching defect with a proposed fix
+- No live classifier yet; current figures are self-tests.
+- Hosted OAuth deferred — on effort, not cost.
+- The demo inbox contains authored emails, marked synthetic.
+- n≈200 gives roughly ±2.5 points; the claim is a point estimate with its interval.
+- The real-inbox demo's Gmail links are broken until T7.7.
 
-**The framing the TA asked for:** why each feature helps a student achieve their goal — not
-what was built. The confidence gate is the clearest example. It exists because an AI product
-that cannot say "I'm not sure" will assert wrong things as fact, and a student who catches
-it once stops trusting the whole pipeline. That is a product argument, not a technical one.
+**The framing the TA asked for:** why each feature helps a student reach their goal. The
+clearest example is the review queue: an AI product that cannot say "I'm not sure" will
+assert wrong things as fact, and a student who catches it once stops trusting the whole
+pipeline. D26 extends the same principle to matching — when GradTracker is not sure two
+emails belong to one application, it asks rather than merging. That is a product argument,
+not a technical one.
