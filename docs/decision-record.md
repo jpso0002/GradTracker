@@ -10,7 +10,7 @@ taken mid-build, reconciled against the working repository.
 |---|---|---|
 | 1 | 16 August 2026 | Initial architecture and scope decisions — D1–D15 |
 | 2 | 16 August 2026 | Post-documentation-review. Resolves D10; adds D16–D21; records six defects found reviewing the specification against itself; adds the measured cost model and the statistical-power finding. |
-| **3** | **28 September 2026** | **Mid-build. Reconciles the condensed RTM (v3) and the September team meetings against the repository. Adds D22–D34; records defects C10–C19, found by inspecting the built system and its corpus; updates the risks, open items and build order.** |
+| **3** | **28 September 2026** | **Mid-build. Reconciles the condensed RTM (v3) and the September team meetings against the repository. Adds D22–D34; records defects C10–C20, found by inspecting the built system and its corpus; updates the risks, open items and build order.** |
 
 This document records every architectural and scope decision taken before the build
 started, including the options that were rejected and why. It exists so the choices are
@@ -517,8 +517,8 @@ interval is the honest claim; presenting 95% as a floor would over-claim.
 
 **Chosen:** a label never asks the model for something its prompt forbids or cannot see.
 Where the prompt states a rule, labels follow it; where it is silent, the labelling guide
-([labelling-guide.md](labelling-guide.md)) sets one mechanical rule, and the next prompt
-version adopts it **before anything is measured** (T3.12). In particular: fields are labelled
+([labelling-guide.md](labelling-guide.md)) sets one mechanical rule, and the prompt adopts
+it too — prompt v2 did so on 28 September, **before anything was measured** (T3.12). In particular: fields are labelled
 from the email alone, never from its thread; a deadline counted in hours is exact, one counted
 in days ends at 23:59 on the last day; "by Friday" resolves against the received date; the
 company is named as the email names it; a withdrawal confirmation is labelled `withdrawn`,
@@ -558,8 +558,8 @@ they are recorded because the correction is itself a decision.
 
 Defects C7–C9, found while building the API and client, are recorded in
 [tasks.md](tasks.md). Revision 3 adds six more, each found by checking the running system or
-the RTM against the code, rather than documents against each other. C16–C19 were found the
-same way, while building steps 1 and 2 of the Plan of record.
+the RTM against the code, rather than documents against each other. C16–C20 were found the
+same way, while building steps 1 to 3 of the Plan of record.
 
 | # | Defect | Resolution | Task |
 |---|---|---|---|
@@ -570,9 +570,10 @@ same way, while building steps 1 and 2 of the Plan of record.
 | **C14** | RQ-03 requires a dataset the classifier was not tuned against; the 80 fixtures shaped the prompt. | They become the tuning set; a new held-out set is frozen before any model run (D32). | T8.3 |
 | **C15** | Documents gave the unit as FIT3163 — the semester-1 code. | Both semesters' codes recorded. **Fixed.** | — |
 | **C16** | Confirming a review item that matches an existing application applied every detected field as a human correction: an older, lower-stage email moved the stage and `lastEventAt` backwards and locked all five fields, so no later email could move the application again. Found by probe while fixing C11. | A match applies the email as the pipeline would; only fields the student edited become human. | T3.11 |
-| **C17** | The prompt tells the model never to assign `withdrawn`, but withdrawal confirmations are labelled `withdrawn`, so a model obeying its prompt is scored wrong on every one. And the new-application path applies an AI-detected stage directly, bypassing the stage engine's user-only guard: a probe created an application straight into `withdrawn` from an AI classification. | Prompt v2 labels withdrawal confirmations; an AI-detected user-only stage becomes a review item on every path (D34). | T3.12 |
+| **C17** | The prompt tells the model never to assign `withdrawn`, but withdrawal confirmations are labelled `withdrawn`, so a model obeying its prompt is scored wrong on every one. And the new-application path applies an AI-detected stage directly, bypassing the stage engine's user-only guard: a probe created an application straight into `withdrawn` from an AI classification. | **Fixed** — prompt v2 labels withdrawal confirmations, and an AI-detected user-only stage becomes a review item on every path (D34). | T3.12 |
 | **C18** | A second application at the same employer merged into the first and overwrote its role: when roles differ, matching fell back to the sender domain, which one employer's ATS shares across every stream. The unit test for the case passed only with a null sender domain. | The case D26 routes to review; pinned by a known-defect test until then. | T3.10 |
-| **C19** | Six authored labels disagreed with the prompt's own rules or with each other — a role the email never states, "by Friday" labelled unresolvable, "within N days" labelled two ways, a wrong note, a weekday contradicting its date. | **Fixed** by relabelling to the prompt's rules (D34); four company names wait for prompt v2's naming rule. | T2.12 · T3.12 |
+| **C19** | Six authored labels disagreed with the prompt's own rules or with each other — a role the email never states, "by Friday" labelled unresolvable, "within N days" labelled two ways, a wrong note, a weekday contradicting its date. | **Fixed** by relabelling to the prompt's rules (D34) — six labels with T2.12, five company names with prompt v2. | T2.12 · T3.12 |
+| **C20** | The model was shown each email's received time in UTC only, while relative deadlines count from the local date: at 08:00 in Melbourne it is still the previous day in UTC, so "within 7 days" would resolve a day early. Hidden in the corpus, where every email arrives after 10:00 Melbourne time. | **Fixed** — the user message gives the received time in the student's timezone as well. | T3.12 |
 
 ---
 

@@ -352,6 +352,32 @@ describe("escalation (T3.5)", () => {
   });
 });
 
+describe("a withdrawal the model detects (C17, T3.12)", () => {
+  // `withdrawn` is user-only. The model may recognise a withdrawal
+  // confirmation; only the student may apply one.
+
+  it("creates no application from it — it asks the student", async () => {
+    // 057 is IBM confirming a withdrawal, with no IBM application tracked.
+    const outcome = await processEmail(deps(), userId, await email("fixture-057"));
+
+    expect(outcome.kind).toBe("queued-for-review");
+    expect(await repo.listJobs(userId)).toHaveLength(0);
+    const [item] = await repo.listPendingReview(userId);
+    expect(item?.detectedStage).toBe("withdrawn");
+  });
+
+  it("does not move an existing application — it asks the student", async () => {
+    // 042 is the IBM interview invitation for the same role.
+    await processEmail(deps(), userId, await email("fixture-042"));
+    const outcome = await processEmail(deps(), userId, await email("fixture-057"));
+
+    expect(outcome.kind).toBe("queued-for-review");
+    const [job] = await repo.listJobs(userId);
+    expect(job?.stage).toBe("interview");
+    expect(job?.status).toBe("active");
+  });
+});
+
 describe("the whole corpus through the pipeline", () => {
   it("produces jobs from the positives and nothing from the negatives", async () => {
     const page = await gmail.listSince(null);
@@ -363,10 +389,11 @@ describe("the whole corpus through the pipeline", () => {
     }
 
     expect(outcomes.filter((o) => o === "not-application")).toHaveLength(25);
-    expect(outcomes.filter((o) => o === "created-job" || o === "updated-job")).toHaveLength(54);
-    // 020 names no role — "the next step is a coding challenge" — so it cannot
-    // be matched and becomes a question for the student instead.
-    expect(outcomes.filter((o) => o === "queued-for-review")).toHaveLength(1);
+    expect(outcomes.filter((o) => o === "created-job" || o === "updated-job")).toHaveLength(52);
+    // Three become questions for the student instead: 020 names no role — "the
+    // next step is a coding challenge" — and 057 and 058 confirm withdrawals,
+    // which only the student may apply (C17).
+    expect(outcomes.filter((o) => o === "queued-for-review")).toHaveLength(3);
 
     // 55 application emails across roughly 20 employers — the pipeline must
     // group them, not create 55 separate jobs.

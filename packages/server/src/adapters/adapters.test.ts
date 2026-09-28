@@ -222,8 +222,38 @@ describe("classification prompt (T2.3)", () => {
     expect(prompt).toContain("viewed your profile");
   });
 
-  it("tells the model never to assign withdrawn", () => {
-    expect(prompt).toContain("NEVER assign this");
+  it("asks the model to recognise a withdrawal rather than forbidding the label (C17)", () => {
+    // v1 said "NEVER assign this" while the labels said `withdrawn`, so a model
+    // obeying its prompt was scored wrong on every withdrawal confirmation.
+    // Recognising one changes nothing by itself: the pipeline asks the student.
+    expect(prompt).not.toContain("NEVER assign");
+    expect(prompt).toMatch(/"withdrawn": .*withdrawal was processed/);
+  });
+
+  it("states the deadline conventions the labels follow (D34)", () => {
+    expect(prompt).toContain("that long after the received time");
+    expect(prompt).toContain("ends at 23:59 on the last day");
+    expect(prompt).toContain("first such day on or after the received date");
+  });
+
+  it("asks for fields from this email alone, named as this email names them (D34)", () => {
+    expect(prompt).toContain("do not fill a field from other emails");
+    expect(prompt).toContain('"CommBank" stays "CommBank"');
+  });
+
+  it("gives the received time in the student's timezone, so days count from the local date (C20)", () => {
+    // 08:00 on 21 May in Melbourne is still 20 May in UTC. Given only the UTC
+    // time, "within 7 days" resolves a day early.
+    const email = {
+      gmailMessageId: "m",
+      gmailThreadId: "t",
+      receivedAt: new Date("2026-05-20T22:00:00Z"),
+      fromAddress: "careers@example.test",
+      subject: "s",
+      body: "b",
+    };
+    expect(buildUserMessage(email)).toContain("Received: 2026-05-21 08:00 Australia/Melbourne");
+    expect(buildUserMessage(email, "Australia/Perth")).toContain("Received: 2026-05-21 06:00 Australia/Perth");
   });
 
   it("puts the email in the user message, never the system prompt", async () => {

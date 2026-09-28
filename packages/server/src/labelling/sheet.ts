@@ -20,7 +20,7 @@ import {
   formatWallClock,
   isValidTimeZone,
   parseDeadline,
-} from "./zoned-time.js";
+} from "../time/zoned-time.js";
 
 /**
  * The labelling spreadsheet (T2.11): export emails to it, import labels from it.
@@ -191,7 +191,6 @@ function addReadme(workbook: ExcelJS.Workbook): void {
     ["", ""],
     ["Stages", "(verbatim from the classifier prompt, so labellers and the model share one definition)"],
     ...StageEnum.options.map((stage): [string, string] => [`  ${stage}`, STAGE_DEFINITIONS[stage]]),
-    ["  withdrawn: labellers", "DO label a confirmation of the student's own withdrawal as withdrawn. 'NEVER assign this' is addressed to the model and the app, not to you."],
     ["", ""],
     ["Privacy", "This file contains real email. Keep it outside the GradTracker repository and out of shared chats."],
   ];

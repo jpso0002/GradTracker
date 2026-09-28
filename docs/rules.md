@@ -155,7 +155,7 @@ Keep entries concise. One line per decision when possible.
 - **"Deadline Approaching" and "Follow-up Required" are computed, never stored** — they are properties of today's date, not of an email.
 - **Stage advances forward only** — a new stage applies only if its rank exceeds the current rank.
 - **`rejected` and `offer` may arrive from any stage** and always apply.
-- **`withdrawn` is never AI-assigned.** User action only. The model may *recognise* a withdrawal confirmation — the labels say `withdrawn` — but no AI classification *applies* it, on any path. Until T3.12 the new-application path does (C17).
+- **`withdrawn` is never AI-assigned.** User action only. The model may *recognise* a withdrawal confirmation — the labels say `withdrawn` — but no AI classification *applies* it, on any path. Enforced in the pipeline before matching: an AI-detected withdrawal becomes a review item on every path, and the student's confirmation sets the stage (C17, fixed by T3.12).
 - **A stage with `human` provenance is frozen** — the pipeline never changes it again.
 
 ### Provenance and correction
@@ -170,6 +170,7 @@ Keep entries concise. One line per decision when possible.
 - **The retention boundary is a type, not a discipline.** `classifyOne()` returns a `ClassifiedEmail` with no subject, body or full address, so downstream code cannot persist content it never receives.
 - **Escalation is composition, not a branch.** `EscalatingClassifier` satisfies the `EmailClassifier` port, so the pipeline is unaware of it and the harness scores the pair as one model. An escalated answer replaces the primary — never merges with it.
 - **`daysUntil` counts calendar days in the student's timezone, never elapsed time.** At 11pm Sunday, a 9am Monday deadline is 0.4 elapsed days away and *tomorrow*.
+- **The model is shown when an email arrived in the student's timezone, not only in UTC.** Relative deadlines count from the local date, and 08:00 in Melbourne is still the previous day in UTC (C20). Melbourne is the default until the server stores a zone per student.
 - **The pre-filter may never make a classification judgement** — it skips only self-sent mail and calendar system notifications. When in doubt, the email goes to the model.
 - **False negatives are the costly failure** and are counted and named explicitly in every harness run.
 - **Threshold changes apply to future syncs only.** Dismissed items stay dismissed.
@@ -219,7 +220,7 @@ Keep entries concise. One line per decision when possible.
 - **Structured output via `output_config.format`** with `zodOutputFormat(ClassificationSchema)` — not a tool-use schema.
 - **Initial inbox scans run through the Batches API** (50% cheaper, not latency-sensitive). Incremental syncs stay synchronous.
 - **Prompt caching does not apply** to the classifier path — Haiku 4.5's minimum cacheable prefix is 4,096 tokens, far above a classification prompt.
-- **The prompt is version-stamped**, and the harness reports which prompt version produced a given accuracy figure.
+- **The prompt is version-stamped**, and the harness reports which prompt version produced a given accuracy figure. Any change to its text bumps the version — `v2` since 28 September (T3.12).
 - **Cost baseline:** ~$4.30 per 2,000-email scan on Haiku 4.5 (~$2.15 batched); ~$65 across development.
 
 ### Environment variables
@@ -275,10 +276,10 @@ Keep entries concise. One line per decision when possible.
 
 - **The labelling guide is the one reference for labels** — [labelling-guide.md](labelling-guide.md). A case it does not cover is decided by the team and added to it, so the next labeller does the same.
 - **The guide quotes the prompt; it never paraphrases it.** Stage definitions and every quoted line are verbatim, enforced by `guide.test.ts`. A prompt change updates the guide in the same change.
-- **Labels follow the prompt's rules wherever the prompt has one** (D34). A label the prompt forbids the model to produce — a role the email never states, a deadline the prompt says to resolve — scores the prompt, not the model (C19).
+- **The prompt and the labels state the same rules** (D34). Since prompt v2 the prompt states every convention the guide uses. A label the prompt forbids the model to produce — a role the email never states, a deadline the prompt says to resolve — scores the prompt, not the model (C19). A new convention goes into both, in one change.
 - **A field is labelled from the email alone, never from its thread.** The classifier sees one email at a time.
 - **Deadlines:** hours are exact; days, weeks and business days end at 23:59 on the last day (business days are Monday to Friday, public holidays ignored); "by", "before", "until" or "no later than" a date is that date at 23:59; "close of business" is 17:00; a weekday alone is the first such day on or after receipt; when a weekday and a date disagree, the date wins.
-- **Company as this email names it** — its sentences, then its sign-off, then its subject — minus a country, a legal suffix and team words; never the ATS. The scorer matches exactly, apart from case and spacing, so the rule must be mechanical.
+- **Company as this email names it** — its sentences, then its sign-off, then its subject — minus a country, a legal suffix (Pty Ltd, Limited, Co) and team words; never the ATS. The scorer matches exactly, apart from case and spacing, so the rule must be mechanical.
 - **Toolkit writes are refused inside the repository** (`assertOutsideRepository`) — enforced, not conventional, including through links and differently-cased Windows paths.
 - **Import is all-or-nothing**, each problem reported by row number. **Dates are ISO only:** `07/04/2026` is 7 April or 4 July depending on the reader's locale.
 - **Splits and samples are seeded, never hand-picked.** The same sheet and seed give the same tuning/held-out split and the same agreement sample; the seed is recorded in the freeze manifest.

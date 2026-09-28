@@ -78,7 +78,7 @@ team chose classifies live (D23, §4).
 | **0 — De-risk** | Google Cloud, API key spike | ⏸ Descoped |
 | **1 — Foundation** | Monorepo, shared Zod schemas, DB schema, migrations, repository, seed | ✅ Complete |
 | **2 — Harness** | Ports, fakes, prompt, 80-fixture corpus, accuracy harness, Wilson intervals, labelling toolkit and guide | ✅ T2.1–T2.7, T2.9, **T2.11** · ◐ **T2.12** written, completes at T8.3 · T2.8 benchmark waits on B3 · ☐ T2.10 |
-| **3 — Pipeline** | Matching, stage engine, provenance, pipeline, ranking, harvest | ✅ T3.1–T3.7, T3.9 · **T3.8 reinstated** as drop-folder sync · ☐ **T3.10–T3.12 new** |
+| **3 — Pipeline** | Matching, stage engine, provenance, pipeline, ranking, harvest | ✅ T3.1–T3.7, T3.9, **T3.12** · **T3.8 reinstated** as drop-folder sync · ☐ **T3.10, T3.11 new** |
 | **4 — API** | Job, review and sync routes | ✅ T4.4, T4.5, T4.8, **T4.9** · ◐ T4.6 · ☐ T4.10 · ⏸ T4.1–T4.3 auth · ☐ T4.7 |
 | **5 — Dashboard** | Design system, shell, API client, pipeline, detail panel | ✅ T5.1–T5.3, T5.5, T5.6, **T5.10** · ◐ T5.7 · ⏸ T5.4 · ☐ T5.8, T5.9, T5.11, T5.12 |
 | **6 — Human-in-the-loop** | Editing, review queue, settings, accessibility | ☐ Not started · **T6.1, T6.3, T6.4 redefined** · **T6.6 new** |
@@ -89,7 +89,7 @@ team chose classifies live (D23, §4).
 
 | | |
 |---|---|
-| Tests | **443 passing**, 27 files — plus one known-defect test that fails on purpose (C18) |
+| Tests | **449 passing**, 27 files — plus one known-defect test that fails on purpose (C18) |
 | Source | ~10,160 lines of TypeScript/TSX (excludes the vendored design system and build output) |
 | Fixture corpus | 80 labelled emails — 55 application / 25 not; 27 deadline-bearing; 15 hard negatives |
 | Real emails harvested | 32 → 8 applications, 20 updates, 4 correctly rejected |
@@ -166,7 +166,7 @@ the repository.
 |---|---|---|
 | **1** ✅ | Stage-correction archive bug (C11) · remove Calendar/Archive · intervals on every figure (C12) — **done 28 Sep** | — |
 | **2** ✅ | Labelling toolkit and guide, with the mailbox reader pulled forward — **done 28 Sep** | — |
-| **3** | Prompt v2, so prompt and labels agree (C17) → live classifier → Haiku-vs-Sonnet benchmark | Prompt v2: — · the rest: **B3** |
+| **3** ◐ | Prompt v2, so prompt and labels agree — **done 28 Sep** → live classifier → Haiku-vs-Sonnet benchmark | **B3** |
 | **4** | Hybrid ingestion: event source + correct Gmail links (C10), unlabelled harvest, one `ingest` command, drop-folder sync | Step 3 |
 | **5** | Ambiguous matches → review (C18) | — |
 | **6** | Panel editing · review queue screen · row marker · settings API + slider · search | Steps 1, 5 |
@@ -384,16 +384,18 @@ duplicate protection cannot see an overlap.
 | **C13** | Next action has no scoring method. | T2.10 |
 | **C14** | The 80 fixtures are not held-out. | T8.3 |
 | **C16** | Confirming a review item onto an **existing** application moves its stage and `lastEventAt` **backwards** and locks all five fields, so no later offer or rejection can move it. Latent today; T3.10 would route more items through it. | T3.11 |
-| **C17** | The prompt says never assign `withdrawn`; the labels say `withdrawn` for a withdrawal confirmation — so obeying the prompt scores as an error. And the new-application path creates an application straight into `withdrawn` from an AI classification (probe-verified). | T3.12 |
 | **C18** | A second application at the same employer **merges into the first and overwrites its role** (sender-domain fallback). Pinned by an `it.fails` test. | T3.10 |
-| **C19** (open half) | Four authored company names ("Commonwealth Bank", "Zip Co") disagree with the guide's naming rule, which the current prompt does not state. | T3.12 |
 
 **Fixed 28 September:** **C11** — status is now derived from stage inside the repository, so
 no code path can archive inconsistently; that also fixed a third affected path, review
 confirm. **C12** — every harness figure now prints with its interval, including a new
 false-negative rate. The demo run now shows deadline detection at 88.9% with an interval of
-71.9–96.1% — a pass at the point estimate that 27 fixtures cannot confirm. **C19** (six authored
-labels contradicting the prompt's own rules) — relabelled, except four company names.
+71.9–96.1% — a pass at the point estimate that 27 fixtures cannot confirm. **C19** — the
+authored labels that contradicted the prompt's own rules are corrected (T2.12, T3.12).
+**C17** — an AI-detected withdrawal now becomes a review item on every path, instead of
+creating an application straight into `withdrawn`; prompt v2 asks the model to label one.
+**C20** — the model is shown the received time in the student's timezone, not only UTC, so
+"within 7 days" counts from the right day.
 
 Also: `users.review_threshold` exists but **nothing reads it** — `/api/me` reports the
 constant and the harvest hard-codes 0.75 (T4.10). And "Emails read: 0" after a harvest,
@@ -444,7 +446,7 @@ Windows, **PowerShell 5.1**: `&&` is a parser error and `npm.ps1` is blocked by 
 policy. Use `npm.cmd`, one command per line.
 
 ```
-npm.cmd test              # 443 tests, plus one that fails on purpose (C18)
+npm.cmd test              # 449 tests, plus one that fails on purpose (C18)
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run accuracy      # the CI gate; --demo shows the report shape, --invert proves it fails
@@ -516,7 +518,7 @@ Twelve documents in `docs/`, about 5,950 lines. If the chat later gains file acc
 - **Corrections that survive** — tested against five conflicting syncs.
 - **Real multi-domain journeys** reconstructed from a genuine inbox.
 - **A test suite that gates on accuracy** rather than reporting it.
-- **Nineteen specification, build and corpus defects found and recorded** before they reached a user,
+- **Twenty specification, build and corpus defects found and recorded** before they reached a user,
   several by using the product rather than reading the code.
 - **An evaluation protocol an assessor would respect** — frozen held-out set, declared
   enrichment, double-labelled agreement, intervals on every figure.

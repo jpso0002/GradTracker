@@ -1,4 +1,10 @@
-import type { Classification, ClassifierModel, ReviewStatus, UserId } from "@gradtracker/shared";
+import {
+  USER_ONLY_STAGES,
+  type Classification,
+  type ClassifierModel,
+  type ReviewStatus,
+  type UserId,
+} from "@gradtracker/shared";
 import type { EmailClassifier, RawEmail } from "../../ports/index.js";
 import { senderDomain } from "../../ports/index.js";
 import type { Repository } from "../../db/repository.js";
@@ -179,28 +185,29 @@ export async function processEmail(
     classifierModel: classified.model,
   };
 
-  // Below the gate the model is not confident enough for this to enter the
-  // pipeline as fact. It becomes a question for the student instead — with no
-  // job attached, so nothing is asserted until they confirm.
-  if (c.confidence < deps.reviewThreshold) {
+  // A question for the student instead of a fact — with no job attached, so
+  // nothing is asserted until they confirm. One helper for every reason to ask.
+  const askTheStudent = async (): Promise<ProcessOutcome> => {
     const event = await deps.repo.insertEmailEvent(userId, {
       ...common,
       jobId: null,
       reviewStatus: "pending" satisfies ReviewStatus,
     });
     return { kind: "queued-for-review", eventId: event!.id };
-  }
+  };
+
+  // Below the gate the model is not confident enough for this to enter the
+  // pipeline as fact.
+  if (c.confidence < deps.reviewThreshold) return askTheStudent();
+
+  // The model may recognise a withdrawal; only the student may apply one.
+  // Checked before matching, so it holds on every path — a new application
+  // was once created straight into `withdrawn` (defect C17).
+  if (c.stage !== null && USER_ONLY_STAGES.has(c.stage)) return askTheStudent();
 
   // An application with no company cannot be matched or displayed usefully —
   // treat it as a question rather than inventing a job called "null".
-  if (c.company === null || c.role === null) {
-    const event = await deps.repo.insertEmailEvent(userId, {
-      ...common,
-      jobId: null,
-      reviewStatus: "pending",
-    });
-    return { kind: "queued-for-review", eventId: event!.id };
-  }
+  if (c.company === null || c.role === null) return askTheStudent();
 
   const candidates: MatchCandidate[] = (await deps.repo.listJobs(userId)).map((job) => ({
     id: job.id,

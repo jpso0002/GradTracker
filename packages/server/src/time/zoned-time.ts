@@ -1,9 +1,12 @@
 /**
- * Wall-clock time in a named timezone → an exact instant.
+ * Wall-clock time in a named timezone ⇄ an exact instant.
  *
- * Labellers write a deadline the way the email states it — "14 March, 1:29pm
- * AEDT" becomes `2026-03-14 13:29` with the zone Australia/Melbourne — and this
- * turns it into the UTC timestamp a fixture stores. The zone's offset is read
+ * Two users, one rule. Labellers write a deadline the way the email states it —
+ * "14 March, 1:29pm AEDT" becomes `2026-03-14 13:29` with the zone
+ * Australia/Melbourne — and this turns it into the UTC timestamp a fixture
+ * stores. The classifier prompt goes the other way: it shows the model when an
+ * email arrived in the student's own timezone, so "within 7 days" counts from
+ * the same local date the labels count from (C20). The zone's offset is read
  * from the platform's timezone database for that date, so daylight saving is
  * handled without anyone having to know whether it applied.
  */

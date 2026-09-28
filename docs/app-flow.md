@@ -89,7 +89,8 @@ close control, or on selecting another row (which swaps content without closing)
 **Rules** *(see [implementation.md §7.5](implementation.md))*:
 1. Forward only — a new stage applies only if its rank exceeds the current rank.
 2. `rejected` and `offer` apply from any stage.
-3. `withdrawn` is never AI-assigned.
+3. `withdrawn` is never AI-assigned. A withdrawal confirmation the model recognises goes to
+   Needs review; the student's confirmation sets the stage.
 4. A `human` provenance lock on `stage` freezes it against the pipeline entirely.
 5. Every transition writes an `email_events` row, so the timeline is a projection of real
    events.

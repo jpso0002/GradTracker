@@ -51,23 +51,22 @@ and a calendar invitation to an interview you are in.
 
 ## 3. Company and role
 
-> - company: the employer's name as the student would recognise it. Not the ATS ("Greenhouse"), not the sending system.
-> - role: the role title as stated. Do not abbreviate or normalise.
+The prompt's rules — the labels follow them exactly:
+
+> Extract only what this email states. You see one email at a time: do not fill a field from other emails or from what you know about the employer.
+
+> - company: the employer's name as the student would recognise it. Not the ATS ("Greenhouse"), not the sending system. Use the name this email gives — in its sentences first, then its sign-off, then its subject — without a country ("PwC Australia" becomes "PwC"), a legal suffix ("Pty Ltd", "Limited", "Co") or team words ("Careers", "Talent", "Graduate Recruitment"). Do not expand or formalise it: "CommBank" stays "CommBank".
+> - role: the role title as stated. Do not abbreviate or normalise. Leave out the employer's name and any intake year. Null if this email does not state a role.
 
 The harness compares these exactly, ignoring only case and spacing — "Deloitte" and
-"Deloitte Australia" are different answers — so labellers need one mechanical rule:
+"Deloitte Australia" are different answers — which is why the rule is mechanical. In practice:
 
-- **Company** — the employer as **this email** names it: in its sentences first, then its
-  sign-off, then its subject. Drop a country that only says where (`PwC Australia` → `PwC`), a
-  legal suffix (`Pty Ltd`, `Limited`), and team words in a sign-off (`Macquarie Group
-  Graduate Recruitment` → `Macquarie Group`). Otherwise keep it as written: `CommBank` stays
-  `CommBank`. Never the ATS (Workday, Greenhouse, Lever, SmartRecruiters).
-- **Role** — the title as this email states it, without the employer's name or an intake year
-  (`the CommBank Technology Graduate Program` → `Technology Graduate Program`). Keep stream
-  names as written (`Graduate Program, Data & Analytics`).
-- **Blank if this email does not say** — even when you know it from earlier emails. The model
-  sees one email at a time; a label it could only know from the thread marks it wrong for not
-  guessing.
+- A sign-off `Macquarie Group Graduate Recruitment` → `Macquarie Group`; `Zip Co Talent` →
+  `Zip`.
+- `the CommBank Technology Graduate Program` → company `CommBank`, role `Technology Graduate
+  Program`. Keep stream names as written: `Graduate Program, Data & Analytics`.
+- **Blank when this email does not say** — even when you know it from earlier emails. A label
+  the model could only know from the thread marks it wrong for not guessing.
 
 ## 4. Stage
 
@@ -81,7 +80,7 @@ emails in order itself. The definitions, verbatim from the prompt:
 | `interview` | An invitation to interview, an interview scheduling request, or an assessment-centre invitation. Involves speaking with a person. |
 | `offer` | An offer of employment or an internship place. |
 | `rejected` | The application was unsuccessful, at any stage. Includes 'we have decided to progress other candidates'. |
-| `withdrawn` | The student withdrew. NEVER assign this — only the student can, in the app. Present here only so you recognise and do not mislabel it. |
+| `withdrawn` | The student withdrew their application — typically a confirmation that their own withdrawal was processed. Label it; the app asks the student before applying it. An employer ending the process is rejected, not withdrawn. |
 
 Cases the definitions settle:
 
@@ -90,11 +89,10 @@ Cases the definitions settle:
 - "Your application is under review" → `applied`. A reminder about an assessment you were
   invited to → `assessment`.
 
-**`withdrawn` — the one place labellers do not follow the prompt's instruction.** Label a
-confirmation of the student's own withdrawal `withdrawn`: it is what the email says. "NEVER
-assign this" is addressed to the model about the app, where only the student may *set* that
-stage. The prompt is brought into line with this guide before the first live measurement
-(C17, T3.12).
+**`withdrawn`** — label a confirmation of the student's own withdrawal `withdrawn`, as the
+definition says. Labelling it changes nothing in the app by itself: GradTracker puts the email
+in **Needs review**, and only the student's confirmation sets the stage (C17, fixed by prompt
+v2).
 
 ## 5. Deadlines
 
@@ -103,17 +101,28 @@ must meet** — and then `deadline` is required.
 
 > Extract a deadline ONLY when the email states one explicitly — "by Friday 23 May", "within 5 business days", "before 11:59pm AEST on 23/05". Do not treat an interview time as a deadline unless the email frames it as something to respond by.
 
-**Not a deadline:** an interview's own time; when *they* will act ("our team will contact you
-within 48 hours"); a closing date for other applicants; "you may reapply in 12 months"; vague
-urgency ("soon", "at your earliest convenience"). **Is one:** a date to book, confirm or
-respond by, and an offer's response date.
+> These are not deadlines either: when the employer will act ("our team will contact you within 48 hours"), a closing date for other applicants, or when the student may reapply.
+
+Nor is vague urgency ("soon", "at your earliest convenience"). **Is one:** a date to book,
+confirm or respond by, and an offer's response date.
 
 **Writing it:** `YYYY-MM-DD HH:MM` (24-hour), or `YYYY-MM-DD` alone for a date with no time,
 which the import reads as 23:59 — the prompt's rule:
 
-> If the email gives a date without a time, use 23:59 local to the email's apparent timezone; if no timezone is discernible, use UTC.
+> If the email gives a date without a time, use 23:59 local to the email's apparent timezone; if no timezone is discernible, use UTC. An Australian employer writing to the student means Australian eastern time unless the email names another city or timezone.
 
-Relative deadlines count from the `received (Melbourne)` column.
+**Resolving it** — the prompt's rules, counted from the `received (Melbourne)` column, which
+is also the received time the model is shown:
+
+> - A duration in hours ("expires in 48 hours") is exact: that long after the received time.
+> - A count of days, weeks or business days ("within 7 days", "within a week", "within 5 business days") ends at 23:59 on the last day. Business days are Monday to Friday; ignore public holidays.
+> - "By", "before", "until" or "no later than" a date with no time means 23:59 on that date.
+> - "Close of business" is 17:00. "End of day" is 23:59.
+> - A weekday alone ("by Friday") is the first such day on or after the received date.
+> - If a weekday and a date disagree, use the date.
+> - If there are several deadlines, use the earliest one the student must meet.
+
+Examples from the corpus:
 
 | The email says | Label | Fixture |
 |---|---|---|

@@ -275,15 +275,12 @@ Counted, never stored. No row, no id, not even the domain. In the demo harvest, 
 ### Step 5 — the review gate
 
 ```ts
-if (c.confidence < deps.reviewThreshold) {     // default 0.75
-  const event = await deps.repo.insertEmailEvent(userId, {
-    ...common, jobId: null, reviewStatus: "pending",
-  });
-  return { kind: "queued-for-review", eventId: event!.id };
-}
+if (c.confidence < deps.reviewThreshold) return askTheStudent();          // default 0.75
+if (c.stage !== null && USER_ONLY_STAGES.has(c.stage)) return askTheStudent();
+if (c.company === null || c.role === null) return askTheStudent();
 ```
 
-Below the threshold, the email becomes a *question* rather than a *fact* — an event with **no job attached**, so nothing is asserted until the student confirms it. The same happens if company or role came back null.
+`askTheStudent()` saves the email as a *question* rather than a *fact* — an event with **no job attached**, so nothing is asserted until the student confirms it. Three reasons lead there: the model is not confident enough; it recognised a withdrawal, which only the student may apply (`withdrawn` is a user-only stage); or it could not name the company or role.
 
 ### Step 6 — matching (see §8)
 

@@ -367,7 +367,9 @@ asserting it.
 six stages with definitions, the output JSON schema, today's date (for resolving "by
 Friday"), and the instruction to return `isApplication: false` rather than guess. **The
 prompt is version-stamped**; the harness reports which version produced a given accuracy
-number.
+number. *Since v2 (28 September, T3.12)* it also states the labelling guide's deadline
+conventions and naming rule and asks for fields from the email alone, and the user message
+gives the received time in the student's timezone as well as UTC (C20).
 
 **Output is constrained by structured outputs, not a tool-use schema (C3).** The call uses
 `output_config.format` with `zodOutputFormat(ClassificationSchema)` and `messages.parse()`,
@@ -401,7 +403,8 @@ full on every call. The offset is the Batches API for initial scans (§7.1, T7.4
 1. Stage only advances forward: a new stage is applied only if its rank exceeds the current
    rank. A confirmation email arriving after an interview invite does not regress the job.
 2. `rejected` and `offer` may arrive from **any** stage and always apply.
-3. `withdrawn` is never AI-assigned. User action only.
+3. `withdrawn` is never AI-assigned. User action only. An AI-detected withdrawal becomes a
+   review item before matching, on every path (T3.12, C17).
 4. Once `stage` provenance is `human`, the pipeline never changes it (§7.7).
 5. Every transition writes an `email_events` row, so the detail-panel timeline is a
    projection of real events rather than a separate log.
@@ -473,6 +476,10 @@ with `review_status = 'pending'` and **no** job. They appear in Needs review wit
 confidence. The student **confirms** (creates or updates the job, all confirmed fields
 marked `human`), **edits then confirms**, or **dismisses** (`review_status = 'dismissed'`;
 never resurfaces — the unique constraint on `gmail_message_id` guarantees it).
+
+*Since T3.12 (28 September): an email whose detected stage is user-only — `withdrawn` — is
+queued the same way at any confidence, as is one with no company or role. Only the student's
+confirmation sets a user-only stage.*
 
 *Revision 3 (28 September): `users.review_threshold` exists but nothing reads it yet — the
 pipeline is handed the constant. See §15.3.*
@@ -880,6 +887,6 @@ overwrites its role (C18).
   nothing inside the repository and freezes each held-out set with a SHA-256 manifest;
   `npm run accuracy -- --corpus <folder>` refuses to score a frozen set that has changed. The
   labelling guide quotes the prompt verbatim, enforced by a test.
-- **Prompt v2 (T3.12, D34)** labels withdrawal confirmations but never lets the app apply
-  one, and adopts the guide's deadline and naming conventions — before the first live
-  measurement.
+- ✅ **Built 28 September (T3.12, D34).** Prompt v2 labels withdrawal confirmations — which
+  the pipeline turns into review items — adopts the guide's deadline and naming conventions,
+  and shows the model the received time in the student's timezone (C20).

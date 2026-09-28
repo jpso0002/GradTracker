@@ -1,6 +1,6 @@
 import { senderDomain } from "../ports/index.js";
 import { dedupeById, type MailboxReadResult, type MailboxEmail } from "../mailbox/reader.js";
-import { DEFAULT_TIMEZONE, formatWallClock } from "./zoned-time.js";
+import { DEFAULT_TIMEZONE, formatWallClock } from "../time/zoned-time.js";
 
 /**
  * Inventory (T2.11): what the exports actually contain, before anyone labels.

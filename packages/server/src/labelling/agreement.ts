@@ -1,5 +1,5 @@
 import { proportion, type Proportion } from "../harness/metrics.js";
-import { DEFAULT_TIMEZONE, parseDeadline } from "./zoned-time.js";
+import { DEFAULT_TIMEZONE, parseDeadline } from "../time/zoned-time.js";
 import { readSheet, type SheetRow } from "./sheet.js";
 
 /**

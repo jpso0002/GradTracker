@@ -405,6 +405,26 @@ describe("review routes", () => {
     expect(archived.body.jobs.map((j: { id: string }) => j.id)).toEqual([res.body.jobId]);
   });
 
+  it("applies a withdrawal the model detected only when the student confirms it (C17)", async () => {
+    // The pipeline never applies `withdrawn`; it queues the email. Confirming
+    // is the student's act, so the stage is human and the application archives.
+    const job = await seedJob(userId);
+    const pending = await seedPending({
+      detectedCompany: "KPMG",
+      detectedRole: "Vacationer Program",
+      detectedStage: "withdrawn",
+      senderDomain: "smartrecruiters.com",
+      confidence: 0.95,
+    });
+    const res = await request(app).post(`/api/review/${pending!.id}/confirm`).send({}).expect(200);
+
+    expect(res.body.jobId).toBe(job!.id);
+    const withdrawn = await repo.findJob(userId, job!.id);
+    expect(withdrawn!.stage).toBe("withdrawn");
+    expect(withdrawn!.status).toBe("archived");
+    expect(await repo.isFieldLocked(userId, job!.id, "stage")).toBe(true);
+  });
+
   it("dismisses without deleting, so the email can never resurface", async () => {
     const pending = await seedPending();
     await request(app).post(`/api/review/${pending!.id}/dismiss`).expect(200);

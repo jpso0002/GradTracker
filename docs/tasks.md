@@ -19,16 +19,17 @@ when its dependencies are checked off.
 | 0 — De-risk | 1 | T0.1–T0.3 | ⏸ Descoped for the demo track |
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** |
 | 2 — Harness | 2–3 | T2.1–T2.12 | ◐ T2.1–T2.7, T2.9, **T2.11** done · **T2.12** written, completes at T8.3 · T2.8 waits on B3 · T2.10 open |
-| 3 — Pipeline | 3–5 | T3.1–T3.12 | ◐ T3.1–T3.7, T3.9 done · **T3.8 reinstated** as drop-folder sync · **T3.10–T3.12 new** |
+| 3 — Pipeline | 3–5 | T3.1–T3.12 | ◐ T3.1–T3.7, T3.9, **T3.12** done · **T3.8 reinstated** as drop-folder sync · **T3.10, T3.11 new** |
 | 4 — API | 5–6 | T4.1–T4.10 | ◐ T4.4, T4.5, T4.8, **T4.9** done · T4.6 partial · T4.10 open · auth deferred |
 | 5 — Dashboard | 6–8 | T5.1–T5.12 | ◐ T5.1–T5.3, T5.5, T5.6, **T5.10** done · T5.7 partial · T5.4 deferred · T5.11, T5.12 open |
 | 6 — Human-in-the-loop | 8–9 | T6.1–T6.6 | ☐ Not started · **T6.1, T6.3, T6.4 redefined** · **T6.6 new** |
 | 7 — Ingestion & live classifier | 9–11 | T7.1–T7.10 | ◐ **T7.8 done** (pulled forward for T2.11) · **T7.3 reinstated** · **T7.7, T7.9, T7.10 new** · T7.1, T7.2, T7.4–T7.6 deferred |
 | 8 — Traceability | 11–12 | T8.1–T8.5 | ◐ **T8.3 reinstated** · the rest deferred |
 
-**441 tests green, plus one known-defect test that fails on purpose** (C18 — it flips when
-T3.10 lands). Steps 1 and 2 of the Plan of record are complete (28 September 2026); every
-other task marked **new** or **reinstated** above is open, except T7.8, pulled forward.
+**449 tests green, plus one known-defect test that fails on purpose** (C18 — it flips when
+T3.10 lands). Steps 1 and 2 of the Plan of record are complete, and T3.12 of step 3
+(28 September 2026); every other task marked **new** or **reinstated** above is open, except
+T7.8, pulled forward.
 
 ---
 
@@ -56,19 +57,19 @@ any other document describes work as done, check here. Reasoning for every choic
 
 ### Build order
 
-By dependency, not deadline. Steps 1 and 2 needed nothing external. Step 3 starts with
-T3.12, which needs nothing either; its T7.3 and T2.8 wait on **B3**.
+By dependency, not deadline. Steps 1 and 2 needed nothing external, and neither did step 3's
+T3.12, now done; its T7.3 and T2.8 wait on **B3**.
 
 | Step | Tasks | What | Waits on |
 |---|---|---|---|
 | **1** ✅ | T4.9 · T5.10 · T2.9 | Stage-correction archive bug (**C11**) · remove Calendar and Archive · an interval on every reported figure (**C12**) — *done 28 Sep* | — |
 | **2** ✅ | T2.11 · T2.12 · T7.8 | Labelling toolkit and guide — early, because labelling is human time — with the mailbox reader (T7.8) pulled forward, since the toolkit reads exports — *done 28 Sep; T2.12's done-when completes at T8.3* | — |
-| **3** | T3.12 · T7.3 · T2.8 | Prompt v2, so the prompt and the labelling guide agree (**C17**) before anything is measured — then the live classifier, then the Haiku-vs-Sonnet benchmark | T3.12: — · T7.3, T2.8: **B3** |
+| **3** ◐ | T3.12 · T7.3 · T2.8 | Prompt v2, so the prompt and the labelling guide agree (**C17**, **C20**) before anything is measured — *done 28 Sep* — then the live classifier, then the Haiku-vs-Sonnet benchmark | T7.3, T2.8: **B3** |
 | **4** | T7.7 · T7.9 · T7.10 · T3.8 · T4.6 | Hybrid ingestion: event source and correct Gmail links (**C10**), unlabelled harvest, one ingest command, drop-folder sync — the mailbox reader (T7.8) already exists | T7.3 |
 | **5** | T3.10 · T3.11 | Ambiguous matches routed to review (**C18**) · confirming onto an existing application applies the email, not a correction (**C16**) | — |
 | **6** | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search | T4.9, T3.10 |
 | **7** | T5.7 · T5.8 · T6.5 · T4.7 · T5.12 · T5.9 | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
-| **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run. **Exporting and labelling can start now** — the toolkit and guide exist | **B6** · measuring: T3.12, T7.3 |
+| **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run. **Exporting and labelling can start now** — the toolkit and guide exist | **B6** · measuring: T7.3 |
 
 ### Demo modes
 
@@ -240,9 +241,10 @@ the documents right now.
 | C13 | RQ-04 compares "every extracted field" against ground truth, but next action is free text with no scoring method. | Model outputs judged acceptable or not after each live run, reported as a rate with its interval. | **T2.10** |
 | C14 | RQ-03 requires a dataset the classifier "was not tuned against". The 80 fixtures shaped the prompt, so they are not held-out. | They become the tuning set; the held-out set is new, real, and frozen before any model run (D32). | **T8.3** |
 | ~~C15~~ | **Fixed 28 September 2026.** ~~Docs gave the unit as FIT3163 — the semester-1 code — for a project now in FIT3162 / FIT3164 / FIT3189 (Software Project Part 2).~~ | ~~Both semesters' codes recorded.~~ | Done |
-| C17 | The prompt tells the model **never** to assign `withdrawn`, but withdrawal confirmations are labelled `withdrawn` — in the corpus (057, 058) and by the labelling guide — so a model that obeys its prompt is scored wrong on every one. Worse, the pipeline's **new-application path sets the detected stage directly** (`pipeline.ts`, `stage: c.stage ?? "applied"`), bypassing the stage engine's user-only guard. A probe on 28 September sent IBM's withdrawal confirmation, with no matching application, through the real pipeline: it **created an application straight into `withdrawn`**, archived, AI-provenanced, stage unlocked — the rule "`withdrawn` is never AI-assigned" broken. Latent until the live classifier sees a withdrawal with no history. | The prompt asks the model to *label* a withdrawal confirmation; the pipeline never *applies* an AI-detected user-only stage — it becomes a review item, on every path. | **T3.12** |
+| ~~C17~~ | **Fixed 28 September 2026 by T3.12** — an AI-detected withdrawal now becomes a review item on every path, and the prompt asks the model to label one. ~~The prompt tells the model **never** to assign `withdrawn`, but withdrawal confirmations are labelled `withdrawn` — in the corpus (057, 058) and by the labelling guide — so a model that obeys its prompt is scored wrong on every one. Worse, the pipeline's **new-application path sets the detected stage directly** (`pipeline.ts`, `stage: c.stage ?? "applied"`), bypassing the stage engine's user-only guard. A probe on 28 September sent IBM's withdrawal confirmation, with no matching application, through the real pipeline: it **created an application straight into `withdrawn`**, archived, AI-provenanced, stage unlocked — the rule "`withdrawn` is never AI-assigned" broken. Latent until the live classifier sees a withdrawal with no history.~~ | ~~The prompt asks the model to *label* a withdrawal confirmation; the pipeline never *applies* an AI-detected user-only stage — it becomes a review item, on every path.~~ | ~~**T3.12**~~ Done |
 | C18 | A second application at the same employer **merges into the first and overwrites its role.** When roles differ, `findMatch` falls back to the sender domain — and one employer's ATS sends every stream's email from one domain. `match.test.ts`'s "different role at the same company" case passes only because it uses a **null** sender domain, which real mail never has. Found 28 September rewriting a pipeline test that T2.12's corpus fixes had broken; pinned by an `it.fails` test in `pipeline.test.ts`. | D26 already routes exactly this case to review; this is the evidence for it. | **T3.10** |
-| C19 | Six authored labels disagreed with the prompt or with each other. **Fixed 28 September (T2.12):** 020 labelled a role the email never states — the model sees one email, and the prompt asks for the role "as stated"; 027 was "unresolvable" though "by Friday" is the prompt's own example of a date to resolve, so obeying the prompt scored as an invented deadline; "within N days" meant 23:59 in 023 and 037 but the received time in 020, 030 and 045, so no consistent model could score full marks on exact time; 046's note said "no response deadline" beside a correct one; 001's "Friday 23 May" is a Saturday. **Still open:** 016, 025 and 035 say "Commonwealth Bank" and 045 "Zip Co" where the emails say CommBank and Zip — the guide's naming rule disagrees, and the current prompt sets none. | Relabelled to the guide's rules (§5), which are the prompt's own wherever it has one. The four names are reconciled together with prompt v2, which adopts the guide's naming rule. | T2.12 · **T3.12** |
+| ~~C19~~ | **Fixed 28 September 2026** — six labels by T2.12, and by T3.12 five company names reconciled with prompt v2's naming rule (016, 025, 035 → CommBank; 031, 045 → Zip, the name each email uses). ~~Six authored labels disagreed with the prompt or with each other. **Fixed 28 September (T2.12):** 020 labelled a role the email never states — the model sees one email, and the prompt asks for the role "as stated"; 027 was "unresolvable" though "by Friday" is the prompt's own example of a date to resolve, so obeying the prompt scored as an invented deadline; "within N days" meant 23:59 in 023 and 037 but the received time in 020, 030 and 045, so no consistent model could score full marks on exact time; 046's note said "no response deadline" beside a correct one; 001's "Friday 23 May" is a Saturday. **Still open:** 016, 025 and 035 say "Commonwealth Bank" and 045 "Zip Co" where the emails say CommBank and Zip — the guide's naming rule disagrees, and the current prompt sets none.~~ | ~~Relabelled to the guide's rules (§5), which are the prompt's own wherever it has one. The four names are reconciled together with prompt v2, which adopts the guide's naming rule.~~ | ~~T2.12 · **T3.12**~~ Done |
+| ~~C20~~ | **Fixed 28 September 2026 by T3.12.** ~~The model was shown each email's received time in **UTC only**, while relative deadlines count from the local date — the prompt said to resolve them "against the email's received date". At 08:00 in Melbourne it is still the previous day in UTC, so "within 7 days" would resolve a day early. Hidden in the corpus, where every email arrives after 10:00 Melbourne time. Found writing prompt v2.~~ | ~~The user message gives the received time in the student's timezone as well as UTC.~~ | ~~**T3.12**~~ Done |
 | C16 | Confirming a review item that **matches an existing application** writes every detected field as a human correction. An older, low-confidence "application received" email confirmed onto an application at interview moves its stage **back** to applied, moves `lastEventAt` **back** from 14 to 2 August, and locks all five fields — so a later offer or rejection can never move it again. Found 28 September by a probe while fixing C11 on the same code path. Latent today — no seeded review item matches an existing application — but T3.10 routes more items through exactly this path. | A match applies the email as the pipeline would; only fields the student edited become human. | **T3.11** |
 
 ---
@@ -788,7 +790,7 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   its stage, `lastEventAt` and field provenance unchanged, and a later offer email still moves
   it — all asserted.
 
-- [ ] **T3.12 — Prompt v2: the prompt and the labelling guide agree** · Lane A · needs T2.12 · *new 28 Sep*
+- [x] **T3.12 — Prompt v2: the prompt and the labelling guide agree** · Lane A · needs T2.12 · ✅ **2026-09-28**
   Fixes **C17** and the open half of **C19**. Must land **before the first live measurement**
   (T2.8, T8.3): a figure measured while the prompt and the labels disagree measures the
   disagreement. Needs no API key.
@@ -802,6 +804,25 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
      demands it.
   *Done when:* a test proves an AI-detected withdrawal never creates or moves an application;
   the guide's drift test passes against v2; the self-test passes on the reconciled corpus.
+  *Verified:* all three. **Withdrawn (C17):** the pipeline checks for a user-only stage before
+  matching, so an AI-detected withdrawal becomes a review item on every path. Tests written
+  first and seen failing: IBM's withdrawal confirmation with no tracked application now
+  creates **no** application — it created one straight into `withdrawn` before — and after
+  IBM's interview invitation it leaves that application at interview, active. The student's
+  half already worked and is now pinned by a route test: confirming the review item sets
+  `withdrawn` as a human value and archives the application. The three reasons to ask the
+  student now share one helper. **Prompt v2:** the withdrawn definition asks the model to
+  label a withdrawal confirmation, and calls an employer-ended process `rejected`; the guide's
+  deadline conventions, its "not a deadline" cases, the Australian-time default and the naming
+  rule are stated; fields come from this email alone. **Found on the way (C20):** the model was
+  shown the received time in UTC only, while relative deadlines count from the local date —
+  the user message now gives it in the student's timezone too (Melbourne by default; the
+  server stores no per-student zone). **Corpus:** five company names reconciled with the naming
+  rule (016, 025, 035 → CommBank; 031, 045 → Zip), closing C19. `PROMPT_VERSION` is `v2` and
+  the harness prints it; the guide changed in the same change and its drift test passes; the
+  self-test passes at 80/80 and `--invert` still exits 1. The timezone helpers moved from
+  `labelling/` to `server/src/time/`, since production code now uses them. The whole-corpus
+  pipeline run now asks the student about three emails — 020, 057 and 058.
 
 ---
 
@@ -1229,11 +1250,11 @@ The chain that determines the finish date. Slip here and the deadline moves.
 Demo:      B3  → T7.3       → T7.10  → T3.8    → the demo
            key   classifier   ingest   refresh
 
-Evidence:  B6      → T2.11 ✅ → T8.3   → T3.12     → T2.8      → accuracy evidence
+Evidence:  B6      → T2.11 ✅ → T8.3   → T3.12 ✅  → T2.8      → accuracy evidence
            exports   toolkit    labels   prompt v2   benchmark
 ```
 
-T3.12 needs nothing but code and can land at any point before T2.8's first measurement.
+T3.12 landed on 28 September, before anything was measured.
 
 The evidence chain is the longer: it depends on three people's exports and on human
 labelling time. That is why the toolkit (T2.11) is step 2 of the build order, ahead of work
