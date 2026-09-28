@@ -13,8 +13,12 @@ import type { RawEmail } from "../../ports/index.js";
 export const PROMPT_VERSION = "v1";
 
 /** What each stage means, in the model's terms. Deliberately concrete: "an
- *  invitation to complete a test" is checkable, "the assessment stage" is not. */
-const STAGE_DEFINITIONS: Record<(typeof StageEnum.options)[number], string> = {
+ *  invitation to complete a test" is checkable, "the assessment stage" is not.
+ *
+ *  Exported so labellers read the same words the model does: the labelling
+ *  spreadsheet quotes these, and a test fails if the labelling guide drifts
+ *  from them (T2.12). */
+export const STAGE_DEFINITIONS: Record<(typeof StageEnum.options)[number], string> = {
   applied:
     "The application was received or acknowledged. Confirmation emails, 'we have your application', portal submission receipts.",
   assessment:

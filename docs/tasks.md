@@ -18,16 +18,17 @@ when its dependencies are checked off.
 |---|---|---|---|
 | 0 — De-risk | 1 | T0.1–T0.3 | ⏸ Descoped for the demo track |
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** |
-| 2 — Harness | 2–3 | T2.1–T2.12 | ◐ T2.1–T2.7, **T2.9** done · T2.8 waits on B3 · T2.10–T2.12 open |
-| 3 — Pipeline | 3–5 | T3.1–T3.11 | ◐ T3.1–T3.7, T3.9 done · **T3.8 reinstated** as drop-folder sync · **T3.10, T3.11 new** |
+| 2 — Harness | 2–3 | T2.1–T2.12 | ◐ T2.1–T2.7, T2.9, **T2.11** done · **T2.12** written, completes at T8.3 · T2.8 waits on B3 · T2.10 open |
+| 3 — Pipeline | 3–5 | T3.1–T3.12 | ◐ T3.1–T3.7, T3.9 done · **T3.8 reinstated** as drop-folder sync · **T3.10–T3.12 new** |
 | 4 — API | 5–6 | T4.1–T4.10 | ◐ T4.4, T4.5, T4.8, **T4.9** done · T4.6 partial · T4.10 open · auth deferred |
 | 5 — Dashboard | 6–8 | T5.1–T5.12 | ◐ T5.1–T5.3, T5.5, T5.6, **T5.10** done · T5.7 partial · T5.4 deferred · T5.11, T5.12 open |
 | 6 — Human-in-the-loop | 8–9 | T6.1–T6.6 | ☐ Not started · **T6.1, T6.3, T6.4 redefined** · **T6.6 new** |
-| 7 — Ingestion & live classifier | 9–11 | T7.1–T7.10 | ◐ **T7.3 reinstated** · **T7.7–T7.10 new** · T7.1, T7.2, T7.4–T7.6 deferred |
+| 7 — Ingestion & live classifier | 9–11 | T7.1–T7.10 | ◐ **T7.8 done** (pulled forward for T2.11) · **T7.3 reinstated** · **T7.7, T7.9, T7.10 new** · T7.1, T7.2, T7.4–T7.6 deferred |
 | 8 — Traceability | 11–12 | T8.1–T8.5 | ◐ **T8.3 reinstated** · the rest deferred |
 
-**387 tests green.** Step 1 of the Plan of record is complete (28 September 2026); every
-other task marked **new** or **reinstated** above is open.
+**441 tests green, plus one known-defect test that fails on purpose** (C18 — it flips when
+T3.10 lands). Steps 1 and 2 of the Plan of record are complete (28 September 2026); every
+other task marked **new** or **reinstated** above is open, except T7.8, pulled forward.
 
 ---
 
@@ -55,18 +56,19 @@ any other document describes work as done, check here. Reasoning for every choic
 
 ### Build order
 
-By dependency, not deadline. Steps 1 and 2 need nothing external; step 3 waits on **B3**.
+By dependency, not deadline. Steps 1 and 2 needed nothing external. Step 3 starts with
+T3.12, which needs nothing either; its T7.3 and T2.8 wait on **B3**.
 
 | Step | Tasks | What | Waits on |
 |---|---|---|---|
 | **1** ✅ | T4.9 · T5.10 · T2.9 | Stage-correction archive bug (**C11**) · remove Calendar and Archive · an interval on every reported figure (**C12**) — *done 28 Sep* | — |
-| **2** | T2.11 · T2.12 | Labelling toolkit and guide — early, because labelling is human time | — |
-| **3** | T7.3 · T2.8 | Live classifier, then the Haiku-vs-Sonnet benchmark | **B3** |
-| **4** | T7.7 · T7.8 · T7.9 · T7.10 · T3.8 · T4.6 | Hybrid ingestion: event source and correct Gmail links (**C10**), mailbox reader, unlabelled harvest, one ingest command, drop-folder sync | T7.3 |
-| **5** | T3.10 · T3.11 | Ambiguous matches routed to review · confirming onto an existing application applies the email, not a correction (**C16**) | — |
+| **2** ✅ | T2.11 · T2.12 · T7.8 | Labelling toolkit and guide — early, because labelling is human time — with the mailbox reader (T7.8) pulled forward, since the toolkit reads exports — *done 28 Sep; T2.12's done-when completes at T8.3* | — |
+| **3** | T3.12 · T7.3 · T2.8 | Prompt v2, so the prompt and the labelling guide agree (**C17**) before anything is measured — then the live classifier, then the Haiku-vs-Sonnet benchmark | T3.12: — · T7.3, T2.8: **B3** |
+| **4** | T7.7 · T7.9 · T7.10 · T3.8 · T4.6 | Hybrid ingestion: event source and correct Gmail links (**C10**), unlabelled harvest, one ingest command, drop-folder sync — the mailbox reader (T7.8) already exists | T7.3 |
+| **5** | T3.10 · T3.11 | Ambiguous matches routed to review (**C18**) · confirming onto an existing application applies the email, not a correction (**C16**) | — |
 | **6** | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search | T4.9, T3.10 |
 | **7** | T5.7 · T5.8 · T6.5 · T4.7 · T5.12 · T5.9 | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
-| **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run | **B6**, T2.11, T7.3 |
+| **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run. **Exporting and labelling can start now** — the toolkit and guide exist | **B6** · measuring: T3.12, T7.3 |
 
 ### Demo modes
 
@@ -238,6 +240,9 @@ the documents right now.
 | C13 | RQ-04 compares "every extracted field" against ground truth, but next action is free text with no scoring method. | Model outputs judged acceptable or not after each live run, reported as a rate with its interval. | **T2.10** |
 | C14 | RQ-03 requires a dataset the classifier "was not tuned against". The 80 fixtures shaped the prompt, so they are not held-out. | They become the tuning set; the held-out set is new, real, and frozen before any model run (D32). | **T8.3** |
 | ~~C15~~ | **Fixed 28 September 2026.** ~~Docs gave the unit as FIT3163 — the semester-1 code — for a project now in FIT3162 / FIT3164 / FIT3189 (Software Project Part 2).~~ | ~~Both semesters' codes recorded.~~ | Done |
+| C17 | The prompt tells the model **never** to assign `withdrawn`, but withdrawal confirmations are labelled `withdrawn` — in the corpus (057, 058) and by the labelling guide — so a model that obeys its prompt is scored wrong on every one. Worse, the pipeline's **new-application path sets the detected stage directly** (`pipeline.ts`, `stage: c.stage ?? "applied"`), bypassing the stage engine's user-only guard. A probe on 28 September sent IBM's withdrawal confirmation, with no matching application, through the real pipeline: it **created an application straight into `withdrawn`**, archived, AI-provenanced, stage unlocked — the rule "`withdrawn` is never AI-assigned" broken. Latent until the live classifier sees a withdrawal with no history. | The prompt asks the model to *label* a withdrawal confirmation; the pipeline never *applies* an AI-detected user-only stage — it becomes a review item, on every path. | **T3.12** |
+| C18 | A second application at the same employer **merges into the first and overwrites its role.** When roles differ, `findMatch` falls back to the sender domain — and one employer's ATS sends every stream's email from one domain. `match.test.ts`'s "different role at the same company" case passes only because it uses a **null** sender domain, which real mail never has. Found 28 September rewriting a pipeline test that T2.12's corpus fixes had broken; pinned by an `it.fails` test in `pipeline.test.ts`. | D26 already routes exactly this case to review; this is the evidence for it. | **T3.10** |
+| C19 | Six authored labels disagreed with the prompt or with each other. **Fixed 28 September (T2.12):** 020 labelled a role the email never states — the model sees one email, and the prompt asks for the role "as stated"; 027 was "unresolvable" though "by Friday" is the prompt's own example of a date to resolve, so obeying the prompt scored as an invented deadline; "within N days" meant 23:59 in 023 and 037 but the received time in 020, 030 and 045, so no consistent model could score full marks on exact time; 046's note said "no response deadline" beside a correct one; 001's "Friday 23 May" is a Saturday. **Still open:** 016, 025 and 035 say "Commonwealth Bank" and 045 "Zip Co" where the emails say CommBank and Zip — the guide's naming rule disagrees, and the current prompt sets none. | Relabelled to the guide's rules (§5), which are the prompt's own wherever it has one. The four names are reconciled together with prompt v2, which adopts the guide's naming rule. | T2.12 · **T3.12** |
 | C16 | Confirming a review item that **matches an existing application** writes every detected field as a human correction. An older, low-confidence "application received" email confirmed onto an application at interview moves its stage **back** to applied, moves `lastEventAt` **back** from 14 to 2 August, and locks all five fields — so a later offer or rejection can never move it again. Found 28 September by a probe while fixing C11 on the same code path. Latent today — no seeded review item matches an existing application — but T3.10 routes more items through exactly this path. | A match applies the email as the pipeline would; only fields the student edited become human. | **T3.11** |
 
 ---
@@ -544,7 +549,7 @@ weeks to improve it.
   *Done when:* `npm run accuracy` reports a next-action acceptance rate for any run with
   judgements recorded — and says plainly when none exist, rather than printing 0%.
 
-- [ ] **T2.11 — Labelling toolkit** · Lane B · needs T2.5 · *new 28 Sep*
+- [x] **T2.11 — Labelling toolkit** · Lane B · needs T2.5, **T7.8** · ✅ **2026-09-28**
   Three commands. **Inventory:** counts per export — candidate positives, negatives, sender
   domains, date range — so the held-out size is chosen from real numbers. **Export to
   spreadsheet:** `.mbox`/`.eml` → one row per email with subject, sender domain, date and a
@@ -553,13 +558,43 @@ weeks to improve it.
   **outside the repository**.
   *Done when:* a Takeout `.mbox` round-trips to a spreadsheet and back into fixtures the
   harness scores, and a test proves the export refuses to write inside the repository.
+  *Verified:* both, and through the real commands. `npm run label -- inventory | export |
+  import | agreement | verify` (`packages/server/src/labelling/`). A synthetic Takeout `.mbox`
+  → spreadsheet → labels written into it as a labeller's would be → fixtures that `loadCorpus`
+  validates and `npm run accuracy -- --corpus <folder>` scores; the same flow was also run end
+  to end through `npm.cmd` in PowerShell. **The repository rule is enforced, not
+  conventional:** every write goes through `assertOutsideRepository`, which resolves links and
+  compares case-insensitively on Windows — a nested, upper-cased path is refused, a sibling
+  `GradTracker-private` folder allowed. The guard was **broken on purpose**: the test run wrote a
+  spreadsheet into the repository and failed; restored. Beyond the task, because D32 needs
+  them: a seeded `--sample` for the agreement exercise; `agreement` (per-field agreement with
+  Wilson intervals and Cohen's κ, every disagreement listed by row); `import --tuning n`, a
+  seeded, stratified tuning/held-out split; and a **freeze** — a SHA-256 manifest of every
+  held-out file, checked by `verify` and by the harness, which **refuses to score a held-out
+  set changed since freezing**. Import is all-or-nothing, each problem listed by row number;
+  only ISO dates are accepted (`07/04/2026` is two different days); deadlines are entered as
+  the email states them, in its timezone, and converted with daylight saving from the
+  platform's timezone database (both sides of the October change tested). The inventory prints
+  counts and domains only, never a subject or body; running it on synthetic mail caught two
+  faults in its sizing heuristic, both fixed and tested. Needed T7.8, pulled forward. New
+  dependencies `mailparser` and `exceljs` (its `uuid` pinned by a scoped override); `npm audit`:
+  0 vulnerabilities.
 
-- [ ] **T2.12 — Labelling guide** · Lane B · needs T2.3 · *new 28 Sep*
+- [ ] **T2.12 — Labelling guide** · Lane B · needs T2.3 · *new 28 Sep* — ◐ *written 2026-09-28; its done-when completes at T8.3*
   One page: what counts as an application email, the six stage definitions **taken from
   `prompt.ts`** so labellers and the model share one definition, how to label deadlines, and
   worked examples of the hard negatives.
   *Done when:* it is the only reference used for T8.3's labelling, and the agreement measured
   there is recorded against it.
+  *Written:* [labelling-guide.md](labelling-guide.md). The six stage definitions are quoted
+  verbatim, as is every other line it quotes from the prompt — **a test fails if the guide and
+  `prompt.ts` drift apart** (`guide.test.ts`, seen failing on a one-word change to each). Writing
+  it forced rules the prompt leaves open — deadlines counted in days or hours, "by Friday",
+  "close of business", company and role naming — and checking them against the authored
+  corpus found six labels in disagreement (**C19**, fixed but for four company names) and the
+  `withdrawn` contradiction (**C17**). The spreadsheet's README tab now tells labellers plainly
+  to label a withdrawal confirmation `withdrawn`. **Two team decisions are pending** (guide §7,
+  and T8.3 below).
 
 ---
 
@@ -733,9 +768,13 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   low), or **none**. An ambiguous email becomes a pending review item carrying a
   `suggested_job_id` (new column on `email_events`); nothing is merged. `GET /api/jobs` marks
   rows that have a pending suggestion. Supersedes the "sender domain as a tiebreak" assumption.
+  Fixes **C18**: today a second application at one employer merges into the first and
+  overwrites its role.
   *Done when:* replaying the 18 August harvest yields **one** Macquarie application and **one**
-  review item suggesting it, never a silent merge; both answers to a suggestion are tested; and
-  the retention guard passes unmodified.
+  review item suggesting it, never a silent merge; both answers to a suggestion are tested; the
+  retention guard passes unmodified; the known-defect test in `pipeline.test.ts` ("never
+  overwrites one application with another at the same employer") is changed from `it.fails`
+  to `it` and passes; and `match.test.ts`'s different-role case uses a real sender domain.
 
 - [ ] **T3.11 — Confirming onto an existing application applies the email** · Lane A · needs T4.5 · *new 28 Sep*
   Fixes **C16**. When a confirmed review item matches an existing application, apply it the
@@ -748,6 +787,21 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   *Done when:* confirming an older, lower-stage email onto an application at interview leaves
   its stage, `lastEventAt` and field provenance unchanged, and a later offer email still moves
   it — all asserted.
+
+- [ ] **T3.12 — Prompt v2: the prompt and the labelling guide agree** · Lane A · needs T2.12 · *new 28 Sep*
+  Fixes **C17** and the open half of **C19**. Must land **before the first live measurement**
+  (T2.8, T8.3): a figure measured while the prompt and the labels disagree measures the
+  disagreement. Needs no API key.
+  1. `withdrawn`: the prompt asks the model to **label** a confirmation of the student's own
+     withdrawal; the app still never **applies** one — an AI-detected user-only stage becomes a
+     review item on every path, including the new-application path that today creates the
+     application straight into `withdrawn`.
+  2. The guide's deadline conventions (§5) and naming rule (§3) written into the prompt.
+  3. The four authored company labels reconciled with the naming rule (016, 025, 035, 045).
+  4. `PROMPT_VERSION` → `v2`, with the guide updated in the same change — its drift test
+     demands it.
+  *Done when:* a test proves an AI-detected withdrawal never creates or moves an application;
+  the guide's drift test passes against v2; the self-test passes on the reconciled corpus.
 
 ---
 
@@ -1074,13 +1128,22 @@ arrives through the hybrid local path instead (T7.7–T7.10). T7.4–T7.6 stay d
   *Done when:* each link type is tested, **and one link of each real type is clicked against
   real Gmail and opens the right email** — the step skipped the first time.
 
-- [ ] **T7.8 — Mailbox file reader** · Lane B · needs T2.1 · *new 28 Sep*
+- [x] **T7.8 — Mailbox file reader** · Lane B · needs T2.1 · ✅ **2026-09-28** *(pulled forward for T2.11)*
   Reads a Google Takeout `.mbox` and individual `.eml` files into `RawEmail` through an
   established MIME parsing library: multipart bodies, quoted-printable and base64, HTML-only
   emails reduced to text — many ATS emails are HTML-only. The RFC 822 `Message-ID` is the
   message id; the Gmail thread id is used where the export carries one.
   *Done when:* fixtures covering multipart, HTML-only, encoded and non-ASCII emails parse
   correctly, and a malformed message is skipped and counted rather than aborting the file.
+  *Verified:* `packages/server/src/mailbox/reader.ts`, on `mailparser`. Eleven tests, each email
+  built as raw text: plain; multipart, text part preferred; HTML-only in quoted-printable with
+  non-ASCII ("Café"); a base64 body ("résumé"); mbox splitting that does **not** split on a
+  "From " inside a paragraph, and unescapes mboxrd `>From`; a malformed message skipped,
+  counted and located while the rest of the file reads; a stable id derived when a message has
+  no `Message-ID`; Gmail's `X-GM-THRID` as the thread id; folders read recursively in a stable
+  order; duplicates across exports removed. The mbox split was **broken on purpose** — the
+  blank-line rule removed — and the tests failed. The demo's ingest command that will use it is
+  still T7.10.
 
 - [ ] **T7.9 — Unlabelled harvest files** · Lane B · needs T7.3 · *new 28 Sep*
   The harvest schema's `classification` becomes optional. Absent → classified live; present →
@@ -1127,8 +1190,13 @@ arrives through the hybrid local path instead (T7.7–T7.10). T7.4–T7.6 stay d
   Real email content lives **outside the repository**, whatever its visibility. Positives are
   deliberately enriched to about half, and the report says so — on a natural inbox, a
   classifier that answers "no" to everything scores ~98%.
-  *Done when:* the frozen held-out set exists, `npm run accuracy -- --corpus=real` reports
-  against it with intervals, and the agreement figure is recorded.
+  **Pending team decisions** (labelling guide §7). *Whose mail forms the agreement sample* —
+  proposed: the owner draws it with `--sample`, reads it first and deletes any row they would
+  not show a teammate. *How three members' held-out sets become one figure* without anyone
+  handling another member's mail — proposed: each member scores their own frozen set and the
+  harness pools the counts (not built yet).
+  *Done when:* the frozen held-out set exists, `npm run accuracy -- --corpus <held-out folder>`
+  reports against it with intervals, and the agreement figure is recorded.
 
 - [ ] **T8.4 — README and setup guide** · Lane A · needs T7.6
   Clone to running in under five minutes, with no database server, Google account or API key.
@@ -1161,9 +1229,11 @@ The chain that determines the finish date. Slip here and the deadline moves.
 Demo:      B3  → T7.3       → T7.10  → T3.8    → the demo
            key   classifier   ingest   refresh
 
-Evidence:  B6      → T2.11   → T8.3   → T2.8      → accuracy evidence
-           exports   toolkit   labels   benchmark
+Evidence:  B6      → T2.11 ✅ → T8.3   → T3.12     → T2.8      → accuracy evidence
+           exports   toolkit    labels   prompt v2   benchmark
 ```
+
+T3.12 needs nothing but code and can land at any point before T2.8's first measurement.
 
 The evidence chain is the longer: it depends on three people's exports and on human
 labelling time. That is why the toolkit (T2.11) is step 2 of the build order, ahead of work

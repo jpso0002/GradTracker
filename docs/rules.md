@@ -39,6 +39,8 @@ Keep entries concise. One line per decision when possible.
 - **Commands in documentation are PowerShell-safe.** The development machine is Windows, and Windows PowerShell 5.1 rejects `&&` as a statement separator. Write each command on its own line, or chain with `;` / `if ($?) { … }` — never `cmd-a && cmd-b`.
 - **Use `npm.cmd`, not `npm`, in PowerShell.** The `npm.ps1` shim is blocked by the default execution policy. `npm.cmd` bypasses it and needs no security setting changed — never instruct anyone to run `Set-ExecutionPolicy` for this.
 - **Zero npm audit vulnerabilities is the baseline.** Dev-only advisories count: the scaffold shipped clean on Vitest 3 rather than carrying Vitest 2's critical advisory. Re-check after any dependency change.
+- **Audit from the repository root.** A workspace-scoped audit reported 0 vulnerabilities while the root audit did not (28 September 2026).
+- **An override pins a transitive dependency under the package that needs it** (`exceljs` → `uuid`), never globally — a global override did not reach the nested copy.
 - **`packages/shared` is the only place types are defined.** Client and server import them; neither redeclares them.
 - **Two ports, each with a fake:** `GmailClient` and `EmailClassifier`. Fakes are the default in test and demo mode.
 - **No vendor SDK may be imported anywhere in the server except `adapters/`** — enforced by ESLint `no-restricted-imports`, verified in both directions. If domain, route or db code could reach the Gmail or Anthropic SDK directly, swapping in the fakes would stop exercising the real path and every offline test would become a lie.
@@ -48,9 +50,10 @@ Keep entries concise. One line per decision when possible.
 - **Accuracy figures are never printed without their confidence interval.** Wilson, not the normal approximation — at proportions near 1 the textbook interval exceeds 100%.
 - **A threshold with a zero denominator fails, it does not pass vacuously.** 0/0 is not 100%; silently passing would let the fixtures backing a criterion be deleted while the gate still reported success.
 - **Failures are named by fixture id, never summarised as a percentage.** A rate tells you the size of a problem; ids tell you what to fix.
-- **Corpus realism outranks corpus targets.** Deadlines are labelled only where an email would genuinely carry one — 26 deadline-bearing rather than a padded 30. Inventing deadlines in acknowledgements to hit a number would make the corpus less representative, and the number it produced would mean less.
+- **Corpus realism outranks corpus targets.** Deadlines are labelled only where an email would genuinely carry one — 27 deadline-bearing (26 until 027's "by Friday" was resolved, C19) rather than a padded 30. Inventing deadlines in acknowledgements to hit a number would make the corpus less representative, and the number it produced would mean less.
 - **Hard negatives must defeat the shortcuts.** A negative that names no pipeline company, arrives from an unused domain and carries no deadline text teaches nothing. At least: some naming live-application companies, one from a shared ATS domain, several carrying deadline language.
 - **Fixture ground truth is validated on load, not trusted.** A mislabelled fixture corrupts every accuracy figure derived from it and the result still looks plausible, so the loader refuses to load it.
+- **A defect found while testing and scheduled rather than fixed is pinned by an `it.fails` test** naming its finding and fixing task. It passes while the defect exists and fails the moment the defect is fixed — the prompt to turn it into an ordinary test, which is part of the fixing task's done-when (C18, T3.10). Check once, by running it as a plain test, that it fails on its assertion and not on a setup error.
 - **Under `NODE_ENV=test` the adapters are forced to fake**, even if `live` is requested. A test that can reach a live API might succeed — spending money and coupling CI to the network.
 - **No global state library.** Server state lives in the typed API client + component state; a store gets added only when two distant components demonstrably need the same data.
 - **The design system is a read-only dependency.** `GradTracker Design System/` is consumed, never edited and never re-implemented.
@@ -88,7 +91,7 @@ Keep entries concise. One line per decision when possible.
 - **No emoji.** Not in UI, not in copy, not in empty states.
 - **Repository methods take `userId` as their first argument** — omitting it must be a compile error.
 - **`UserId` is a branded type.** `asUserId()` is the only widening point and is called only where an id has genuinely been authenticated — session middleware, seeds, tests. A plain string cannot be passed where scoping is required.
-- **Type-level guarantees are asserted in `*.typecheck.ts`, never in `*.test.ts`.** Test files are excluded from the tsconfig, so a `@ts-expect-error` placed in one is never checked. Files named `*.typecheck.ts` are compiled, contain only `declare`d bindings, and emit no runtime code.
+- **Type-level guarantees are asserted in `*.typecheck.ts`, never in `*.test.ts`.** Test files are excluded from both packages' tsconfigs (the client's since 28 September 2026), so a `@ts-expect-error` placed in one is never checked. Files named `*.typecheck.ts` are compiled, contain only `declare`d bindings, and emit no runtime code.
 - **`createIdentityRepository` holds the only operations that run without a `UserId`**, because they are what establishes one. Keep it minimal so it stays auditable.
 - **Tables without a `user_id` column scope through their owning row.** `job_field_provenance` goes through `assertOwnsJob`, implemented once — this is where the scoping guarantee is easiest to lose silently.
 - **A job's status is derived from its stage, in the repository, and nowhere else.** Terminal stages are archived; every other stage is active. `JobPatch` has no `status` field, and a status passed by an untyped caller is discarded. While the rule lived at call sites it was written four times and missing twice (defect C11).
@@ -152,7 +155,7 @@ Keep entries concise. One line per decision when possible.
 - **"Deadline Approaching" and "Follow-up Required" are computed, never stored** — they are properties of today's date, not of an email.
 - **Stage advances forward only** — a new stage applies only if its rank exceeds the current rank.
 - **`rejected` and `offer` may arrive from any stage** and always apply.
-- **`withdrawn` is never AI-assigned.** User action only.
+- **`withdrawn` is never AI-assigned.** User action only. The model may *recognise* a withdrawal confirmation — the labels say `withdrawn` — but no AI classification *applies* it, on any path. Until T3.12 the new-application path does (C17).
 - **A stage with `human` provenance is frozen** — the pipeline never changes it again.
 
 ### Provenance and correction
@@ -267,3 +270,17 @@ Keep entries concise. One line per decision when possible.
 - **0/0 prints "—", never "0.0 %".** An empty denominator is nothing to measure, and a zero would claim a result — the same rule that stops SM-3 passing vacuously.
 - **Confirming onto an existing application is an email, not a correction.** Only fields the student edited on the card become human; everything else goes through the stage engine and the provenance write path like any other email (defect C16, T3.11).
 - **Next action is judged after the run, not labelled before it.** Free text has no single right answer to match.
+
+## Labelling *(28 September 2026)*
+
+- **The labelling guide is the one reference for labels** — [labelling-guide.md](labelling-guide.md). A case it does not cover is decided by the team and added to it, so the next labeller does the same.
+- **The guide quotes the prompt; it never paraphrases it.** Stage definitions and every quoted line are verbatim, enforced by `guide.test.ts`. A prompt change updates the guide in the same change.
+- **Labels follow the prompt's rules wherever the prompt has one** (D34). A label the prompt forbids the model to produce — a role the email never states, a deadline the prompt says to resolve — scores the prompt, not the model (C19).
+- **A field is labelled from the email alone, never from its thread.** The classifier sees one email at a time.
+- **Deadlines:** hours are exact; days, weeks and business days end at 23:59 on the last day (business days are Monday to Friday, public holidays ignored); "by", "before", "until" or "no later than" a date is that date at 23:59; "close of business" is 17:00; a weekday alone is the first such day on or after receipt; when a weekday and a date disagree, the date wins.
+- **Company as this email names it** — its sentences, then its sign-off, then its subject — minus a country, a legal suffix and team words; never the ATS. The scorer matches exactly, apart from case and spacing, so the rule must be mechanical.
+- **Toolkit writes are refused inside the repository** (`assertOutsideRepository`) — enforced, not conventional, including through links and differently-cased Windows paths.
+- **Import is all-or-nothing**, each problem reported by row number. **Dates are ISO only:** `07/04/2026` is 7 April or 4 July depending on the reader's locale.
+- **Splits and samples are seeded, never hand-picked.** The same sheet and seed give the same tuning/held-out split and the same agreement sample; the seed is recorded in the freeze manifest.
+- **A frozen held-out set is verified before every measurement**, and the harness refuses to score one that has changed.
+- **Leaving an email out is always allowed** — a blank `is_application`. Privacy outranks completeness; the import reports how many were left out.

@@ -5,8 +5,8 @@
 > on opening a file. Written to be blunt rather than diplomatic — if you use it to help
 > explain the project to teammates, soften it yourself.
 >
-> **Accurate as of:** 28 September 2026. Code last changed 18 August 2026; documentation
-> updated 28 September to record the current Plan of record.
+> **Accurate as of:** 28 September 2026 — steps 1 and 2 of the Plan of record were built
+> that day; the rest of the code last changed 18 August.
 >
 > **On meeting minutes.** Treat any team meeting minutes as **reference, not fact.** They may
 > describe work that does not exist in the repository, or plans since changed. When minutes
@@ -77,21 +77,21 @@ team chose classifies live (D23, §4).
 |---|---|---|
 | **0 — De-risk** | Google Cloud, API key spike | ⏸ Descoped |
 | **1 — Foundation** | Monorepo, shared Zod schemas, DB schema, migrations, repository, seed | ✅ Complete |
-| **2 — Harness** | Ports, fakes, prompt, 80-fixture corpus, accuracy harness, Wilson intervals | ✅ T2.1–T2.7, **T2.9** · T2.8 benchmark waits on B3 · ☐ T2.10–T2.12 |
-| **3 — Pipeline** | Matching, stage engine, provenance, pipeline, ranking, harvest | ✅ T3.1–T3.7, T3.9 · **T3.8 reinstated** as drop-folder sync · ☐ **T3.10, T3.11 new** |
+| **2 — Harness** | Ports, fakes, prompt, 80-fixture corpus, accuracy harness, Wilson intervals, labelling toolkit and guide | ✅ T2.1–T2.7, T2.9, **T2.11** · ◐ **T2.12** written, completes at T8.3 · T2.8 benchmark waits on B3 · ☐ T2.10 |
+| **3 — Pipeline** | Matching, stage engine, provenance, pipeline, ranking, harvest | ✅ T3.1–T3.7, T3.9 · **T3.8 reinstated** as drop-folder sync · ☐ **T3.10–T3.12 new** |
 | **4 — API** | Job, review and sync routes | ✅ T4.4, T4.5, T4.8, **T4.9** · ◐ T4.6 · ☐ T4.10 · ⏸ T4.1–T4.3 auth · ☐ T4.7 |
 | **5 — Dashboard** | Design system, shell, API client, pipeline, detail panel | ✅ T5.1–T5.3, T5.5, T5.6, **T5.10** · ◐ T5.7 · ⏸ T5.4 · ☐ T5.8, T5.9, T5.11, T5.12 |
 | **6 — Human-in-the-loop** | Editing, review queue, settings, accessibility | ☐ Not started · **T6.1, T6.3, T6.4 redefined** · **T6.6 new** |
-| **7 — Ingestion & live classifier** | Live classifier, hybrid ingestion | ☐ **T7.3 reinstated** · **T7.7–T7.10 new** · ⏸ hosted Gmail (T7.1, T7.2) |
+| **7 — Ingestion & live classifier** | Live classifier, hybrid ingestion | ✅ **T7.8** mailbox reader (pulled forward) · ☐ **T7.3 reinstated** · **T7.7, T7.9, T7.10 new** · ⏸ hosted Gmail (T7.1, T7.2) |
 | **8 — Traceability** | Real labelled corpus, traceability, limitations | ☐ **T8.3 reinstated** · rest deferred |
 
 ### 2.3 Hard numbers
 
 | | |
 |---|---|
-| Tests | **387 passing**, 22 files |
+| Tests | **443 passing**, 27 files — plus one known-defect test that fails on purpose (C18) |
 | Source | ~10,160 lines of TypeScript/TSX (excludes the vendored design system and build output) |
-| Fixture corpus | 80 labelled emails — 55 application / 25 not; 26 deadline-bearing; 15 hard negatives |
+| Fixture corpus | 80 labelled emails — 55 application / 25 not; 27 deadline-bearing; 15 hard negatives |
 | Real emails harvested | 32 → 8 applications, 20 updates, 4 correctly rejected |
 | Gates | `test`, `lint`, `typecheck`, `accuracy` — all green |
 | Commits | All 21 by Jordan (`jpso0002`); a single repository (D22) |
@@ -165,13 +165,13 @@ the repository.
 | Step | What | Waits on |
 |---|---|---|
 | **1** ✅ | Stage-correction archive bug (C11) · remove Calendar/Archive · intervals on every figure (C12) — **done 28 Sep** | — |
-| **2** | Labelling toolkit and guide | — |
-| **3** | Live classifier → Haiku-vs-Sonnet benchmark | **B3** |
-| **4** | Hybrid ingestion: event source + correct Gmail links (C10), mailbox reader, unlabelled harvest, one `ingest` command, drop-folder sync | Step 3 |
-| **5** | Ambiguous matches → review | — |
+| **2** ✅ | Labelling toolkit and guide, with the mailbox reader pulled forward — **done 28 Sep** | — |
+| **3** | Prompt v2, so prompt and labels agree (C17) → live classifier → Haiku-vs-Sonnet benchmark | Prompt v2: — · the rest: **B3** |
+| **4** | Hybrid ingestion: event source + correct Gmail links (C10), unlabelled harvest, one `ingest` command, drop-folder sync | Step 3 |
+| **5** | Ambiguous matches → review (C18) | — |
 | **6** | Panel editing · review queue screen · row marker · settings API + slider · search | Steps 1, 5 |
 | **7** | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
-| **Alongside** | Evaluation dataset: export → inventory → label → freeze → measure | **B6**, step 2 |
+| **Alongside** | Evaluation dataset: export → inventory → label → freeze → measure. Exporting and labelling can start now | **B6** |
 
 **No hard target for 7 or 9 October** — the team's position is that wherever the work has
 reached is fine.
@@ -276,8 +276,11 @@ the point estimate with its interval (D33).
   where answering "no" to everything scores ~98%.
 - **Each member exports their own mail** (labelled Gmail search → Google Takeout). Nobody
   reads anyone else's inbox.
-- **Spreadsheet labelling** via a converter, against a one-page guide using the prompt's own
-  stage definitions. **~25 emails double-labelled**; agreement reported.
+- **Spreadsheet labelling** — built 28 September: `npm run label` (inventory, export, import,
+  agreement, verify) and `docs/labelling-guide.md`, which quotes the prompt verbatim (a test
+  enforces it). **~25 emails double-labelled**; agreement reported. **Open team decision:**
+  whose mail forms that sample, and how three members' held-out sets become one figure without
+  anyone handling another member's mail.
 - **Frozen before any model sees it.** The model never pre-labels held-out data.
 - **Authored emails never count** toward the headline figure.
 - **Real email content never enters git.**
@@ -381,12 +384,16 @@ duplicate protection cannot see an overlap.
 | **C13** | Next action has no scoring method. | T2.10 |
 | **C14** | The 80 fixtures are not held-out. | T8.3 |
 | **C16** | Confirming a review item onto an **existing** application moves its stage and `lastEventAt` **backwards** and locks all five fields, so no later offer or rejection can move it. Latent today; T3.10 would route more items through it. | T3.11 |
+| **C17** | The prompt says never assign `withdrawn`; the labels say `withdrawn` for a withdrawal confirmation — so obeying the prompt scores as an error. And the new-application path creates an application straight into `withdrawn` from an AI classification (probe-verified). | T3.12 |
+| **C18** | A second application at the same employer **merges into the first and overwrites its role** (sender-domain fallback). Pinned by an `it.fails` test. | T3.10 |
+| **C19** (open half) | Four authored company names ("Commonwealth Bank", "Zip Co") disagree with the guide's naming rule, which the current prompt does not state. | T3.12 |
 
 **Fixed 28 September:** **C11** — status is now derived from stage inside the repository, so
 no code path can archive inconsistently; that also fixed a third affected path, review
 confirm. **C12** — every harness figure now prints with its interval, including a new
-false-negative rate. The demo run now shows deadline detection at 88.5% with an interval of
-71.0–96.0% — a pass at the point estimate that 26 fixtures cannot confirm.
+false-negative rate. The demo run now shows deadline detection at 88.9% with an interval of
+71.9–96.1% — a pass at the point estimate that 27 fixtures cannot confirm. **C19** (six authored
+labels contradicting the prompt's own rules) — relabelled, except four company names.
 
 Also: `users.review_threshold` exists but **nothing reads it** — `/api/me` reports the
 constant and the harvest hard-codes 0.75 (T4.10). And "Emails read: 0" after a harvest,
@@ -437,10 +444,12 @@ Windows, **PowerShell 5.1**: `&&` is a parser error and `npm.ps1` is blocked by 
 policy. Use `npm.cmd`, one command per line.
 
 ```
-npm.cmd test              # 387 tests
+npm.cmd test              # 443 tests, plus one that fails on purpose (C18)
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run accuracy      # the CI gate; --demo shows the report shape, --invert proves it fails
+npm.cmd run accuracy -- --corpus <held-out folder>   # a labelled set outside the repo
+npm.cmd run label -- inventory|export|import|agreement|verify ...   # see labelling-guide.md
 npm.cmd run db:reset      # wipe, migrate, seed
 npm.cmd run harvest -- <path-to-harvest.json>
 npm.cmd run dev:server    # API on :3000
@@ -479,12 +488,13 @@ Planned rules that are easy to break:
 
 ## 14. Documentation map
 
-Eleven documents in `docs/`, about 5,650 lines. If the chat later gains file access:
+Twelve documents in `docs/`, about 5,950 lines. If the chat later gains file access:
 
 | File | What it holds |
 |---|---|
 | `tasks.md` | **The source of truth** — the Plan of record, every task with a done-when, defects, blockers |
-| `decision-record.md` | D1–D33 with reasoning and rejected options; defects C1–C15; risks |
+| `decision-record.md` | D1–D34 with reasoning and rejected options; defects C1–C19; risks |
+| `labelling-guide.md` | The one reference for labelling real email: definitions quoted from the prompt, deadline and naming rules, worked hard negatives, the workflow |
 | `revision-plan.md` | Revision 2 (28 Sep): what changed, the RTM v4 amendments, labelling effort |
 | `rules.md` | ~180 one-line standing rules, including ingestion and evaluation |
 | `masterplan.md` | Vision, users, the nine success metrics, scope |
@@ -506,7 +516,7 @@ Eleven documents in `docs/`, about 5,650 lines. If the chat later gains file acc
 - **Corrections that survive** — tested against five conflicting syncs.
 - **Real multi-domain journeys** reconstructed from a genuine inbox.
 - **A test suite that gates on accuracy** rather than reporting it.
-- **Fifteen specification and build defects found and recorded** before they reached a user,
+- **Nineteen specification, build and corpus defects found and recorded** before they reached a user,
   several by using the product rather than reading the code.
 - **An evaluation protocol an assessor would respect** — frozen held-out set, declared
   enrichment, double-labelled agreement, intervals on every figure.

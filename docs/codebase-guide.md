@@ -557,15 +557,29 @@ The implementation is elegant: `EscalatingClassifier` is itself an `EmailClassif
 
 Note the comment on why the escalated answer *replaces* the first rather than being blended: combining two disagreeing classifications produces a result neither model actually gave, which is untraceable when a human reviews it.
 
+### Labelling real email — `labelling/` and `mailbox/`
+
+The 80 fixtures were written by the team, so they partly measure the classifier against the team's own writing. The real test is the team's real inboxes — which is a privacy problem, because a labelled real email contains a real subject and body.
+
+`mailbox/reader.ts` reads a Gmail export (Google Takeout's `.mbox`, or `.eml` files) into the same `RawEmail` shape the rest of the server uses. `labelling/` turns those emails into a spreadsheet a person labels, then turns the spreadsheet back into fixture files the harness can score — `npm run label`, with the rules in [labelling-guide.md](labelling-guide.md).
+
+Three things it will not let you do:
+
+- **Write anything inside the repository.** `labelling/guard.ts` refuses, even through a link or a differently capitalised Windows path. Real email must never be committed.
+- **Half-import a spreadsheet.** Every row is checked first; one mistake and nothing is written, with each problem listed by row number.
+- **Quietly change the test set.** The held-out set is *frozen* when it is made: `labelling/freeze.ts` records a fingerprint (a SHA-256 hash) of every file, and `npm run accuracy -- --corpus <folder>` refuses to score it if anything has changed since. A test set edited after you have seen the model's results is no longer a test set.
+
+One more test worth knowing about: `labelling/guide.test.ts` fails if the labelling guide stops quoting the classifier prompt word for word — the people labelling and the model must work from the same definitions.
+
 ---
 
 ## 13. The tests
 
-21 test files, run with `npm test` (Vitest). They fall into three groups:
+27 test files, run with `npm test` (Vitest). They fall into three groups:
 
 **Logic tests** — pure functions with known answers: `match.test.ts`, `engine.test.ts`, `rank.test.ts`, `apply.test.ts`, `pipeline.test.ts`.
 
-**Contract tests** — things that must not drift apart: `schema.parity.test.ts` (SQLite vs Postgres schemas), `ds.sync.test.ts` (design system copy vs source), `corpus.test.ts` (fixture labels are valid).
+**Contract tests** — things that must not drift apart: `schema.parity.test.ts` (SQLite vs Postgres schemas), `ds.sync.test.ts` (design system copy vs source), `corpus.test.ts` (fixture labels are valid), `guide.test.ts` (the labelling guide vs the classifier prompt).
 
 **Guard tests** — rules that must never be broken, even by accident:
 
@@ -575,6 +589,7 @@ Note the comment on why the escalated answer *replaces* the first rather than be
 | `domain/classify/retention.test.ts` | the pipeline lets content past the boundary |
 | `no-hardcoded-colour.test.ts` | any file in `src/` writes a raw colour |
 | `harness.test.ts` | a deliberately broken classifier *doesn't* fail the gate |
+| `labelling.test.ts` | the toolkit writes inside the repository, or the harness scores a held-out set changed since it was frozen |
 
 That last one is a nice idea: it tests the test. A quality gate that cannot detect a broken classifier is worthless, so they break one on purpose and assert that the harness notices.
 

@@ -25,5 +25,9 @@
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.mjs"],
-  "exclude": ["dist", "src/ds/vendor/**/*.jsx"]
+  /* Test files are excluded, as they are in the server (rules.md). They run in
+   * Node under Vitest and use `node:fs`; typing them here would mean adding
+   * Node's types to browser code. Until Vitest 4 they compiled only because
+   * Vitest 3's types pulled Node's in transitively. */
+  "exclude": ["dist", "src/ds/vendor/**/*.jsx", "src/**/*.test.ts", "src/**/*.test.tsx"]
 }

@@ -825,7 +825,7 @@ on a machine that has never seen it.
 
 ## 15. Revision 3 — planned changes *(28 September 2026)*
 
-Agreed, not yet built. Reasoning is in [decision-record.md](decision-record.md) D22–D33;
+Agreed; items marked ✅ are built. Reasoning is in [decision-record.md](decision-record.md) D22–D34;
 order in the Plan of record in [tasks.md](tasks.md). Where this section and §7–§9 disagree,
 this section is the plan, and §7–§9 describe what exists or the original design.
 
@@ -838,9 +838,11 @@ harvest JSON ─┐
                                               live classifier (T7.3)
 ```
 
-- **Readers, not new pipelines.** The harvest reader exists; the mailbox reader (T7.8)
-  parses `.mbox` and `.eml` through a MIME library. Both produce `RawEmail`, so the pipeline,
-  the retention boundary and the duplicate protection are untouched.
+- **Readers, not new pipelines.** The harvest reader exists, and ✅ **the mailbox reader is
+  built (T7.8, 28 September)** — `mailbox/reader.ts` parses `.mbox` and `.eml` through
+  `mailparser`. Both produce `RawEmail`, so the pipeline, the retention boundary and the
+  duplicate protection are untouched. The labelling toolkit uses it now; the ingest command
+  (T7.10) will.
 - **Every event records its `source`** — `connector`, `export` or `synthetic` (T7.7). The
   timeline builds the Gmail link per id format and shows none for synthetic mail.
 - **One mailbox, one path.** Connector events carry Gmail API ids and exports carry RFC 822
@@ -854,7 +856,8 @@ harvest JSON ─┐
 `findMatch` returns **match**, **ambiguous** or **none**. Ambiguous — company and sender
 domain agree, role similarity is actively low — creates a pending review item with
 `email_events.suggested_job_id` set, instead of merging. Supersedes the sender-domain
-tiebreak in §7.6.
+tiebreak in §7.6, which today merges a second application at one employer into the first and
+overwrites its role (C18).
 
 ### 15.3 Correction and settings *(D27, D28)*
 
@@ -872,5 +875,11 @@ tiebreak in §7.6.
 - ✅ **Built 28 September (T2.9).** A Wilson interval on every reported proportion — nine
   figures, including a new false-negative rate — with 0/0 printed as "nothing to measure".
 - A next-action acceptance rate from post-hoc judgements (T2.10).
-- A labelling toolkit — inventory, export to spreadsheet, import to fixtures — that writes
-  real content outside the repository (T2.11).
+- ✅ **Built 28 September (T2.11, T2.12).** The labelling toolkit — `npm run label --
+  inventory | export | import | agreement | verify`, in `server/src/labelling/` — writes
+  nothing inside the repository and freezes each held-out set with a SHA-256 manifest;
+  `npm run accuracy -- --corpus <folder>` refuses to score a frozen set that has changed. The
+  labelling guide quotes the prompt verbatim, enforced by a test.
+- **Prompt v2 (T3.12, D34)** labels withdrawal confirmations but never lets the app apply
+  one, and adopts the guide's deadline and naming conventions — before the first live
+  measurement.

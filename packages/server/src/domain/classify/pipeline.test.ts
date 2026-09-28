@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { migrate } from "drizzle-orm/libsql/migrator";
-import { asUserId, type UserId, type Classification } from "@gradtracker/shared";
+import { asUserId, type UserId, type Classification, type Fixture } from "@gradtracker/shared";
 import { createTestDatabase, type DatabaseHandle } from "../../db/client.js";
 import { createRepository, createIdentityRepository, type Repository } from "../../db/repository.js";
 import { loadCorpus } from "../../corpus/loader.js";
@@ -244,13 +244,45 @@ describe("processEmail", () => {
     expect(job?.stage).toBe("rejected");
   });
 
-  it("keeps separate applications at one employer separate", async () => {
-    // 001 is Deloitte Audit; 020 is Atlassian. Different companies entirely —
-    // but the important case is the Deloitte Digital fixture, which normalises
-    // differently and must not merge.
-    await processEmail(deps(), userId, await email("fixture-001"));
-    await processEmail(deps(), userId, await email("fixture-020"));
-    expect(await repo.listJobs(userId)).toHaveLength(2);
+  // KNOWN DEFECT C18, fixed by T3.10 — `it.fails` passes while the defect
+  // exists. When T3.10 lands this starts failing: change it to `it`.
+  //
+  // Deloitte Audit (001), then a Deloitte application for a different role
+  // from the same sender, as one employer's ATS sends every stream's email.
+  // Today the sender-domain fallback merges the second into the first and
+  // overwrites its role. Under D26 the second becomes a review item suggesting
+  // the first; either way, the first application must survive intact.
+  // (matching's "different role at the same company" test passes only because
+  // it uses a null sender domain, which real mail never has.)
+  it.fails("never overwrites one application with another at the same employer", async () => {
+    const audit = await email("fixture-001");
+    const consulting: Fixture = {
+      email: {
+        ...corpus.find((f) => f.email.gmailMessageId === "fixture-001")!.email,
+        id: "extra-deloitte-consulting",
+        gmailMessageId: "extra-deloitte-consulting",
+        gmailThreadId: "extra-t-deloitte-consulting",
+      },
+      expected: {
+        isApplication: true,
+        company: "Deloitte",
+        role: "Technology Consulting Graduate",
+        stage: "applied",
+        deadlineAt: null,
+        hasExplicitDeadlineLanguage: false,
+      },
+    };
+    const classifier = new FakeEmailClassifier({ fixtures: [...corpus, consulting] });
+
+    await processEmail(deps({ classifier }), userId, audit);
+    await processEmail(deps({ classifier }), userId, {
+      ...audit,
+      gmailMessageId: "extra-deloitte-consulting",
+      gmailThreadId: "extra-t-deloitte-consulting",
+    });
+
+    const jobs = await repo.listJobs(userId);
+    expect(jobs.map((j) => j.role)).toContain("Audit Graduate Program");
   });
 
   it("advances lastEventAt even when no field changed", async () => {
@@ -331,7 +363,10 @@ describe("the whole corpus through the pipeline", () => {
     }
 
     expect(outcomes.filter((o) => o === "not-application")).toHaveLength(25);
-    expect(outcomes.filter((o) => o === "created-job" || o === "updated-job")).toHaveLength(55);
+    expect(outcomes.filter((o) => o === "created-job" || o === "updated-job")).toHaveLength(54);
+    // 020 names no role — "the next step is a coding challenge" — so it cannot
+    // be matched and becomes a question for the student instead.
+    expect(outcomes.filter((o) => o === "queued-for-review")).toHaveLength(1);
 
     // 55 application emails across roughly 20 employers — the pipeline must
     // group them, not create 55 separate jobs.

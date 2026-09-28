@@ -10,7 +10,7 @@ taken mid-build, reconciled against the working repository.
 |---|---|---|
 | 1 | 16 August 2026 | Initial architecture and scope decisions — D1–D15 |
 | 2 | 16 August 2026 | Post-documentation-review. Resolves D10; adds D16–D21; records six defects found reviewing the specification against itself; adds the measured cost model and the statistical-power finding. |
-| **3** | **28 September 2026** | **Mid-build. Reconciles the condensed RTM (v3) and the September team meetings against the repository. Adds D22–D33; records defects C10–C15, found by inspecting the built system; updates the risks, open items and build order.** |
+| **3** | **28 September 2026** | **Mid-build. Reconciles the condensed RTM (v3) and the September team meetings against the repository. Adds D22–D34; records defects C10–C19, found by inspecting the built system and its corpus; updates the risks, open items and build order.** |
 
 This document records every architectural and scope decision taken before the build
 started, including the options that were rejected and why. It exists so the choices are
@@ -513,6 +513,30 @@ deadline detection, next-action acceptance — carries its Wilson 95% interval. 
 93.6–98.6%. A lower bound at 95% would need about 98% measured. The point estimate with its
 interval is the honest claim; presenting 95% as a floor would over-claim.
 
+### D34 — Labels follow the prompt's rules *(Revision 3)*
+
+**Chosen:** a label never asks the model for something its prompt forbids or cannot see.
+Where the prompt states a rule, labels follow it; where it is silent, the labelling guide
+([labelling-guide.md](labelling-guide.md)) sets one mechanical rule, and the next prompt
+version adopts it **before anything is measured** (T3.12). In particular: fields are labelled
+from the email alone, never from its thread; a deadline counted in hours is exact, one counted
+in days ends at 23:59 on the last day; "by Friday" resolves against the received date; the
+company is named as the email names it; a withdrawal confirmation is labelled `withdrawn`,
+though the app never applies it.
+
+**Rejected:**
+
+| Option | Why not |
+|---|---|
+| Label what the student knows from the whole thread | The classifier sees one email. A label it cannot reach scores it wrong for not guessing — the figure measures the input, not the model. |
+| Leave conventions to each labeller | Agreement between labellers is capped by the ambiguity, and exact-match scoring punishes whichever convention the model happens to choose. |
+| Fuzzy company matching in the scorer | "Deloitte" and "Deloitte Australia" can be different answers; a forgiving scorer hides real extraction problems. The ambiguity is removed at the label instead. |
+| Keep "never assign withdrawn" and label withdrawals as some other stage | No other stage is true of a withdrawal confirmation. The rule belongs to the app, not to the model's reading of the email. |
+
+**Reasoning:** a label the prompt forbids — a role the email never states, a deadline the
+prompt says to resolve but the label calls unresolvable — scores the prompt, not the model.
+Checking the authored corpus against this found six such labels (C19).
+
 ---
 
 ## 3. Defects found reviewing the specification *(Revision 2)*
@@ -534,7 +558,8 @@ they are recorded because the correction is itself a decision.
 
 Defects C7–C9, found while building the API and client, are recorded in
 [tasks.md](tasks.md). Revision 3 adds six more, each found by checking the running system or
-the RTM against the code, rather than documents against each other.
+the RTM against the code, rather than documents against each other. C16–C19 were found the
+same way, while building steps 1 and 2 of the Plan of record.
 
 | # | Defect | Resolution | Task |
 |---|---|---|---|
@@ -545,6 +570,9 @@ the RTM against the code, rather than documents against each other.
 | **C14** | RQ-03 requires a dataset the classifier was not tuned against; the 80 fixtures shaped the prompt. | They become the tuning set; a new held-out set is frozen before any model run (D32). | T8.3 |
 | **C15** | Documents gave the unit as FIT3163 — the semester-1 code. | Both semesters' codes recorded. **Fixed.** | — |
 | **C16** | Confirming a review item that matches an existing application applied every detected field as a human correction: an older, lower-stage email moved the stage and `lastEventAt` backwards and locked all five fields, so no later email could move the application again. Found by probe while fixing C11. | A match applies the email as the pipeline would; only fields the student edited become human. | T3.11 |
+| **C17** | The prompt tells the model never to assign `withdrawn`, but withdrawal confirmations are labelled `withdrawn`, so a model obeying its prompt is scored wrong on every one. And the new-application path applies an AI-detected stage directly, bypassing the stage engine's user-only guard: a probe created an application straight into `withdrawn` from an AI classification. | Prompt v2 labels withdrawal confirmations; an AI-detected user-only stage becomes a review item on every path (D34). | T3.12 |
+| **C18** | A second application at the same employer merged into the first and overwrote its role: when roles differ, matching fell back to the sender domain, which one employer's ATS shares across every stream. The unit test for the case passed only with a null sender domain. | The case D26 routes to review; pinned by a known-defect test until then. | T3.10 |
+| **C19** | Six authored labels disagreed with the prompt's own rules or with each other — a role the email never states, "by Friday" labelled unresolvable, "within N days" labelled two ways, a wrong note, a weekday contradicting its date. | **Fixed** by relabelling to the prompt's rules (D34); four company names wait for prompt v2's naming rule. | T2.12 · T3.12 |
 
 ---
 
@@ -607,9 +635,11 @@ misleading.
 | 4 | Classifier model choice | ✅ **Resolved in Revision 2** — Haiku 4.5 + Sonnet 5 escalation; **measurement pending** (T2.8) |
 | 5 | Anthropic API key | **Open** — created, not yet verified (blocker B3) |
 | 6 | Mailbox exports from all three members | **Open** — blocker B6 |
+| 7 | Agreement sample and pooling | **Open — a team decision.** Whose mail forms the ~25 double-labelled emails, and how three members' held-out sets become one figure without anyone handling another member's mail ([labelling-guide.md](labelling-guide.md) §7) |
 
-Items 5 and 6 block the live classifier and the evidence chain respectively. **Neither blocks
-the first two steps of the build order.**
+Items 5 and 6 block the live classifier and the evidence chain respectively; item 7 must be
+settled before the agreement exercise and the first pooled measurement. **None blocks T3.12,
+the next step of the build order.**
 
 ---
 
@@ -626,6 +656,8 @@ All reversible; recorded for transparency.
   corpus. Escalation to Sonnet 5 triggers below 0.6. *Revision 3: a per-user setting (D28).*
 - **Stage progression:** stages only advance forward, except that `rejected` and
   `offer received` may arrive from any stage. `withdrawn` is never AI-assigned.
+  *Revision 3: the model may recognise a withdrawal confirmation; the app never applies one
+  (D34, C17).*
 - **Initial scan bound:** the first scan reads the most recent **2,000 messages or 180 days**,
   whichever is smaller. Unbounded scans are a cost and rate-limit hazard, and older mail has
   no live pipeline value.

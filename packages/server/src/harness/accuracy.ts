@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { Classification, Fixture } from "@gradtracker/shared";
 import type { EmailClassifier, RawEmail } from "../ports/index.js";
 import { loadCorpus } from "../corpus/loader.js";
@@ -5,13 +7,16 @@ import { FakeEmailClassifier } from "../adapters/classifier/fake.js";
 import { PROMPT_VERSION } from "../adapters/classifier/prompt.js";
 import { buildReport, type Scored } from "./metrics.js";
 import { formatReport } from "./report.js";
+import { MANIFEST, verifyManifest } from "../labelling/freeze.js";
 
 /**
  * The accuracy gate (T2.6).
  *
- *   npm run accuracy            self-test against the fake
- *   npm run accuracy -- --demo  injected errors, to see the report shape
- *   npm run accuracy -- --live  the real model (T2.8, needs an API key)
+ *   npm run accuracy                     self-test against the fake
+ *   npm run accuracy -- --demo           injected errors, to see the report shape
+ *   npm run accuracy -- --live           the real model (T2.8, needs an API key)
+ *   npm run accuracy -- --corpus <dir>   a labelled set made with the labelling
+ *                                        toolkit (T2.11), outside the repository
  *
  * **Exits non-zero when a threshold fails**, which is what makes this a CI gate
  * rather than a report someone reads once and forgets.
@@ -88,12 +93,74 @@ export function demoCorruption(correct: Classification, fixtureId: string): Clas
   return correct;
 }
 
+export class CorpusChoiceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CorpusChoiceError";
+  }
+}
+
+/**
+ * Which fixtures to score: the repository's corpus, or `--corpus <dir>` (also
+ * `--corpus=<dir>`) — a set made by the labelling toolkit, outside the
+ * repository.
+ *
+ * A frozen held-out set is checked against its freeze before it is loaded, and
+ * refused if anything changed: a held-out set edited after a model has been run
+ * on it is no longer held-out, and its figure would be a tuning figure (D32).
+ */
+export function selectCorpus(args: string[]): { fixtures: Fixture[]; header: string[] } {
+  const i = args.findIndex((a) => a === "--corpus" || a.startsWith("--corpus="));
+  if (i === -1) return { fixtures: loadCorpus(), header: [] };
+
+  const arg = args[i]!;
+  const dir = arg.startsWith("--corpus=") ? arg.slice("--corpus=".length) : args[i + 1];
+  // Without this, a missing folder would silently score the default corpus
+  // and report its figure as if it were the one asked for.
+  if (dir === undefined || dir === "" || dir.startsWith("--")) {
+    throw new CorpusChoiceError("--corpus needs a folder: npm run accuracy -- --corpus <folder>");
+  }
+
+  if (!existsSync(join(dir, "emails")) && existsSync(join(dir, "held-out"))) {
+    throw new CorpusChoiceError(
+      `${dir} holds a tuning/held-out split. Point --corpus at ${join(dir, "tuning")} or ${join(dir, "held-out")}.`,
+    );
+  }
+
+  const header: string[] = [];
+  if (existsSync(join(dir, MANIFEST))) {
+    const verification = verifyManifest(dir);
+    if (!verification.ok) {
+      throw new CorpusChoiceError(
+        [
+          "Refusing to score: this held-out set has changed since it was frozen.",
+          ...verification.problems.map((p) => `  ${p}`),
+        ].join("\n"),
+      );
+    }
+    header.push(`Frozen held-out set, unchanged since freezing — digest ${verification.digest}`);
+  }
+
+  const fixtures = loadCorpus(dir);
+  header.push(`Corpus: ${dir} (${fixtures.length} fixtures)`);
+  return { fixtures, header };
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const live = args.includes("--live");
   const demo = args.includes("--demo");
 
-  const fixtures = loadCorpus();
+  let selected: ReturnType<typeof selectCorpus>;
+  try {
+    selected = selectCorpus(args);
+  } catch (error) {
+    if (!(error instanceof CorpusChoiceError)) throw error;
+    console.error(error.message);
+    process.exit(1);
+  }
+  const { fixtures } = selected;
+  for (const line of selected.header) console.log(line);
 
   if (live) {
     console.error(
