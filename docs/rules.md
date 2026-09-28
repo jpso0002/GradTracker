@@ -221,7 +221,8 @@ Keep entries concise. One line per decision when possible.
 - **Initial inbox scans run through the Batches API** (50% cheaper, not latency-sensitive). Incremental syncs stay synchronous.
 - **Prompt caching does not apply** to the classifier path — Haiku 4.5's minimum cacheable prefix is 4,096 tokens, far above a classification prompt.
 - **The prompt is version-stamped**, and the harness reports which prompt version produced a given accuracy figure. Any change to its text bumps the version — `v2` since 28 September (T3.12).
-- **Cost baseline:** ~$4.30 per 2,000-email scan on Haiku 4.5 (~$2.15 batched); ~$65 across development.
+- **Cost baseline** — repriced 28 September 2026 from current rates, with prompt v2: about US$0.003 per real email on Haiku 4.5 and $0.007 on Sonnet 5 — a 2,000-email scan is about $5.40 on Haiku 4.5 ($2.70 batched), and the whole evaluation about $15–20.
+- **The app's key is scoped to the GradTracker workspace, never to the whole organization.** An organization-scoped key must name a workspace on every request and can manage workspaces and members through the Admin API; a workspace key can do only what the app needs, and the workspace carries its own spend limit. The key lives in the git-ignored `.env` and nowhere else (28 September 2026).
 
 ### Environment variables
 | Variable | Required | Purpose |

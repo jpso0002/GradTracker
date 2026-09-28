@@ -634,7 +634,7 @@ misleading.
 | 2 | Google Cloud OAuth consent screen and test-user allowlist | ⏸ **Deferred in Revision 3**, with hosted OAuth (D23) |
 | 3 | Real labelled email corpus | **Protocol agreed in Revision 3** (D32); the held-out size is set after the inventory |
 | 4 | Classifier model choice | ✅ **Resolved in Revision 2** — Haiku 4.5 + Sonnet 5 escalation; **measurement pending** (T2.8) |
-| 5 | Anthropic API key | **Open** — created, not yet verified (blocker B3) |
+| 5 | Anthropic API key | **Open** — a workspace-scoped key reaches the API; the account has no credit yet (blocker B3) |
 | 6 | Mailbox exports from all three members | **Open** — blocker B6 |
 | 7 | Agreement sample and pooling | **Open — a team decision.** Whose mail forms the ~25 double-labelled emails, and how three members' held-out sets become one figure without anyone handling another member's mail ([labelling-guide.md](labelling-guide.md) §7) |
 

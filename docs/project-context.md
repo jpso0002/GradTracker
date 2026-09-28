@@ -65,8 +65,10 @@ Consequences:
 3. **The 100% accuracy the harness prints is a self-test** — the fake scores the corpus
    against itself. The output says so. It proves the harness, not a model.
 
-**The unblock is an Anthropic API key.** One has been created as of late September but **not
-yet verified** (blocker B3). Verifying it is the first thing that unlocks the classifier lane.
+**The unblock is an Anthropic API key with credit.** A key scoped to a GradTracker workspace
+reaches the API as of 28 September, but the account has **no credit**, so every request is
+refused (blocker B3). A small prepaid top-up is the first thing that unlocks the classifier
+lane.
 
 **On 28 September the classifier moved onto the critical path**: every ingestion path the
 team chose classifies live (D23, §4).
@@ -405,7 +407,7 @@ because `emails_read_total` is never written (T3.8).
 
 | | |
 |---|---|
-| **B3** | API key created, not verified. Blocks the classifier and the benchmark. |
+| **B3** | A workspace-scoped key reaches the API, but the account has no credit. Blocks the classifier and the benchmark. |
 | **B6** | Mailbox exports from all three members. Blocks the evaluation dataset. |
 | **Voice interaction** | Not in RTM v3. Worth written confirmation from the tutor that it is optional. |
 | **Cost** | The labelled-set runs will cost several times the old $1.30 estimate; price from current rates first. |
