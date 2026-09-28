@@ -174,9 +174,20 @@ From the authored corpus (`fixtures/`), where each has a note saying why it is t
 Commands are for Windows PowerShell; on a Mac use `npm` instead of `npm.cmd`. Paths are
 examples — anything written must be outside the repository.
 
-1. **Export your own mail** (B6). In Gmail, search for application senders and subjects and
-   label the results; do the same for job boards (the hard negatives). Export those labels
-   with Google Takeout and save the `.mbox` somewhere like `Documents\gradtracker-private\`.
+1. **Export your own mail** (B6). In Gmail on the web, paste the search below, tick select-all
+   and choose **Select all conversations that match this search**, then label them
+   `GradTracker export`. At takeout.google.com, **Deselect all**, tick **Mail**, limit it to that
+   one label under **All Mail data included**, and export once. Save the `.mbox` somewhere like
+   `Documents\gradtracker-private\`.
+   ```text
+   (from:(greenhouse.io OR lever.co OR smartrecruiters.com OR myworkday.com OR workday.com OR successfactors.com OR taleo.net OR criteriacorp.com OR hirevue.com OR pageuppeople.com OR icims.com OR jobvite.com OR ashbyhq.com OR livehire.com OR sonru.com OR pymetrics.com OR fusiongc.com.au OR yello.co)) OR (label:job-applications) OR (subject:("your application" OR "application received" OR "thank you for applying" OR "thanks for applying" OR "online assessment" OR "video interview" OR interview OR "assessment centre" OR "offer of employment" OR "letter of offer" OR unsuccessful OR "application update" OR "application status" OR "application outcome" OR "graduate program" OR "graduate programme" OR internship OR "applications open" OR "applications now open" OR "applications close" OR "early careers" OR vacationer OR clerkship OR "summer intern") after:2024/01/01) OR (from:(seek.com.au OR linkedin.com OR indeed.com OR prosple.com OR gradconnection.com OR gradaustralia.com.au OR glassdoor.com OR joinhandshake.com OR theforage.com) after:2024/01/01 -from:security-noreply@linkedin.com)
+   ```
+   It finds mail from applicant-tracking systems at any date; application and
+   graduate-program subjects since 2024; job boards since 2024, whose older mail would swamp
+   the applications; and one member's own `Job applications` label — swap in yours, or leave
+   it, since a label you do not have matches nothing. If your applications went through a
+   system not listed, add its domain. Checked on 28 September against one inbox using
+   metadata only: 110 threads, every one recruitment mail.
 2. **Inventory** — counts and sender domains only, never a subject or body. Share the counts;
    the held-out size is set from them (D32).
    ```powershell
