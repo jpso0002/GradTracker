@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readMailboxes, dedupeById } from "./reader.js";
+import { readMailboxes, dedupeById, MailboxPathError } from "./reader.js";
 
 /**
  * T7.8 — the mailbox reader. Every email here is synthetic and written to a
@@ -103,6 +103,78 @@ describe("mailbox reader (T7.8)", () => {
     expect(email!.body).toContain("by Friday 20 March");
     expect(email!.body).toContain("Café");
     expect(email!.body).not.toMatch(/<\/?[a-z]/i);
+  });
+
+  it("falls back to the HTML when the plain-text part is only whitespace (Criteria Corp's shape)", async () => {
+    // Found in a real export: the text part held two blank lines, the HTML
+    // held the invitation. The parser returned the blank text (C21).
+    writeFileSync(
+      join(dir, "c.eml"),
+      message([
+        "From: Criteria <DO-NOT-REPLY@criteria.test>",
+        "Subject: Your assessment",
+        "Date: Mon, 09 Mar 2026 10:55:33 +0000",
+        "Message-ID: <criteria-1@criteria.test>",
+        "MIME-Version: 1.0",
+        'Content-Type: multipart/alternative; boundary="c1"',
+        "",
+        "--c1",
+        "Content-Type: text/plain; charset=utf-8",
+        "",
+        "  ",
+        "",
+        "--c1",
+        "Content-Type: text/html; charset=utf-8",
+        "",
+        "<html><body><p>Please complete your assessment by <b>14 March</b>.</p></body></html>",
+        "--c1--",
+      ]),
+    );
+    const [email] = (await readMailboxes([join(dir, "c.eml")])).emails;
+    expect(email!.body).toContain("Please complete your assessment by 14 March");
+    expect(email!.body).not.toMatch(/<\/?[a-z]/i);
+  });
+
+  it("reads HTML nested in multipart/related with no text part (Workday's shape)", async () => {
+    // Also from a real export: mixed → related → HTML plus an inline logo. The
+    // parser returned no text at all, so the email looked empty (C21).
+    writeFileSync(
+      join(dir, "w.eml"),
+      message([
+        "From: nbn <nbn@myworkday.test>",
+        "Subject: Thanks for applying",
+        "Date: Wed, 18 Mar 2026 11:58:14 +0000",
+        "Message-ID: <workday-1@myworkday.test>",
+        "MIME-Version: 1.0",
+        'Content-Type: multipart/mixed; boundary="m1"',
+        "",
+        "--m1",
+        'Content-Type: multipart/related; boundary="r1"',
+        "",
+        "--r1",
+        "Content-Type: text/html; charset=utf-8",
+        "",
+        '<html><body><p>Thank you for applying for the Graduate Program.</p><img src="cid:logo"></body></html>',
+        "--r1",
+        "Content-Type: image/png",
+        "Content-ID: <logo>",
+        "Content-Disposition: inline",
+        "Content-Transfer-Encoding: base64",
+        "",
+        "iVBORw0KGgo=",
+        "--r1--",
+        "--m1--",
+      ]),
+    );
+    const [email] = (await readMailboxes([join(dir, "w.eml")])).emails;
+    expect(email!.body).toContain("Thank you for applying for the Graduate Program");
+  });
+
+  it("names a missing path plainly instead of failing with a stack trace", async () => {
+    const missing = join(dir, "GradTracker export.mbox");
+    const error = await readMailboxes([missing]).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(MailboxPathError);
+    expect((error as Error).message).toContain(`Cannot find ${missing}`);
   });
 
   it("decodes a base64 body", async () => {

@@ -38,6 +38,8 @@ Keep entries concise. One line per decision when possible.
 - **Node 20 LTS minimum**, enforced by `engines` in the root `package.json`.
 - **Commands in documentation are PowerShell-safe.** The development machine is Windows, and Windows PowerShell 5.1 rejects `&&` as a statement separator. Write each command on its own line, or chain with `;` / `if ($?) { … }` — never `cmd-a && cmd-b`.
 - **Use `npm.cmd`, not `npm`, in PowerShell.** The `npm.ps1` shim is blocked by the default execution policy. `npm.cmd` bypasses it and needs no security setting changed — never instruct anyone to run `Set-ExecutionPolicy` for this.
+- **An npm script that takes arguments starts with `node`; a build step goes in its `pre` script.** On Windows, npm escapes `--` arguments twice when a script begins with a batch file such as `npm.cmd`, so a path with a space arrived with literal carets (C22). A test guards `label` and `accuracy`.
+- **Every package the code imports is declared in that package's `package.json`,** even when another dependency already installs it — a transitive copy can change or vanish with that dependency's next release.
 - **Zero npm audit vulnerabilities is the baseline.** Dev-only advisories count: the scaffold shipped clean on Vitest 3 rather than carrying Vitest 2's critical advisory. Re-check after any dependency change.
 - **Audit from the repository root.** A workspace-scoped audit reported 0 vulnerabilities while the root audit did not (28 September 2026).
 - **An override pins a transitive dependency under the package that needs it** (`exceljs` → `uuid`), never globally — a global override did not reach the nested copy.
@@ -252,6 +254,7 @@ Keep entries concise. One line per decision when possible.
 ## Ingestion *(28 September 2026)*
 
 - **One ingest path, several readers.** Harvest JSON, `.mbox` and `.eml` all become `RawEmail` and run through the unchanged `processEmail`. A new input format is a new reader, never a second pipeline.
+- **An email's body is its plain-text part when that says anything, otherwise its HTML converted to text** — never empty while HTML exists. Applicant-tracking systems send HTML in shapes the parser does not convert on its own (C21); an empty body is a missed application.
 - **One mailbox, one path.** Connector events carry Gmail API ids; exports carry RFC 822 Message-IDs. Ingest one mailbox both ways and every email is stored twice, invisibly.
 - **Every event records its `source`** — `connector`, `export` or `synthetic` — and the timeline builds its Gmail link from it.
 - **Authored emails are ingested with `--synthetic`, shown with a "Synthetic" tag and no Gmail link, and never count toward an accuracy figure.** Presenting authored mail as real is the one thing an assessor could fairly call misleading.

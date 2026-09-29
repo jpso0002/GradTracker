@@ -1,4 +1,4 @@
-import { readMailboxes } from "../mailbox/reader.js";
+import { readMailboxes, MailboxPathError } from "../mailbox/reader.js";
 import { buildInventory, formatInventory } from "./inventory.js";
 import { exportSheet, importSheet, LabelError } from "./sheet.js";
 import { verifyManifest } from "./freeze.js";
@@ -145,7 +145,8 @@ if (process.argv[1]?.replace(/\\/g, "/").endsWith("labelling/cli.js")) {
   run(process.argv.slice(2)).then(
     (code) => process.exit(code),
     (error: unknown) => {
-      const known = error instanceof LabelError || error instanceof InsideRepositoryError;
+      const known =
+        error instanceof LabelError || error instanceof InsideRepositoryError || error instanceof MailboxPathError;
       console.error(known ? (error as Error).message : error);
       process.exit(1);
     },

@@ -469,6 +469,21 @@ describe("the command line", () => {
     );
   });
 
+  it("keeps a path with a space intact through npm on Windows", () => {
+    // `npm run x -- <args>` escapes the arguments for cmd.exe — twice when the
+    // script starts with a batch file, and `npm run typecheck && node …`
+    // starts with npm.cmd. Takeout names the export "GradTracker export.mbox",
+    // and its path arrived as `^C:\…\GradTracker^ export.mbox^`. A script that
+    // starts with `node` is escaped once, correctly; the build moves to `pre`.
+    const { scripts } = JSON.parse(readFileSync(join(REPOSITORY_ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    for (const name of ["label", "accuracy"]) {
+      expect(scripts[name], name).toMatch(/^node /);
+      expect(scripts[`pre${name}`], `pre${name}`).toContain("typecheck");
+    }
+  });
+
   it("runs inventory end to end and reports an unknown command with usage", async () => {
     writeFileSync(join(dir, "a.mbox"), mbox(EMAILS));
     const lines: string[] = [];

@@ -849,7 +849,8 @@ harvest JSON ─┐
   built (T7.8, 28 September)** — `mailbox/reader.ts` parses `.mbox` and `.eml` through
   `mailparser`. Both produce `RawEmail`, so the pipeline, the retention boundary and the
   duplicate protection are untouched. The labelling toolkit uses it now; the ingest command
-  (T7.10) will.
+  (T7.10) will. When an email has no plain text, its HTML is converted — the parser does
+  that itself only for simple HTML-only mail (C21).
 - **Every event records its `source`** — `connector`, `export` or `synthetic` (T7.7). The
   timeline builds the Gmail link per id format and shows none for synthetic mail.
 - **One mailbox, one path.** Connector events carry Gmail API ids and exports carry RFC 822

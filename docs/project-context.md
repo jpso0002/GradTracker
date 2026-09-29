@@ -91,7 +91,7 @@ team chose classifies live (D23, §4).
 
 | | |
 |---|---|
-| Tests | **449 passing**, 27 files — plus one known-defect test that fails on purpose (C18) |
+| Tests | **453 passing**, 27 files — plus one known-defect test that fails on purpose (C18) |
 | Source | ~10,160 lines of TypeScript/TSX (excludes the vendored design system and build output) |
 | Fixture corpus | 80 labelled emails — 55 application / 25 not; 27 deadline-bearing; 15 hard negatives |
 | Real emails harvested | 32 → 8 applications, 20 updates, 4 correctly rejected |
@@ -397,7 +397,10 @@ authored labels that contradicted the prompt's own rules are corrected (T2.12, T
 **C17** — an AI-detected withdrawal now becomes a review item on every path, instead of
 creating an application straight into `withdrawn`; prompt v2 asks the model to label one.
 **C20** — the model is shown the received time in the student's timezone, not only UTC, so
-"within 7 days" counts from the right day.
+"within 7 days" counts from the right day. **Fixed 29 September:** **C21** — HTML-only mail from
+Workday and Criteria Corp read as empty (7 of the first real export's 120 emails); the reader now
+converts the HTML. **C22** — paths with spaces were mangled by npm on Windows, breaking the
+documented command on every Takeout export.
 
 Also: `users.review_threshold` exists but **nothing reads it** — `/api/me` reports the
 constant and the harvest hard-codes 0.75 (T4.10). And "Emails read: 0" after a harvest,
@@ -448,7 +451,7 @@ Windows, **PowerShell 5.1**: `&&` is a parser error and `npm.ps1` is blocked by 
 policy. Use `npm.cmd`, one command per line.
 
 ```
-npm.cmd test              # 449 tests, plus one that fails on purpose (C18)
+npm.cmd test              # 453 tests, plus one that fails on purpose (C18)
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run accuracy      # the CI gate; --demo shows the report shape, --invert proves it fails
@@ -520,7 +523,7 @@ Twelve documents in `docs/`, about 5,950 lines. If the chat later gains file acc
 - **Corrections that survive** — tested against five conflicting syncs.
 - **Real multi-domain journeys** reconstructed from a genuine inbox.
 - **A test suite that gates on accuracy** rather than reporting it.
-- **Twenty specification, build and corpus defects found and recorded** before they reached a user,
+- **Twenty-two specification, build and corpus defects found and recorded** before they reached a user,
   several by using the product rather than reading the code.
 - **An evaluation protocol an assessor would respect** — frozen held-out set, declared
   enrichment, double-labelled agreement, intervals on every figure.

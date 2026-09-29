@@ -17,6 +17,7 @@
     "drizzle-orm": "^0.45.2",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
+    "html-to-text": "^10.0.1",
     "mailparser": "^3.9.29",
     "zod": "^3.23.8"
   },

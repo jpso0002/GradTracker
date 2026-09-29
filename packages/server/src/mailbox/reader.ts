@@ -1,8 +1,9 @@
-import { createReadStream, readFileSync, readdirSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { createHash } from "node:crypto";
 import { basename, extname, join } from "node:path";
 import { simpleParser, type ParsedMail } from "mailparser";
+import { convert as htmlToText } from "html-to-text";
 import type { RawEmail } from "../ports/index.js";
 
 /**
@@ -47,6 +48,14 @@ export interface MailboxReadResult {
 
 const SUPPORTED = new Set([".mbox", ".eml"]);
 
+/** A path that cannot be read as a mailbox — said plainly, without a stack. */
+export class MailboxPathError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MailboxPathError";
+  }
+}
+
 /**
  * Reads every `.mbox` and `.eml` found at the given paths. Directories are
  * searched recursively — a Takeout archive nests its mailboxes. Files are read
@@ -83,10 +92,11 @@ export async function readMailboxes(paths: string[]): Promise<MailboxReadResult>
 }
 
 function expand(path: string): string[] {
+  if (!existsSync(path)) throw new MailboxPathError(`Cannot find ${path}.`);
   const stat = statSync(path);
   if (stat.isFile()) {
     if (!SUPPORTED.has(extname(path).toLowerCase())) {
-      throw new Error(`${path} is not an .mbox or .eml file.`);
+      throw new MailboxPathError(`${path} is not an .mbox or .eml file.`);
     }
     return [path];
   }
@@ -148,7 +158,7 @@ function toEmail(mail: ParsedMail, file: string): MailboxEmail | string {
   if (!receivedAt || Number.isNaN(receivedAt.getTime())) return "no usable Date header";
 
   const subject = mail.subject ?? "";
-  const body = (mail.text ?? "").replace(/\r\n/g, "\n").trim();
+  const body = bodyText(mail);
 
   const messageId = stripBrackets(mail.messageId);
   const derivedMessageId = messageId === null;
@@ -167,6 +177,24 @@ function toEmail(mail: ParsedMail, file: string): MailboxEmail | string {
     sourceFile: basename(file),
     derivedMessageId,
   };
+}
+
+/**
+ * The text to classify: the plain-text part when it says anything, otherwise
+ * the HTML reduced to text.
+ *
+ * The parser converts HTML itself only for simple HTML-only mail. Two shapes
+ * from a real export came through empty (C21): Workday nests its HTML in
+ * multipart/related with no text part, and Criteria Corp sends a
+ * whitespace-only text part beside the real HTML. Both are applicant-tracking
+ * systems, so an empty body there is a missed application. The conversion is
+ * the parser's own library at its defaults, so every shape reads the same way.
+ */
+function bodyText(mail: ParsedMail): string {
+  const text = (mail.text ?? "").replace(/\r\n/g, "\n").trim();
+  if (text !== "") return text;
+  const html = typeof mail.html === "string" ? mail.html : "";
+  return html === "" ? "" : htmlToText(html).replace(/\r\n/g, "\n").trim();
 }
 
 /** Gmail's own thread id where a Takeout export carries it; otherwise the root

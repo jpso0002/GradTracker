@@ -191,11 +191,11 @@ examples — anything written must be outside the repository.
 2. **Inventory** — counts and sender domains only, never a subject or body. Share the counts;
    the held-out size is set from them (D32).
    ```powershell
-   npm.cmd run label -- inventory "$HOME\Documents\gradtracker-private\takeout.mbox"
+   npm.cmd run label -- inventory "$HOME\Documents\gradtracker-private\GradTracker export.mbox"
    ```
 3. **Export a spreadsheet** — one row per email, oldest first, duplicates removed.
    ```powershell
-   npm.cmd run label -- export "$HOME\Documents\gradtracker-private\takeout.mbox" --out "$HOME\Documents\gradtracker-private\labels.xlsx"
+   npm.cmd run label -- export "$HOME\Documents\gradtracker-private\GradTracker export.mbox" --out "$HOME\Documents\gradtracker-private\labels.xlsx"
    ```
 4. **Label** the `Label` tab in Excel or Google Sheets: white columns only, your initials in
    `labeller`. Sorting and filtering are fine; the grey columns must not be edited. The
