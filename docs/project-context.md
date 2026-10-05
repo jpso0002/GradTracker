@@ -5,8 +5,8 @@
 > on opening a file. Written to be blunt rather than diplomatic — if you use it to help
 > explain the project to teammates, soften it yourself.
 >
-> **Accurate as of:** 28 September 2026 — steps 1 and 2 of the Plan of record were built
-> that day; the rest of the code last changed 18 August.
+> **Accurate as of:** 5 October 2026 — steps 1, 2, 5 and 6 of the Plan of record are built,
+> with step 3's prompt v2; steps 3 and 4 wait on blocker B3.
 >
 > **On meeting minutes.** Treat any team meeting minutes as **reference, not fact.** They may
 > describe work that does not exist in the repository, or plans since changed. When minutes
@@ -81,9 +81,9 @@ team chose classifies live (D23, §4).
 | **1 — Foundation** | Monorepo, shared Zod schemas, DB schema, migrations, repository, seed | ✅ Complete |
 | **2 — Harness** | Ports, fakes, prompt, 80-fixture corpus, accuracy harness, Wilson intervals, labelling toolkit and guide | ✅ T2.1–T2.7, T2.9, **T2.11** · ◐ **T2.12** written, completes at T8.3 · T2.8 benchmark waits on B3 · ☐ T2.10 |
 | **3 — Pipeline** | Matching, stage engine, provenance, pipeline, ranking, harvest | ✅ T3.1–T3.7, T3.9–T3.12 · **T3.8 reinstated** as drop-folder sync |
-| **4 — API** | Job, review and sync routes | ✅ T4.4, T4.5, T4.8, **T4.9** · ◐ T4.6 · ☐ T4.10 · ⏸ T4.1–T4.3 auth · ☐ T4.7 |
-| **5 — Dashboard** | Design system, shell, API client, pipeline, detail panel | ✅ T5.1–T5.3, T5.5, T5.6, **T5.10** · ◐ T5.7 · ⏸ T5.4 · ☐ T5.8, T5.9, T5.11, T5.12 |
-| **6 — Human-in-the-loop** | Editing, review queue, settings, accessibility | ☐ Not started · **T6.1, T6.3, T6.4 redefined** · **T6.6 new** |
+| **4 — API** | Job, review, settings and sync routes | ✅ T4.4, T4.5, T4.8, T4.9, **T4.10** · ◐ T4.6 · ⏸ T4.1–T4.3 auth · ☐ T4.7 |
+| **5 — Dashboard** | Design system, shell, API client, pipeline, detail panel, search | ✅ T5.1–T5.3, T5.5, T5.6, T5.10, **T5.11** · ◐ T5.7 · ⏸ T5.4 · ☐ T5.8, T5.9, T5.12 |
+| **6 — Human-in-the-loop** | Editing, review queue, settings, accessibility | ✅ **T6.1, T6.3, T6.4, T6.6** · ☐ T6.2, T6.5 |
 | **7 — Ingestion & live classifier** | Live classifier, hybrid ingestion | ✅ **T7.8** mailbox reader (pulled forward) · ☐ **T7.3 reinstated** · **T7.7, T7.9, T7.10 new** · ⏸ hosted Gmail (T7.1, T7.2) |
 | **8 — Traceability** | Real labelled corpus, traceability, limitations | ☐ **T8.3 reinstated** · rest deferred |
 
@@ -91,12 +91,12 @@ team chose classifies live (D23, §4).
 
 | | |
 |---|---|
-| Tests | **468 passing**, 28 files |
-| Source | ~10,160 lines of TypeScript/TSX (excludes the vendored design system and build output) |
+| Tests | **510 passing**, 30 files |
+| Source | ~16,000 lines of TypeScript/TSX in the three packages' `src/` — ~9,600 application, ~6,400 tests (excludes the vendored design system and build output; counted 5 October) |
 | Fixture corpus | 80 labelled emails — 55 application / 25 not; 27 deadline-bearing; 15 hard negatives |
 | Real emails harvested | 32 → 8 applications, 20 updates, 4 correctly rejected |
 | Gates | `test`, `lint`, `typecheck`, `accuracy` — all green |
-| Commits | All 21 by Jordan (`jpso0002`); a single repository (D22) |
+| Commits | All 30 by Jordan (`jpso0002`); a single repository (D22) |
 
 ---
 
@@ -171,7 +171,7 @@ the repository.
 | **3** ◐ | Prompt v2, so prompt and labels agree — **done 28 Sep** → live classifier → Haiku-vs-Sonnet benchmark | **B3** |
 | **4** | Hybrid ingestion: event source + correct Gmail links (C10), unlabelled harvest, one `ingest` command, drop-folder sync | Step 3 |
 | **5** ✅ | Ambiguous matches → review (C18) · confirming onto an application applies the email (C16) — **done 5 Oct** | — |
-| **6** | Panel editing · review queue screen · row marker · settings API + slider · search | — (steps 1 and 5 done) |
+| **6** ✅ | Panel editing · review queue screen · row marker · settings API + slider · search — **done 5 Oct** | — |
 | **7** | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
 | **Alongside** | Evaluation dataset: export → inventory → label → freeze → measure. Exporting and labelling can start now | **B6** |
 
@@ -402,11 +402,14 @@ converts the HTML. **C22** — paths with spaces were mangled by npm on Windows,
 documented command on every Takeout export. **Fixed 5 October:** **C18** — a second application
 at the same employer is asked about, never merged; the August Macquarie merge, replayed, now
 asks. **C16** — confirming onto an application applies the email, not a correction, through the
-one step the pipeline also uses.
+one step the pipeline also uses. **C23** — a next action the student set was replaced on screen
+by a derived one ("Follow up", or the stage default when cleared), so a saved correction looked
+unsaved; found building panel edit mode, and now shown exactly as set.
 
-Also: `users.review_threshold` exists but **nothing reads it** — `/api/me` reports the
-constant and the harvest hard-codes 0.75 (T4.10). And "Emails read: 0" after a harvest,
-because `emails_read_total` is never written (T3.8).
+**Fixed 5 October (T4.10):** `users.review_threshold` had existed with **nothing reading it** —
+`/api/me` reported the constant and the harvest hard-coded 0.75. The pipeline now reads each
+student's own value on every email, set from the Settings slider. Still open: "Emails read: 0"
+after a harvest, because `emails_read_total` is never written (T3.8).
 
 ### Open problems
 
@@ -453,7 +456,7 @@ Windows, **PowerShell 5.1**: `&&` is a parser error and `npm.ps1` is blocked by 
 policy. Use `npm.cmd`, one command per line.
 
 ```
-npm.cmd test              # 468 tests
+npm.cmd test              # 510 tests
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run accuracy      # the CI gate; --demo shows the report shape, --invert proves it fails

@@ -275,12 +275,16 @@ Counted, never stored. No row, no id, not even the domain. In the demo harvest, 
 ### Step 5 — the review gate
 
 ```ts
-if (c.confidence < deps.reviewThreshold) return askTheStudent();          // default 0.75
+const settings = await deps.repo.getSettings(userId);                      // the student's own threshold
+if (routesToReview(c.confidence, settings.reviewThreshold)) return askTheStudent();
 if (c.stage !== null && USER_ONLY_STAGES.has(c.stage)) return askTheStudent();
 if (c.company === null || c.role === null) return askTheStudent();
+if (match?.kind === "ambiguous") return askTheStudent();
 ```
 
-`askTheStudent()` saves the email as a *question* rather than a *fact* — an event with **no job attached**, so nothing is asserted until the student confirms it. Three reasons lead there: the model is not confident enough; it recognised a withdrawal, which only the student may apply (`withdrawn` is a user-only stage); or it could not name the company or role.
+`askTheStudent()` saves the email as a *question* rather than a *fact* — an event with **no job attached**, so nothing is asserted until the student confirms it. Four reasons lead there: the model is not confident enough; it recognised a withdrawal, which only the student may apply (`withdrawn` is a user-only stage); it could not name the company or role; or the email might belong to an application already tracked (§8a).
+
+The threshold is the student's own, from the Settings slider, and the pipeline reads it on every email — no caller passes one, so no ingest path can quietly use a constant. At the slider's maximum, `routesToReview` sends *everything* to review, even an email the model scored 1.0.
 
 ### Step 6 — matching (see §8)
 
@@ -425,9 +429,9 @@ A "branded type" is a string that TypeScript refuses to treat as an ordinary str
 
 ## 10. The API — `packages/server/src/routes/`
 
-Express, three route files, all mounted in `app.ts`.
+Express, four route files, all mounted in `app.ts`.
 
-**`routes/jobs.ts`** — `GET /api/jobs` (ranked list + the four stat-card numbers), `GET /api/jobs/:id` (one job with its timeline), `PATCH /api/jobs/:id` (inline correction), `POST /api/jobs/:id/withdraw`.
+**`routes/jobs.ts`** — `GET /api/jobs` (ranked list + the four stat-card numbers), `GET /api/jobs/:id` (one job with its timeline), `PATCH /api/jobs/:id` (a correction — the panel sends only the fields changed), `POST /api/jobs/:id/withdraw`.
 
 Two deliberate behaviours that look like bugs until you know why:
 
@@ -435,6 +439,8 @@ Two deliberate behaviours that look like bugs until you know why:
 - **There is no `?sort=` parameter.** The ranking is the product's one opinion. A student who can sort by company name has rebuilt the spreadsheet this exists to replace.
 
 **`routes/review.ts`** — the queue of low-confidence detections, plus confirm and dismiss. The key line in its header: everything the student confirms is written as `human`, not `ai`. They looked at it and said yes, so a later sync must not overwrite it. Dismissed items are *marked*, never deleted — the unique constraint on `(user_id, gmail_message_id)` is what stops a re-sync resurrecting an email the student already rejected.
+
+**`routes/settings.ts`** — `GET` and `PATCH /api/settings`: the student's review threshold. Notice what is *not* here: nothing re-routes mail already stored. The pipeline reads the threshold itself on every email, so a change simply applies to the next one.
 
 **`routes/sync.ts`** — `GET /api/sync/status` works. `POST /api/sync` returns **501 Not Implemented** with an explanation, because the sync orchestrator is deferred. The comment is worth internalising: *a "Refresh" button that appears to work and does not is worse than one that says it cannot.*
 
@@ -455,10 +461,11 @@ src/
 ├── main.tsx        Boots React, installs icons, wraps in providers
 ├── App.tsx         The routes
 ├── shell/          Sidebar + toasts — the frame around every page
-├── views/          The actual screens
+├── views/          The actual screens: pipeline + detail panel, review queue, settings
 ├── api/client.ts   Typed wrapper around fetch()
 ├── hooks/          useAsync — loading/error/data state
 ├── format.ts       Date formatting, and nothing else
+├── motion.ts       Reads a motion token's duration, for animations that end in removal
 └── ds/             The design system
 ```
 
@@ -466,7 +473,7 @@ src/
 
 `App.tsx` maps URLs to views. The interesting choice: the detail panel is a **route** (`/pipeline/:jobId`), not a piece of component state. That means a student can bookmark one application, and the browser back button closes the panel instead of leaving the pipeline entirely.
 
-Several routes deliberately render a `BlankView` that says what is missing and when it is planned. Blank means blank — no placeholder content pretending to be a feature.
+`/docs` and unknown URLs render a `BlankView` that says what is missing and when it is planned. Blank means blank — no placeholder content pretending to be a feature. (`/review` and `/settings` did too, until their screens were built on 5 October.)
 
 ### Data fetching — `hooks/useAsync.ts`
 
@@ -499,7 +506,18 @@ There is a strict rule enforced by `no-hardcoded-colour.test.ts`: **no file in `
 
 ### The main screen — `views/PipelineView.tsx`
 
-Worth reading for one line of its header comment: *the list arrives already ranked by the server, and nothing here re-sorts it.* Stage chips filter and tabs switch between Active and Archived; neither touches the order.
+Worth reading for one line of its header comment: *the list arrives already ranked by the server, and nothing here re-sorts it.* Stage chips filter and tabs switch between Active and Archived; neither touches the order. The search box doesn't either — it is a `filter` over the server's list, never a `sort`.
+
+### Editing — `views/DetailPanel.tsx` and `views/fields.tsx`
+
+The panel's **Edit** turns all five fields into inputs; **Save** sends one `PATCH`. Two details worth understanding:
+
+- **Only changed fields are sent.** `fields.tsx` decides what "changed" means — trimmed text, typed-and-deleted is no change — and the review card uses the same file, so the two editors cannot disagree. Sending an untouched field would stamp it "Edited" and lock it against the classifier forever.
+- **The stale-edit check.** Before saving, the panel re-reads the application. If an email changed a field the student is about to overwrite, it stops and asks. A field the student didn't touch never triggers it — it isn't being sent.
+
+### The review queue — `views/ReviewView.tsx`
+
+One card per email the model wouldn't assert on its own. When the server suggests the email belongs to an application already tracked, the card asks "same application, or a new one?" and won't confirm until answered. After a card is handled it fades out — on the design system's motion token, read by `motion.ts`, so reduced-motion users don't wait — and focus moves to the next card.
 
 ---
 
@@ -574,7 +592,7 @@ One more test worth knowing about: `labelling/guide.test.ts` fails if the labell
 
 ## 13. The tests
 
-27 test files, run with `npm test` (Vitest). They fall into three groups:
+30 test files, run with `npm test` (Vitest). They fall into three groups:
 
 **Logic tests** — pure functions with known answers: `match.test.ts`, `engine.test.ts`, `rank.test.ts`, `apply.test.ts`, `pipeline.test.ts`.
 
@@ -672,8 +690,7 @@ Being clear about this saves you hunting for code that does not exist:
 - **The live Gmail adapter** (T7.2) — the fake reads fixtures; real emails come in via harvest
 - **The live Claude adapter** (T7.3) — same
 - **The sync orchestrator** (T3.8) — no incremental "Refresh"; `POST /api/sync` honestly returns 501
-- **The review queue screen** (T6.3) — `GET /api/review` works and returns the pending items; only the UI is missing
-- **Settings, Calendar, Archive screens** — blank on purpose
+- **The Documentation Center** (T5.9) — `/docs` is blank on purpose. Calendar and Archive were removed (D29); the review queue and Settings were built on 5 October
 - **Postgres deployment** (T8.5) — the schema exists and is parity-tested; nothing is deployed
 
 Each is deferred with its acceptance criteria intact in `docs/tasks.md`, not deleted.

@@ -559,7 +559,8 @@ they are recorded because the correction is itself a decision.
 Defects C7–C9, found while building the API and client, are recorded in
 [tasks.md](tasks.md). Revision 3 adds six more, each found by checking the running system or
 the RTM against the code, rather than documents against each other. C16–C22 were found the
-same way, while building steps 1 to 3 of the Plan of record and running the first real export.
+same way, while building steps 1 to 3 of the Plan of record and running the first real export,
+and C23 while building step 6.
 
 | # | Defect | Resolution | Task |
 |---|---|---|---|
@@ -576,6 +577,7 @@ same way, while building steps 1 to 3 of the Plan of record and running the firs
 | **C20** | The model was shown each email's received time in UTC only, while relative deadlines count from the local date: at 08:00 in Melbourne it is still the previous day in UTC, so "within 7 days" would resolve a day early. Hidden in the corpus, where every email arrives after 10:00 Melbourne time. | **Fixed** — the user message gives the received time in the student's timezone as well. | T3.12 |
 | **C21** | The mailbox reader returned an empty body for HTML mail from Workday (HTML nested in multipart/related) and Criteria Corp (a whitespace-only text part beside the HTML) — 7 of 120 emails in the first real export, all from applicant-tracking systems. | **Fixed** — no plain text falls back to the HTML, converted by the parser's own library. | T7.8 |
 | **C22** | A path with a space reached the labelling toolkit mangled on Windows, so the documented command failed on every Takeout export. | **Fixed** — scripts that take arguments start with `node`; the build moved to `pre` scripts. | — |
+| **C23** | The API derives the next action it displays — staleness, a closed application and stage defaults — and derived over the student's own value too, so a saved correction looked unsaved: hidden behind "Follow up" on a quiet application, and back as the stage default when cleared. Found designing panel edit mode. | **Fixed 5 October** — a next action the student set is shown exactly as set, blank included. | T6.1 |
 
 ---
 

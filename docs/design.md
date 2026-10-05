@@ -279,13 +279,27 @@ single most consequential piece of UI in the product.
 
 ### 7.3 Edit interaction
 
-Click a field → it becomes an `Input` (or `Select` for stage) in place, pre-filled and
-focused with the text selected. `Enter` or blur saves; `Escape` cancels. On save the field
-returns to display type, the meter is replaced by the Edited tag, and a `Toast` confirms.
-On validation failure the input keeps focus and shows the error beneath — **the entered
-value is never discarded**.
+*Revised 5 October 2026 for D27 (T6.1). Until then this section specified per-field inline
+editing, saved on `Enter` or blur, with an optimistic update.*
 
-Optimistic update, with rollback and an error toast on failure.
+**Edit**, in the detail panel, turns all five fields into inputs at once — `Input` for
+company, role, deadline (`datetime-local`, in the student's own timezone) and next action,
+`Select` for stage — pre-filled, with focus on the first. **Save** (or `Enter`) commits them
+in one request; **Cancel** (or `Escape`) discards them and returns focus to Edit.
+
+- Save sends **only the fields changed**. With nothing changed it sends nothing, so no field
+  is stamped Edited by accident.
+- On success the panel returns to display type, each changed field's meter is replaced by
+  the Edited tag, and a `Toast` confirms.
+- On validation failure the field takes focus and shows the server's message beneath it —
+  **the entered value is never discarded**.
+- If an ingest changed a field being saved while the panel was open, Save stops and says what
+  changed, offering **Save anyway** or **Keep editing**; focus goes to Keep editing, the safe
+  choice. Keep editing shows the new values and keeps the student's own.
+
+Save is not optimistic: it checks for a stale edit first, so it waits for the server and says
+"Saving…". The review card's **Edit** uses the same five inputs and the same rule about
+changes.
 
 ### 7.4 Describing the model honestly
 
@@ -366,8 +380,10 @@ All stage `bg`/`fg` pairs are AA in both themes, verified in `tokens/stages.css`
 
 - Every interactive element reachable by `Tab` in visual order.
 - Pipeline rows are real buttons: `Enter` or `Space` opens the detail panel.
-- Editable fields: `Enter` opens the editor, `Enter` saves, `Escape` cancels and restores
-  focus to the field.
+- Edit mode: **Edit** opens it with focus on the first field, `Enter` saves, `Escape`
+  cancels and returns focus to Edit (D27).
+- The review queue: after a card is confirmed or dismissed, focus moves to the next card, or
+  to the empty queue — never to the page.
 - `Dialog` traps focus, closes on `Escape`, restores focus to its trigger.
 - **No keyboard trap anywhere**, including inline editors.
 
@@ -413,8 +429,8 @@ case even though the criterion only says "standard web browser".
 - Ranking never changes. The most urgent item is first on every device — that is SM-4, and
   it is not a desktop-only promise.
 - Touch targets ≥44px (`--touch-min`) below 1024px.
-- Inline editing works on touch: tap to edit, on-screen keyboard, explicit save and cancel
-  buttons below 768px where blur-to-save is unreliable.
+- Editing works on touch: the panel's Save and Cancel are explicit buttons at every width
+  (D27), so nothing depends on blur.
 - Nothing is hidden on mobile that is actionable on desktop. Density may drop; capability
   may not.
 

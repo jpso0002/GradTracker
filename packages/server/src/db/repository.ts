@@ -319,10 +319,35 @@ export function createRepository(db: Database) {
      *  them, and a response body is exactly where they must not appear. */
     async findUser(userId: UserId) {
       const [row] = await db
-        .select({ id: users.id, email: users.email, displayName: users.displayName })
+        .select({
+          id: users.id,
+          email: users.email,
+          displayName: users.displayName,
+          reviewThreshold: users.reviewThreshold,
+        })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
+      return row;
+    },
+
+    /** The student's own settings (T4.10). Read by the pipeline on every
+     *  ingest, so a change routes the next email and nothing already stored. */
+    async getSettings(userId: UserId) {
+      const [row] = await db
+        .select({ reviewThreshold: users.reviewThreshold })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      return row;
+    },
+
+    async updateSettings(userId: UserId, patch: { reviewThreshold?: number | undefined }) {
+      const [row] = await db
+        .update(users)
+        .set(patch)
+        .where(eq(users.id, userId))
+        .returning({ reviewThreshold: users.reviewThreshold });
       return row;
     },
 

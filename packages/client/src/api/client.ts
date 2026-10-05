@@ -3,13 +3,16 @@ import {
   JobDetailResponseSchema,
   MeResponseSchema,
   ReviewItemSchema,
+  SettingsResponseSchema,
   SyncStatusResponseSchema,
   type ListJobsResponse,
   type JobDetailResponse,
   type MeResponse,
   type ReviewItem,
+  type SettingsResponse,
   type SyncStatusResponse,
   type UpdateJobBody,
+  type UpdateSettingsBody,
   type ConfirmReviewBody,
   type Job,
   type JobStatus,
@@ -168,6 +171,17 @@ export const api = {
 
   syncStatus(): Promise<SyncStatusResponse> {
     return request("/api/sync/status", SyncStatusResponseSchema);
+  },
+
+  getSettings(): Promise<SettingsResponse> {
+    return request("/api/settings", SettingsResponseSchema);
+  },
+
+  updateSettings(patch: UpdateSettingsBody): Promise<SettingsResponse> {
+    return request("/api/settings", SettingsResponseSchema, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    });
   },
 };
 

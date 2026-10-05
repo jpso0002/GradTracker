@@ -97,13 +97,22 @@ export function isFollowUpRequired(stage: Stage, lastEventAt: Date, now: Date): 
  * stage-derived default. Staleness overrides both — if nothing has happened
  * for weeks, chasing it is the next action regardless of what the last email
  * asked for.
+ *
+ * Above all of it, a next action the student set is shown exactly as they set
+ * it — blank included. Deriving over it made a saved correction look unsaved:
+ * staleness replaced it, a closed application hid it, and clearing it brought
+ * back the stage default (C23).
  */
 export function deriveNextAction(input: {
   stage: Stage;
   extracted: string | null;
   followUpRequired: boolean;
   daysSinceLastEvent: number;
+  /** True when the field's provenance is `human`. */
+  setByStudent?: boolean;
 }): string | null {
+  if (input.setByStudent) return input.extracted?.trim() ? input.extracted : null;
+
   if (TERMINAL_STAGES.has(input.stage)) return null;
 
   if (input.followUpRequired) {

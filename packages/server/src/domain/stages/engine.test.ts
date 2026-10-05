@@ -157,4 +157,44 @@ describe("next action", () => {
       deriveNextAction({ stage: "offer", extracted: "   ", followUpRequired: false, daysSinceLastEvent: 1 }),
     ).toBe("Respond to offer");
   });
+
+  // ── C23 ───────────────────────────────────────────────────────────────────
+  // A next action the student typed was replaced on screen: staleness overrode
+  // it, a closed application hid it, and clearing it brought back the stage
+  // default. The correction saved, and looked as though it had not.
+  it("shows a next action the student set, even once the application has gone quiet", () => {
+    expect(
+      deriveNextAction({
+        stage: "applied",
+        extracted: "Wait for the HireVue results — they said six weeks",
+        followUpRequired: true,
+        daysSinceLastEvent: 21,
+        setByStudent: true,
+      }),
+    ).toBe("Wait for the HireVue results — they said six weeks");
+  });
+
+  it("shows a next action the student set on a closed application", () => {
+    expect(
+      deriveNextAction({
+        stage: "rejected",
+        extracted: "Ask for feedback",
+        followUpRequired: false,
+        daysSinceLastEvent: 1,
+        setByStudent: true,
+      }),
+    ).toBe("Ask for feedback");
+  });
+
+  it("keeps a next action the student cleared clear, rather than restoring a default", () => {
+    expect(
+      deriveNextAction({
+        stage: "interview",
+        extracted: null,
+        followUpRequired: true,
+        daysSinceLastEvent: 9,
+        setByStudent: true,
+      }),
+    ).toBeNull();
+  });
 });

@@ -52,7 +52,7 @@ beforeAll(async () => {
   const page = await gmail.listSince(null);
   for (const id of page.messageIds) {
     await processEmail(
-      { repo, classifier, ownAddress: "sam@student.monash.edu", reviewThreshold: 0.75 },
+      { repo, classifier, ownAddress: "sam@student.monash.edu" },
       userId,
       await gmail.fetchMessage(id),
     );

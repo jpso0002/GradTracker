@@ -1,9 +1,21 @@
-import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { StageEnum, type Job, type JobStatus, type Stage } from "@gradtracker/shared";
-import { ApplicationRow, EmptyState, StatCard, Tabs, TopBar, Button, Icon, STAGES } from "../ds";
+import {
+  ApplicationRow,
+  Badge,
+  EmptyState,
+  SearchField,
+  StatCard,
+  Tabs,
+  TopBar,
+  Button,
+  Icon,
+  STAGES,
+} from "../ds";
 import { api } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
+import { VisuallyHidden } from "../shell/VisuallyHidden";
 import { DetailPanel } from "./DetailPanel";
 import { formatDeadline } from "../format";
 
@@ -13,23 +25,46 @@ import { formatDeadline } from "../format";
  * The list arrives already ranked by the server. **Nothing here re-sorts it.**
  * Stage chips filter and the tabs switch corpus; neither touches order, and
  * there is no sort control, because a student who can sort by company name has
- * rebuilt the spreadsheet this replaces.
+ * rebuilt the spreadsheet this replaces. Search narrows the same way (T5.11,
+ * D30): it removes rows and never moves one.
  */
 
 /** The six stages, from the shared enum — never a second hand-written list. */
 const STAGE_VALUES: readonly Stage[] = StageEnum.options;
 
+/** Company or role, any case. A filter, so the survivors keep the server's order. */
+export function matchesSearch(job: Job, query: string): boolean {
+  const q = query.trim().toLocaleLowerCase();
+  return q === "" || job.company.toLocaleLowerCase().includes(q) || job.role.toLocaleLowerCase().includes(q);
+}
+
 export function PipelineView() {
   const [status, setStatus] = useState<JobStatus>("active");
   const [stages, setStages] = useState<Stage[]>([]);
+  const [query, setQuery] = useState("");
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
+  const searchLabel = useRef<HTMLLabelElement>(null);
 
   const pipeline = useAsync(() => api.listJobs({ status, stages }), [status, stages.join(",")]);
   const review = useAsync(() => api.listReview(), []);
 
   const jobs = pipeline.data?.jobs ?? [];
   const stats = pipeline.data?.stats;
+
+  // The search box's hint promises "/". Typing it anywhere outside a field
+  // keeps that promise.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+      e.preventDefault();
+      searchLabel.current?.querySelector("input")?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const toggleStage = (stage: Stage) => {
     setStages((current) =>
@@ -45,6 +80,15 @@ export function PipelineView() {
   return (
     <>
       <TopBar title="Applications" {...(subtitle ? { subtitle } : {})}>
+        <label ref={searchLabel} style={{ display: "flex" }}>
+          <VisuallyHidden>Search applications</VisuallyHidden>
+          <SearchField
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Company or role"
+            width={240}
+          />
+        </label>
         <Button variant="ghost" iconLeft="refresh-cw" onClick={pipeline.reload}>
           Refresh
         </Button>
@@ -72,17 +116,22 @@ export function PipelineView() {
             error={pipeline.error}
             offline={pipeline.offline}
             jobs={jobs}
+            query={query}
             status={status}
             filtered={stages.length > 0}
             selectedId={jobId}
             onSelect={(id) => navigate(`/pipeline/${id}`)}
             onClearFilters={() => setStages([])}
+            onClearSearch={() => setQuery("")}
             onRetry={pipeline.reload}
           />
         </div>
 
         {jobId ? (
           <DetailPanel
+            // A different application is a fresh panel: an open editor's
+            // changes were for the last one.
+            key={jobId}
             jobId={jobId}
             onClose={() => navigate("/pipeline")}
             onChanged={pipeline.reload}
@@ -173,17 +222,20 @@ interface BodyProps {
   loading: boolean;
   error: Error | null;
   offline: boolean;
+  /** The server's list, in the server's order. */
   jobs: Job[];
+  query: string;
   status: JobStatus;
   filtered: boolean;
   selectedId: string | undefined;
   onSelect: (id: string) => void;
   onClearFilters: () => void;
+  onClearSearch: () => void;
   onRetry: () => void;
 }
 
 function PipelineBody(props: BodyProps) {
-  const { loading, error, offline, jobs, status, filtered } = props;
+  const { loading, error, offline, jobs, query, status, filtered } = props;
 
   if (loading && jobs.length === 0) {
     return <Skeleton />;
@@ -241,22 +293,91 @@ function PipelineBody(props: BodyProps) {
     );
   }
 
+  // `filter`, never `sort`: the rows that survive keep the server's order.
+  const shown = jobs.filter((job) => matchesSearch(job, query));
+
+  if (shown.length === 0) {
+    return (
+      <EmptyState
+        icon="search"
+        title={`No applications match “${query.trim()}”`}
+        description="Search looks at company and role."
+        action={<Button onClick={props.onClearSearch}>Clear search</Button>}
+        compact
+      />
+    );
+  }
+
   return (
     <div role="list">
-      {jobs.map((job) => (
-        <ApplicationRow
+      {shown.map((job) => (
+        <PipelineRow
           key={job.id}
-          company={job.company}
-          role={job.role}
-          stage={job.stage}
+          job={job}
           selected={job.id === props.selectedId}
-          onClick={() => props.onSelect(job.id)}
-          {...(job.nextAction ? { nextAction: job.nextAction } : {})}
-          {...(job.deadlineAt ? { deadline: formatDeadline(job.deadlineAt) } : {})}
-          {...(job.daysLeft !== null ? { daysLeft: job.daysLeft } : {})}
-          {...(job.senderDomain ? { source: `Detected from ${job.senderDomain}` } : {})}
+          onSelect={() => props.onSelect(job.id)}
         />
       ))}
+    </div>
+  );
+}
+
+/**
+ * One row, plus — while an email may belong to this application (T3.10) — a
+ * marker linking to that question in the review queue (T6.6).
+ *
+ * The wrapper owns the hairline and the hover and selected tints, so the
+ * marker's line reads as part of its row rather than as a row of its own.
+ */
+function PipelineRow({ job, selected, onSelect }: { job: Job; selected: boolean; onSelect: () => void }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      role="listitem"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        borderBottom: "1px solid var(--border-hairline)",
+        background: selected ? "var(--surface-selected)" : hover ? "var(--surface-hover)" : "transparent",
+        transition: "background-color var(--dur-fast) var(--ease-standard)",
+      }}
+    >
+      <ApplicationRow
+        company={job.company}
+        role={job.role}
+        stage={job.stage}
+        selected={selected}
+        onClick={onSelect}
+        style={{ borderBottom: "none", background: "transparent" }}
+        {...(job.nextAction ? { nextAction: job.nextAction } : {})}
+        {...(job.deadlineAt ? { deadline: formatDeadline(job.deadlineAt) } : {})}
+        {...(job.daysLeft !== null ? { daysLeft: job.daysLeft } : {})}
+        // The row adds "Detected from" itself; passing it too doubled it.
+        {...(job.senderDomain ? { source: job.senderDomain } : {})}
+      />
+      {job.pendingReviewId ? <ReviewMarker job={job} questionId={job.pendingReviewId} /> : null}
+    </div>
+  );
+}
+
+/**
+ * "Review required" — in words, not a coloured dot, and named in full for
+ * assistive technology. It exists exactly while a pending review item suggests
+ * this application; the server clears `pendingReviewId` once it is answered.
+ */
+function ReviewMarker({ job, questionId }: { job: Job; questionId: string }) {
+  return (
+    <div style={{ padding: "0 var(--cell-pad-x) var(--cell-pad-y)" }}>
+      <Link
+        to={`/review#review-${questionId}`}
+        aria-label={`Review required: an email may belong to ${job.company} — ${job.role}`}
+        style={{ display: "inline-flex", borderRadius: "var(--radius-pill)", textDecoration: "none" }}
+      >
+        <Badge tone="ai" uppercase={false}>
+          <Icon name="sparkles" size={12} />
+          Review required
+        </Badge>
+      </Link>
     </div>
   );
 }

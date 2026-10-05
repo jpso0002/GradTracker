@@ -110,7 +110,7 @@ Keep entries concise. One line per decision when possible.
 - **Correcting a company recomputes `companyNormalised`** — otherwise the corrected job stops matching its own future emails.
 - **Stage decisions return a typed reason, not a boolean**, so the timeline can explain why an email changed nothing.
 - **Ranking, staleness and urgency are pure functions** with no I/O, so they are exhaustively testable.
-- **Mutations are optimistic with rollback** and a `Toast` on success.
+- **A mutation shows its result once the server has agreed, with a `Toast` on success** *(revised 5 October 2026, T6.1)*. It was "optimistic with rollback" while editing was per-field. Panel Save checks for a stale edit before it writes, so it cannot show a value before knowing whether to warn; and a review card that left before the server agreed would have to come back, moving focus twice. The wait is one round trip, and the button says so meanwhile.
 - **Colour is never the only signal** — stage badges carry text, deadline pills carry dates, provenance carries a tag.
 - **Empty states admit the gap** rather than filling space. Blank means blank.
 - **No fake progress.** If duration is unknown, show a real count of work done.
@@ -119,6 +119,7 @@ Keep entries concise. One line per decision when possible.
 - **A record belonging to another user returns 404, never 403.** A 403 confirms the record exists, which is itself a disclosure. "Not yours", "already handled" and "never existed" must be indistinguishable to the caller.
 - **There is no `?sort=`.** Ranking is the product's single opinion about what matters today. A client that can re-sort by company name has rebuilt the spreadsheet GradTracker exists to replace.
 - **Validation errors return the offending `field` alongside `error`**, so an inline editor can attach the message to the input rather than showing a banner.
+- **Validation messages are written for the student.** The editors show them beneath the field as they are, so the shared schema states them as sentences — "Company cannot be empty." — never Zod's defaults.
 - **Unknown body fields are stripped, not rejected and not persisted.** A client must not be able to smuggle `status` or `confidence` into a `PATCH`.
 - **An empty patch is a 400, not a 200 no-op.** Silently accepting a request that changes nothing hides a broken client.
 - **Every confirmed field is written as `human`, not `ai`.** Confirming is the moment a machine guess becomes a human fact; a later sync must not overwrite what the student looked at and accepted.
@@ -148,7 +149,14 @@ Keep entries concise. One line per decision when possible.
 - **Responses are parsed, not cast.** A `fetch` returning something unexpected must fail next to the request, not three components deep.
 - **Panel Save sends only the fields actually changed.** Sending all five would mark every field human-edited and lock it against the classifier, though the student changed nothing.
 - **Save warns if an ingest changed the application while the panel was open.** It never silently replaces a value the student did not see.
-- **Search narrows; it never reorders** — the same rule as the stage chips.
+- **The panel and the review card share one definition of a change** (`views/fields.tsx`): text compares trimmed, typed-and-deleted is no change, and a Save with no change sends no request at all.
+- **The stale-edit check re-reads the application just before saving and compares only the fields being saved.** A field the student left alone is not sent, so it cannot be overwritten and never warns.
+- **A suggestion is answered before confirming, in the client as on the server.** Confirm stays enabled and asks — a disabled button does not say why.
+- **Search narrows; it never reorders** — the same rule as the stage chips. It is a client-side `filter` of the server's list, with no comparator.
+- **A row sits in a list item that owns its hairline and tints**, so anything carried beneath it — the "Review required" marker — reads as part of the row.
+- **After an action, focus goes somewhere deliberate:** the next review card, or the empty queue; Edit, when the editor closes; the refused field, after a refusal; the safe choice, when a warning appears. Never to the page.
+- **An animation that gates removal reads its duration from the motion token** (`tokenDurationMs`), never a second constant. `prefers-reduced-motion` zeroes the token, and the removal follows it.
+- **The threshold slider saves once per gesture.** It waits for the student to stop, and a failed save restores the stored value and says so.
 
 ## Business Logic
 
@@ -165,9 +173,10 @@ Keep entries concise. One line per decision when possible.
 - **Provenance never downgrades.** There is no `human → ai` transition.
 - **Human-verified company and role become the job-matching key**, so corrections route future emails to the corrected job.
 - **All five extractable fields are editable:** company, role, stage, deadline, next action.
+- **A next action the student set is displayed exactly as set, blank included.** Staleness, a closed application and stage defaults derive only over the model's values. Deriving over the student's made a saved correction look unsaved (C23).
 
 ### Classification and confidence
-- **Escalate to Sonnet 5 below 0.6 confidence.** Queue for review below `users.review_threshold` (default 0.75). `>=` accepts at the boundary.
+- **Escalate to Sonnet 5 below 0.6 confidence.** Queue for review below `users.review_threshold` (default 0.75). `>=` accepts at the boundary — except at the maximum, 1.0, which means review everything (D28), even an email the model scored 1.0.
 - **Never filter on a provider domain.** Google, Microsoft and Amazon are mail providers *and* major graduate employers. A rule matching `google.com` dropped genuine `careers-noreply@google.com` application emails, and the loss was invisible in accuracy figures because a filtered email is never scored. Filter on specific bounce addresses only.
 - **The retention boundary is a type, not a discipline.** `classifyOne()` returns a `ClassifiedEmail` with no subject, body or full address, so downstream code cannot persist content it never receives.
 - **Escalation is composition, not a branch.** `EscalatingClassifier` satisfies the `EmailClassifier` port, so the pipeline is unaware of it and the harness scores the pair as one model. An escalated answer replaces the primary — never merges with it.
@@ -176,7 +185,7 @@ Keep entries concise. One line per decision when possible.
 - **The pre-filter may never make a classification judgement** — it skips only self-sent mail and calendar system notifications. When in doubt, the email goes to the model.
 - **False negatives are the costly failure** and are counted and named explicitly in every harness run.
 - **Threshold changes apply to future syncs only.** Dismissed items stay dismissed.
-- **The threshold is per user** — `users.review_threshold`, set from the Settings slider. Ingest passes each user's own value; nothing may substitute the constant.
+- **The threshold is per user** — `users.review_threshold`, set from the Settings slider. The pipeline reads each user's own value on every email; no caller passes one, so no ingest path can substitute a constant, as the harvest importer once did (T4.10).
 - **A match resting on sender domain alone, with low role similarity, is not a match.** It goes to review with a suggested application. Domains like `criteriacorp.com` serve several employers, and a silent merge destroys an application's history. `findMatch` returns `match`, `ambiguous` or none (T3.10).
 - **Every review item names its likely application when there is one**, so the card can ask "same application, or a new one?" — and confirming such an item requires that answer. A confirmed item with no suggestion attaches only on a clear match.
 - **One step applies an email to an application — `applyEmailToJob` — for the pipeline and the review queue alike.** An email older than the application's latest event changes no detail and never moves `lastEventAt` back; an older offer or rejection never overrules newer news; an older email that moves the stage forward still counts.

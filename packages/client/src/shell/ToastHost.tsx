@@ -4,9 +4,9 @@ import { Toast } from "../ds";
 /**
  * One place toasts appear, so no view has to own a corner of the screen.
  *
- * Mutations are optimistic with rollback and a toast on success
- * (rules.md → Design Patterns), which means every view needs to raise one —
- * and none of them should be positioning it.
+ * Every mutation raises a toast once the server has agreed (rules.md →
+ * Design Patterns), which means every view needs to raise one — and none of
+ * them should be positioning it.
  */
 
 type Tone = "info" | "success" | "warning" | "error";

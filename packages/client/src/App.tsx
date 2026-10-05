@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./shell/AppShell";
 import { ToastHost } from "./shell/ToastHost";
 import { PipelineView } from "./views/PipelineView";
+import { ReviewView } from "./views/ReviewView";
+import { SettingsView } from "./views/SettingsView";
 import { BlankView } from "./views/BlankView";
 import { api } from "./api/client";
 import { useAsync } from "./hooks/useAsync";
@@ -27,26 +29,10 @@ export function App() {
           <Route path="/" element={<Navigate to="/pipeline" replace />} />
           <Route path="/pipeline" element={<PipelineView />} />
           <Route path="/pipeline/:jobId" element={<PipelineView />} />
-          <Route
-            path="/review"
-            element={
-              <BlankView
-                title="Needs review"
-                icon="sparkles"
-                description="The review queue arrives with T6.3. The API behind it is complete — GET /api/review already returns what GradTracker read from each email."
-              />
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <BlankView
-                title="Settings"
-                icon="settings"
-                description="Settings arrive with T6.4. The review threshold is currently a constant."
-              />
-            }
-          />
+          {/* The queue tells the shell when it changes, so the sidebar count
+              follows what the student has handled. */}
+          <Route path="/review" element={<ReviewView onChanged={review.reload} />} />
+          <Route path="/settings" element={<SettingsView />} />
           <Route
             path="/docs"
             element={

@@ -100,12 +100,8 @@ async function main(): Promise<void> {
   const tally: Record<string, number> = {};
   for (const record of records) {
     const outcome = await processEmail(
-      {
-        repo,
-        classifier: new HarvestClassifier(records),
-        ownAddress,
-        reviewThreshold: 0.75,
-      },
+      // No threshold passed: the pipeline routes by the student's own (T4.10).
+      { repo, classifier: new HarvestClassifier(records), ownAddress },
       userId,
       toRawEmail(record),
     );

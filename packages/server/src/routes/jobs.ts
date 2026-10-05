@@ -71,6 +71,7 @@ function toJob(
       extracted: job.nextAction,
       followUpRequired: ranked.followUpRequired,
       daysSinceLastEvent: (now.getTime() - job.lastEventAt.getTime()) / 86_400_000,
+      setByStudent: provenance.some((p) => p.field === "next_action" && p.source === "human"),
     }),
     senderDomain: job.senderDomain,
     confidence: job.confidence,

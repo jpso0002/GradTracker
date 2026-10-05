@@ -24,7 +24,6 @@ const deps = (over: Partial<PipelineDeps> = {}): PipelineDeps => ({
   repo,
   classifier: new FakeEmailClassifier({ fixtures: corpus }),
   ownAddress: "sam@student.monash.edu",
-  reviewThreshold: 0.75,
   ...over,
 });
 
@@ -390,6 +389,38 @@ describe("a withdrawal the model detects (C17, T3.12)", () => {
     const [job] = await repo.listJobs(userId);
     expect(job?.stage).toBe("interview");
     expect(job?.status).toBe("active");
+  });
+});
+
+describe("the student's own review threshold (T4.10, D28)", () => {
+  it("routes the next ingest by the new threshold and re-routes nothing already stored", async () => {
+    // The model is 80% sure of both emails. At the default 0.75 the first is
+    // asserted; after the student raises the bar to 0.9, the next one asks.
+    const sure = new FakeEmailClassifier({ fixtures: corpus, confidenceFor: () => 0.8 });
+    expect((await processEmail(deps({ classifier: sure }), userId, await email("fixture-001"))).kind).toBe(
+      "created-job",
+    );
+
+    await repo.updateSettings(userId, { reviewThreshold: 0.9 });
+    const next = await processEmail(deps({ classifier: sure }), userId, await email("fixture-007"));
+
+    expect(next.kind).toBe("queued-for-review");
+    // What was already asserted stays asserted — it is not re-routed to review.
+    const jobs = await repo.listJobs(userId);
+    expect(jobs.map((j) => j.company)).toEqual(["Deloitte"]);
+    expect((await repo.listPendingReview(userId)).map((p) => p.detectedCompany)).toEqual(["PwC"]);
+  });
+
+  it("reviews everything at the slider's maximum — even an email the model is certain of", async () => {
+    // D28: "review everything" is the slider at its maximum. A strict
+    // less-than alone would still assert an email scored 1.0.
+    await repo.updateSettings(userId, { reviewThreshold: 1 });
+    const certain = new FakeEmailClassifier({ fixtures: corpus, confidenceFor: () => 1 });
+
+    const outcome = await processEmail(deps({ classifier: certain }), userId, await email("fixture-001"));
+
+    expect(outcome.kind).toBe("queued-for-review");
+    expect(await repo.listJobs(userId)).toHaveLength(0);
   });
 });
 

@@ -6,6 +6,7 @@ import { demoContext } from "./middleware/context.js";
 import { errorHandler } from "./middleware/validate.js";
 import { jobRoutes } from "./routes/jobs.js";
 import { reviewRoutes } from "./routes/review.js";
+import { settingsRoutes } from "./routes/settings.js";
 import { syncRoutes } from "./routes/sync.js";
 
 /**
@@ -46,7 +47,9 @@ export function createApp(options: AppOptions): Express {
       email: user?.email ?? "",
       displayName: user?.displayName ?? null,
       gmailConnected: sync?.historyId != null,
-      reviewThreshold: CONFIDENCE.DEFAULT_REVIEW_THRESHOLD,
+      // The student's own value (T4.10) — this reported the constant while
+      // nothing read the column.
+      reviewThreshold: user?.reviewThreshold ?? CONFIDENCE.DEFAULT_REVIEW_THRESHOLD,
       timeZone: req.timeZone,
       demoMode: true,
       sync: {
@@ -62,6 +65,7 @@ export function createApp(options: AppOptions): Express {
 
   app.use("/api/jobs", jobRoutes(repo, options.clock));
   app.use("/api/review", reviewRoutes(repo));
+  app.use("/api/settings", settingsRoutes(repo));
   app.use("/api/sync", syncRoutes(repo));
 
   app.use((_req: Request, res: Response) => {

@@ -471,7 +471,7 @@ six. Rejection returns 400 with the field name.
 and drop the confidence meter; AI fields show `ConfidenceMeter`.
 
 *Revision 3 (28 September): correction happens in panel edit mode, and a correction that sets
-a terminal stage archives the application. See §15.3.*
+a terminal stage archives the application. See §15.3 — both built (T6.1, T4.9).*
 
 ### 7.8 F5 — Review queue *(confidence gate)*
 
@@ -486,7 +486,10 @@ queued the same way at any confidence, as is one with no company or role. Only t
 confirmation sets a user-only stage.*
 
 *Revision 3 (28 September): `users.review_threshold` exists but nothing reads it yet — the
-pipeline is handed the constant. See §15.3.*
+pipeline is handed the constant. See §15.3.* **Since T4.10 (5 October)** the pipeline reads
+each student's own threshold on every email, set from the Settings slider; at the maximum,
+1.0, everything is queued. The queue screen is built (T6.3): the model reports one confidence
+per email, so a card shows one figure, "How sure the model is about this email".
 
 ### 7.9 F6 — See the pipeline *(workflow 4)*
 
@@ -513,6 +516,9 @@ Precedence: the AI-extracted `next_action` if present → otherwise a stage-deri
 (`applied` → "Wait for response"; `assessment` → "Complete online assessment";
 `interview` → "Confirm interview time"; `offer` → "Respond to offer") → overridden by the
 follow-up rule when stale ("Follow up — no reply in 14 days").
+
+**A next action the student set overrides all of it** and is shown exactly as set, blank
+included (C23, 5 October). Deriving over it made a saved correction look unsaved.
 
 Deadline-bearing actions render with the date appended: "Complete online assessment by
 23 May". Imperative, specific, sentence case, no trailing period ([design.md §9](design.md)).
@@ -587,7 +593,7 @@ mandatory first argument on every method.
 | `POST` | `/api/review/:eventId/dismiss` | Not an application |
 | `POST` | `/api/sync` | Incremental sync; 409 if already running |
 | `GET` | `/api/sync/status` | Progress for the in-flight sync |
-| `GET`/`PATCH` | `/api/settings` | Review threshold, reminders, profile |
+| `GET`/`PATCH` | `/api/settings` | Review threshold (built, T4.10); reminders and profile not planned for the MVP |
 
 Every request body is Zod-validated by shared schemas. Validation failure → 400 with the
 offending field. Unknown fields are stripped, never persisted.
@@ -607,7 +613,9 @@ Shipped: `/api/me`, all four `/api/jobs` routes, all three `/api/review` routes,
   honest refusal, so the route says what is missing and names the tasks that supply it.
   The 409-on-concurrent contract therefore remains untested and **T4.6 stays open**.
 - **No `/api/settings`.** Belongs with the settings view (Phase 6); the review threshold
-  is currently the `DEFAULT_REVIEW_THRESHOLD` constant.
+  is currently the `DEFAULT_REVIEW_THRESHOLD` constant. *Built 5 October (T4.10):*
+  `GET /api/settings` returns `{ reviewThreshold }`; `PATCH` takes the same, 0–1, and an
+  empty change is a 400. `/api/me` reports the stored value.
 - **`GET /api/jobs` also returns `stats`** — `liveApplications`, `dueThisWeek`,
   `needsReview`, `emailsRead` — rather than requiring a second request for the header
   the dashboard always renders alongside the list.
@@ -664,6 +672,15 @@ files that the drift test would then reject.
 **One clock.** `daysLeft` is computed server-side from the `x-timezone` header and arrives on
 the payload. `src/format.ts` does no date arithmetic at all — only formatting — because a
 client that recomputed it could disagree with the rank the server assigned (defect C2).
+
+**Human-in-the-loop screens *(T6.1, T6.3, T6.4, T6.6, T5.11 — 5 October 2026)*.** The detail
+panel has an edit mode; `/review` is `views/ReviewView.tsx` and `/settings` is
+`views/SettingsView.tsx`; rows with an open question carry a "Review required" link; a search
+box filters the ranked list. Three small shared pieces: `views/fields.tsx` — the five inputs,
+and the one definition of a change both editors use; `src/motion.ts` — a motion token's
+duration, so a fading card is removed when the token says, and at once under reduced motion;
+`shell/VisuallyHidden.tsx` — a label with no room on screen. The deadline input is
+`datetime-local` in the browser's timezone, the zone the client already sends as `x-timezone`.
 
 ### Version constraint worth knowing
 
@@ -875,14 +892,19 @@ the step the pipeline uses, so only the fields the student changed become human 
 
 ### 15.3 Correction and settings *(D27, D28)*
 
-- **Panel edit mode.** `PATCH /api/jobs/:id` carries only the changed fields, and Save
-  detects an application changed by an ingest while the panel was open.
+- ✅ **Built 5 October (T6.1).** **Panel edit mode.** `PATCH /api/jobs/:id` carries only the
+  changed fields, and Save detects an application changed by an ingest while the panel was
+  open: it re-reads the application and compares the fields it is about to send. The panel
+  and the review card share `views/fields.tsx`, so "changed" has one definition. The job-edit
+  schema's validation messages are written to be shown beneath the field.
 - ✅ **Built 28 September (T4.9, defect C11).** A job's status is derived from its stage inside the
   repository, on every insert and update; `JobPatch` has no `status` field. Every path that
   writes a stage — correction, withdraw, review confirm, the pipeline, the seed — is covered
   by the one rule.
-- **`GET` / `PATCH /api/settings`** read and write `users.review_threshold` (T4.10). Ingest
-  passes each user's own value; changes apply to newly ingested mail only.
+- ✅ **Built 5 October (T4.10, T6.4).** **`GET` / `PATCH /api/settings`** read and write
+  `users.review_threshold`; changes apply to newly ingested mail only. Rather than ingest
+  passing each user's value, the pipeline reads it on every email — `PipelineDeps` has no
+  threshold, so no caller can pass a constant. The Settings slider saves once per gesture.
 
 ### 15.4 Harness *(D32, D33)*
 

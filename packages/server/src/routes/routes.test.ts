@@ -221,7 +221,29 @@ describe("PATCH /api/jobs/:id", () => {
       .send({ company: "   " })
       .expect(400);
     expect(res.body.field).toBe("company");
-    expect(res.body.error).toBeTruthy();
+    // Shown beneath the field as written, so it has to read as a sentence —
+    // not "String must contain at least 1 character(s)".
+    expect(res.body.error).toBe("Company cannot be empty.");
+  });
+
+  it("shows a next action the student typed, though the application has gone quiet (C23)", async () => {
+    // 46 days without an email: an assessment is long past its five-day
+    // staleness threshold, so the derived action is "Follow up".
+    const job = await seedJob(userId, { lastEventAt: new Date("2026-07-01T00:00:00Z") });
+    expect((await request(app).get(`/api/jobs/${job!.id}`)).body.job.nextAction).toMatch(/^Follow up/);
+
+    const res = await request(app)
+      .patch(`/api/jobs/${job!.id}`)
+      .send({ nextAction: "Email Priya about the test link" })
+      .expect(200);
+
+    expect(res.body.job.nextAction).toBe("Email Priya about the test link");
+  });
+
+  it("keeps a cleared next action clear instead of restoring the stage default (C23)", async () => {
+    const job = await seedJob(userId);
+    const res = await request(app).patch(`/api/jobs/${job!.id}`).send({ nextAction: null }).expect(200);
+    expect(res.body.job.nextAction).toBeNull();
   });
 
   it("strips unknown fields rather than persisting them", async () => {
@@ -584,7 +606,7 @@ describe("review routes", () => {
       },
     };
     await processEmail(
-      { repo, classifier: new FakeEmailClassifier({ fixtures: [offer] }), ownAddress: null, reviewThreshold: 0.75 },
+      { repo, classifier: new FakeEmailClassifier({ fixtures: [offer] }), ownAddress: null },
       userId,
       { ...offer.email, receivedAt: new Date(offer.email.receivedAt) },
     );
@@ -612,6 +634,74 @@ describe("review routes", () => {
     expect(sources["next_action"]).toBe("human");
     expect(sources["stage"]).toBe("ai"); // the email's own stage, through the stage engine
     expect((await repo.findJob(userId, job!.id))!.stage).toBe("interview");
+  });
+});
+
+describe("settings (T4.10)", () => {
+  it("reads the student's own review threshold — 0.75 until they change it", async () => {
+    const res = await request(app).get("/api/settings").expect(200);
+    expect(res.body).toEqual({ reviewThreshold: 0.75 });
+  });
+
+  it("persists a new threshold, and /api/me reports it rather than the constant", async () => {
+    await request(app).patch("/api/settings").send({ reviewThreshold: 0.9 }).expect(200);
+    expect((await request(app).get("/api/settings")).body.reviewThreshold).toBeCloseTo(0.9);
+    expect((await request(app).get("/api/me")).body.reviewThreshold).toBeCloseTo(0.9);
+  });
+
+  it("refuses a threshold outside 0–1, and an empty change", async () => {
+    await request(app).patch("/api/settings").send({ reviewThreshold: 1.5 }).expect(400);
+    await request(app).patch("/api/settings").send({}).expect(400);
+    expect((await request(app).get("/api/settings")).body.reviewThreshold).toBe(0.75);
+  });
+
+  it("changes only this student's threshold", async () => {
+    await request(app).patch("/api/settings").send({ reviewThreshold: 0.6 }).expect(200);
+    expect((await repo.getSettings(otherUserId))?.reviewThreshold).toBe(0.75);
+  });
+
+  it("routes the next ingest by a threshold set through the API, and re-routes nothing stored (T6.4)", async () => {
+    // The Settings slider's whole contract, end to end: PATCH, then ingest.
+    const fixture = (id: string, company: string): Fixture => ({
+      email: {
+        id,
+        gmailMessageId: id,
+        gmailThreadId: `${id}-t`,
+        receivedAt: "2026-08-15T00:00:00+00:00",
+        fromAddress: `careers@${company.toLowerCase()}.com`,
+        subject: "s",
+        body: "b",
+      },
+      expected: {
+        isApplication: true,
+        company,
+        role: "Graduate Program",
+        stage: "applied",
+        deadlineAt: null,
+        hasExplicitDeadlineLanguage: false,
+      },
+    });
+    const first = fixture("ingest-1", "Optiver");
+    const second = fixture("ingest-2", "Canva");
+    // The model is 80% sure of both: asserted at 0.75, asked about at 0.9.
+    const deps = {
+      repo,
+      classifier: new FakeEmailClassifier({ fixtures: [first, second], confidenceFor: () => 0.8 }),
+      ownAddress: null,
+    };
+    const ingest = (f: Fixture) =>
+      processEmail(deps, userId, { ...f.email, receivedAt: new Date(f.email.receivedAt) });
+
+    expect((await ingest(first)).kind).toBe("created-job");
+    await request(app).patch("/api/settings").send({ reviewThreshold: 0.9 }).expect(200);
+    expect((await ingest(second)).kind).toBe("queued-for-review");
+
+    expect((await request(app).get("/api/jobs")).body.jobs.map((j: { company: string }) => j.company)).toEqual([
+      "Optiver",
+    ]);
+    expect((await request(app).get("/api/review")).body.items.map((i: { company: string }) => i.company)).toEqual([
+      "Canva",
+    ]);
   });
 });
 

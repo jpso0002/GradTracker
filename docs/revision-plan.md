@@ -91,10 +91,11 @@ Full reasoning and rejected options are in [decision-record.md](decision-record.
 | **C13** | RQ-04 scores every extracted field, but next action has no scoring method. | T2.10 — judged after each run |
 | **C14** | The 80 fixtures shaped the prompt, so they are not the held-out set RQ-03 requires. | T8.3 — they become the tuning set |
 | **C15** | The docs gave the semester-1 unit code. | ✅ Fixed |
-| **C16** | Confirming a review item onto an existing application moves its stage and `lastEventAt` **backwards** and locks all five fields. Found by probe while fixing C11. | T3.11, with T3.10 |
+| **C16** | Confirming a review item onto an existing application moves its stage and `lastEventAt` **backwards** and locks all five fields. Found by probe while fixing C11. | ✅ Fixed by T3.11, with T3.10 |
 
 Also found: `users.review_threshold` has existed since T1.4 but **nothing reads it** —
 `/api/me` reports the constant and the harvest importer hard-codes 0.75. T4.10 wires it.
+✅ *Wired 5 October: the pipeline reads each student's own value on every email.*
 
 ---
 

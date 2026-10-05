@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, cleanup, within } from "@testing-library/react";
+import { render, screen, cleanup, within, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { App } from "../App";
 import { ThemeProvider } from "../theme/theme";
@@ -57,5 +58,36 @@ describe("sidebar (T5.10)", () => {
     expect(screen.getAllByText("Not found").length).toBeGreaterThan(0);
     expect(screen.queryByText(/No design exists for this yet/)).toBeNull();
     expect(screen.queryByText(/are on the Archived tab of your pipeline/)).toBeNull();
+  });
+});
+
+describe("the review queue in the shell (T6.3)", () => {
+  it("keeps the sidebar count in step with the queue", async () => {
+    const pending = {
+      eventId: "11111111-1111-4111-8111-111111111111",
+      receivedAt: "2026-08-15T00:00:00.000Z",
+      senderDomain: "boutique-consult.com.au",
+      company: "Boutique Consulting",
+      role: "Graduate Analyst",
+      stage: "applied" as const,
+      deadlineAt: null,
+      nextAction: null,
+      confidence: 0.62,
+      suggestedJob: null,
+    };
+    // One read for the queue, one for the sidebar; after a confirm, empty.
+    vi.spyOn(api, "listReview")
+      .mockResolvedValueOnce({ items: [pending] })
+      .mockResolvedValueOnce({ items: [pending] })
+      .mockResolvedValue({ items: [] });
+    vi.spyOn(api, "confirmReview").mockResolvedValue({ jobId: "j1", matched: false });
+    renderAt("/review");
+    const nav = screen.getByRole("navigation");
+
+    // The count sits in its own span, so the name reads "Needs review1".
+    expect(await within(nav).findByRole("button", { name: /^Needs review\s*1$/ })).toBeDefined();
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(within(nav).getByRole("button", { name: /^Needs review\s*0$/ })).toBeDefined());
   });
 });

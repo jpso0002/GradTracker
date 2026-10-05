@@ -20,15 +20,15 @@ when its dependencies are checked off.
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** |
 | 2 — Harness | 2–3 | T2.1–T2.12 | ◐ T2.1–T2.7, T2.9, **T2.11** done · **T2.12** written, completes at T8.3 · T2.8 waits on B3 · T2.10 open |
 | 3 — Pipeline | 3–5 | T3.1–T3.12 | ◐ T3.1–T3.7, T3.9–T3.12 done · **T3.8 reinstated** as drop-folder sync |
-| 4 — API | 5–6 | T4.1–T4.10 | ◐ T4.4, T4.5, T4.8, **T4.9** done · T4.6 partial · T4.10 open · auth deferred |
-| 5 — Dashboard | 6–8 | T5.1–T5.12 | ◐ T5.1–T5.3, T5.5, T5.6, **T5.10** done · T5.7 partial · T5.4 deferred · T5.11, T5.12 open |
-| 6 — Human-in-the-loop | 8–9 | T6.1–T6.6 | ☐ Not started · **T6.1, T6.3, T6.4 redefined** · **T6.6 new** |
+| 4 — API | 5–6 | T4.1–T4.10 | ◐ T4.4, T4.5, T4.8, T4.9, **T4.10** done · T4.6 partial · auth deferred |
+| 5 — Dashboard | 6–8 | T5.1–T5.12 | ◐ T5.1–T5.3, T5.5, T5.6, T5.10, **T5.11** done · T5.7 partial · T5.4 deferred · T5.12 open |
+| 6 — Human-in-the-loop | 8–9 | T6.1–T6.6 | ◐ **T6.1, T6.3, T6.4, T6.6** done · T6.2, T6.5 open |
 | 7 — Ingestion & live classifier | 9–11 | T7.1–T7.10 | ◐ **T7.8 done** (pulled forward for T2.11) · **T7.3 reinstated** · **T7.7, T7.9, T7.10 new** · T7.1, T7.2, T7.4–T7.6 deferred |
 | 8 — Traceability | 11–12 | T8.1–T8.5 | ◐ **T8.3 reinstated** · the rest deferred |
 
-**468 tests green.** Steps 1, 2 and 5 of the Plan of record are complete, and T3.12 of step 3
-(5 October 2026); every other task marked **new** or **reinstated** above is open, except
-T7.8, pulled forward.
+**510 tests green.** Steps 1, 2, 5 and 6 of the Plan of record are complete, and T3.12 of
+step 3 (5 October 2026); every other task marked **new** or **reinstated** above is open,
+except T7.8, pulled forward.
 
 ---
 
@@ -66,7 +66,7 @@ T3.12, now done; its T7.3 and T2.8 wait on **B3**.
 | **3** ◐ | T3.12 · T7.3 · T2.8 | Prompt v2, so the prompt and the labelling guide agree (**C17**, **C20**) before anything is measured — *done 28 Sep* — then the live classifier, then the Haiku-vs-Sonnet benchmark | T7.3, T2.8: **B3** |
 | **4** | T7.7 · T7.9 · T7.10 · T3.8 · T4.6 | Hybrid ingestion: event source and correct Gmail links (**C10**), unlabelled harvest, one ingest command, drop-folder sync — the mailbox reader (T7.8) already exists | T7.3 |
 | **5** ✅ | T3.10 · T3.11 | Ambiguous matches routed to review (**C18**) · confirming onto an existing application applies the email, not a correction (**C16**) — *done 5 Oct* | — |
-| **6** | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search | — *(T4.9 and T3.10 are done)* |
+| **6** ✅ | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search — *done 5 Oct*, fixing **C23** on the way | — |
 | **7** | T5.7 · T5.8 · T6.5 · T4.7 · T5.12 · T5.9 | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
 | **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run. **Exporting and labelling can start now** — the toolkit and guide exist | **B6** · measuring: T7.3 |
 
@@ -246,6 +246,7 @@ the documents right now.
 | ~~C20~~ | **Fixed 28 September 2026 by T3.12.** ~~The model was shown each email's received time in **UTC only**, while relative deadlines count from the local date — the prompt said to resolve them "against the email's received date". At 08:00 in Melbourne it is still the previous day in UTC, so "within 7 days" would resolve a day early. Hidden in the corpus, where every email arrives after 10:00 Melbourne time. Found writing prompt v2.~~ | ~~The user message gives the received time in the student's timezone as well as UTC.~~ | ~~**T3.12**~~ Done |
 | ~~C21~~ | **Fixed 29 September 2026 (T7.8 reopened).** ~~The mailbox reader returned an **empty body** for HTML mail in two shapes the parser does not convert: Workday nests its HTML in multipart/related with no text part, and Criteria Corp sends a whitespace-only text part beside the real HTML. Found on the first real export — 7 of 120 emails, all from applicant-tracking systems, each with 600–2,500 characters of visible text. They could not have been labelled, and at ingestion the classifier would have seen an empty email from exactly the senders that send assessments. The reader's HTML test had covered only single-part HTML, which the parser does convert.~~ | ~~When no plain text survives, the HTML is converted with the parser's own library (`html-to-text`) at its defaults; both shapes tested.~~ | ~~**T7.8**~~ Done |
 | ~~C22~~ | **Fixed 29 September 2026.** ~~A path containing a space reached the labelling toolkit mangled — `^C:\…\GradTracker^ export.mbox^` — so the documented command failed on every Takeout export, whose file is named `GradTracker export.mbox`. On Windows, npm escapes `--` arguments for cmd.exe, twice when the script begins with a batch file, and `npm run typecheck && node …` begins with `npm.cmd`. The end-to-end check had used a path without spaces.~~ | ~~`label` and `accuracy` start with `node`; their build step moved into `prelabel` and `preaccuracy`. A test fails if either script stops starting with `node`.~~ | Done |
+| ~~C23~~ | **Fixed 5 October 2026 with T6.1.** ~~A next action the student set was replaced on screen by a derived one. The API derives the displayed next action — staleness ("Follow up — no reply in 15 days") overrides the stored value, a closed application shows none, and an empty value shows the stage default — and it applied all three over the student's own value too. So a correction saved, became `human`, and **looked as though it had not**: typed on a quiet application it was hidden behind "Follow up", and cleared it came straight back as "Complete online assessment". Found designing the panel's edit mode, which T6.1's "all five fields editable" would have shipped broken.~~ | ~~A next action the student set is shown exactly as set, blank included; derivation applies only to the model's values.~~ | ~~**T6.1**~~ Done |
 | ~~C16~~ | **Fixed 5 October 2026 by T3.11.** ~~Confirming a review item that **matches an existing application** writes every detected field as a human correction. An older, low-confidence "application received" email confirmed onto an application at interview moves its stage **back** to applied, moves `lastEventAt` **back** from 14 to 2 August, and locks all five fields — so a later offer or rejection can never move it again. Found 28 September by a probe while fixing C11 on the same code path. Latent today — no seeded review item matches an existing application — but T3.10 routes more items through exactly this path.~~ | ~~A match applies the email as the pipeline would; only fields the student edited become human.~~ | ~~**T3.11**~~ Done |
 
 ---
@@ -939,7 +940,7 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   those workarounds are removed and the tests pass without them. The reseeded demo database
   has identical stage and status pairs, with no archive step anywhere in the seed.
 
-- [ ] **T4.10 — Settings API** · Lane A · needs T4.4 · *new 28 Sep*
+- [x] **T4.10 — Settings API** · Lane A · needs T4.4 · *new 28 Sep* · ✅ **2026-10-05**
   `GET` / `PATCH /api/settings` reading and writing `users.review_threshold`. The column has
   existed since T1.4 (default 0.75) but **nothing reads it**: `/api/me` reports the constant
   and the harvest importer hard-codes 0.75. Ingest passes each user's own threshold instead.
@@ -947,6 +948,16 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   applications the student may have acted on (D28).
   *Done when:* changing the threshold changes the routing of the next ingest and nothing
   already stored, both asserted.
+  *Verified:* tests written first and seen failing with the pipeline still on the constant —
+  two 80%-sure emails, the threshold raised to 0.9 between them: the first stays asserted, the
+  second is asked about. **The pipeline now reads the student's threshold itself, on every
+  email**; `PipelineDeps` has no threshold, so no ingest path can pass a constant again, as the
+  harvest importer did. "Review everything" at the maximum (D28) is now true — a strict
+  less-than alone would still have asserted an email the model scored 1.0, and a test says so.
+  `GET`/`PATCH /api/settings`: an empty change or a value outside 0–1 is a 400, another
+  student's threshold is untouched, and `/api/me` reports the stored value. A route test sets
+  the threshold through `PATCH` and then ingests; in the browser, an 85%-sure email went to
+  review once the slider stood at 90%.
 
 - [ ] **T4.7 — Security test suite** · Lane B · needs T4.1–T4.6
   Consolidates: no password column, token encryption, HTTPS, session flags, validation,
@@ -1063,11 +1074,19 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   found; no console errors. Also corrected the Settings placeholder, which said settings arrive
   with T6.5 — Settings is T6.4.
 
-- [ ] **T5.11 — Search that keeps rank order** · Lane C · needs T5.5 · *new 28 Sep*
+- [x] **T5.11 — Search that keeps rank order** · Lane C · needs T5.5 · *new 28 Sep* · ✅ **2026-10-05**
   **D30**, resolving the old R09 flag. A search box narrows the list by company or role; the
   order stays the server's — the same rule the stage chips already follow.
   *Done when:* a test types a query and asserts the surviving rows keep their server order,
   and that clearing it restores the full list unchanged.
+  *Verified:* three tests written first and seen failing. A query narrows by company or role,
+  in any case, and the survivors keep the server's order — the rows are chosen so that an
+  alphabetical sort would reorder them; clearing restores the full list unchanged; no match
+  says so and offers Clear search; and "/", the shortcut the design system's search field
+  advertises, moves focus to it. Search is a client-side `filter`, never a `sort`, and asks the
+  server for nothing. In the browser, "graduate" left 18 of 22 rows as an in-order subsequence
+  of the ranking, and clearing restored all 22. Found on the way: every row's tooltip read
+  "Detected from Detected from …", because the row adds the phrase itself — fixed.
 
 - [ ] **T5.12 — Performance measurement** · Lane B · needs T5.5 · *new 28 Sep*
   RQ-09's performance clause and SM-8: time the pipeline render and an edit round-trip on the
@@ -1080,7 +1099,7 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
 
 The product's most important feature. Every task here serves SM-7.
 
-- [ ] **T6.1 — Panel edit mode** · Lane C · needs T5.6, T4.4, **T4.9** · *redefined 28 Sep*
+- [x] **T6.1 — Panel edit mode** · Lane C · needs T5.6, T4.4, **T4.9** · *redefined 28 Sep* · ✅ **2026-10-05**
   **D27.** The detail panel switches into edit mode and all five extractable fields become
   editable together. Changes are held in a temporary state: **Save** commits them in one
   request, **Cancel** discards them. Two rules that are easy to get wrong:
@@ -1091,6 +1110,21 @@ The product's most important feature. Every task here serves SM-7.
   *Done when:* all five fields are editable without leaving the dashboard; an untouched Save
   changes no provenance; a validation failure keeps the student's typing; and the stale-edit
   warning is tested.
+  *Verified:* eight tests written first and seen failing. All five fields edit in the panel
+  and Save sends exactly the changed ones; Save with nothing changed — typed-and-deleted
+  included — sends **no request at all**, so no field becomes Edited; a refusal keeps the
+  typing, with the server's message beneath the field, `aria-invalid` and focus; the stale-edit
+  warning names what changed — **Save anyway**, or **Keep editing**, after which the
+  student's value stays and Save does not ask twice; a field the student left alone never
+  warns, since Save does not send it; Cancel and Escape discard. Before saving, the panel
+  re-reads the application and compares only the fields being saved. In the browser, on a
+  scratch copy of the demo database: a next action saved on Telstra became its only human
+  field; a role changed from a second tab mid-edit produced "Role is now “Graduate Engineer
+  (Networks)”" with focus on Keep editing; a blank company came back as "Company cannot be
+  empty." beneath the field — the job-edit schema's messages are now written for the student,
+  since the panel shows them as they are. **Found on the way: C23** — a next action the
+  student set was hidden by derived ones, so this task's "all five fields editable" would
+  have shipped with one that looked unsaved. Fixed first, with tests.
 
 - [ ] **T6.2 — AI-vs-human visual contract** · Lane C · needs T6.1
   Per [design.md §7](design.md): AI field shows `ConfidenceMeter`; human field shows an
@@ -1098,19 +1132,43 @@ The product's most important feature. Every task here serves SM-7.
   *Done when:* provenance is distinguishable while scanning, without interaction, and carried
   by a text tag rather than colour alone.
 
-- [ ] **T6.3 — Review queue view** · Lane C · needs T4.5, T5.2, T3.10
+- [x] **T6.3 — Review queue view** · Lane C · needs T4.5, T5.2, T3.10 · ✅ **2026-10-05**
   Per-item cards with per-field confidence and source. Confirm / Edit and confirm / Not an
   application. Sidebar count. *28 Sep:* an item carrying a suggested application (T3.10) asks
   **same application, or a new one?** before confirming.
   *Done when:* confirming creates or updates a job with confirmed fields marked `human`, both
   answers to a suggestion are tested, and the item animates out with focus moving to the next.
+  *Verified:* eleven tests written first and seen failing — ten for the view, one for the
+  shell. Each card shows company, role, stage, deadline, next action, sender domain and date,
+  and the model's confidence as "How sure the model is about this email" — **one figure per
+  email**, which is what the classifier reports, so "per-field confidence" is per email.
+  Confirm on an untouched card sends nothing but the answer; Edit sends only the changed
+  fields (D27's rule); a suggestion must be answered — unanswered, Confirm asks and focuses
+  the first choice — and **both answers are tested**; Not an application dismisses; a refusal
+  opens the editor with the reason beneath the field; a handled card fades on the motion
+  tokens before it leaves, so `prefers-reduced-motion` removes it at once, and focus moves to
+  the next card, or to the empty queue; a row marker's link lands on its card; the sidebar
+  count follows. That confirmed fields become `human` — on a new application all of them, on
+  an existing one only those changed — is the server's, covered by T4.8's and T3.11's route
+  tests. In the browser, the marker's link focused the Macquarie card, "New application"
+  created a separate application with every field human and left the tracked one untouched,
+  focus moved to the next card and the sidebar fell from 5 to 4.
 
-- [ ] **T6.4 — Settings view** · Lane C · needs T5.2, T4.10 · *redefined 28 Sep*
+- [x] **T6.4 — Settings view** · Lane C · needs T5.2, T4.10 · *redefined 28 Sep* · ✅ **2026-10-05**
   Review-threshold slider ("How sure GradTracker must be before adding an application
   automatically"), stating that it applies to new mail only (D28) · theme. Gmail connection
   and Disconnect are deferred with T4.1–T4.3 — there is no stored token to disconnect.
   *Done when:* moving the slider persists through `PATCH /api/settings`, and the next ingest
   routes by the new threshold.
+  *Verified:* six tests written first and seen failing: the stored threshold is shown with
+  "Applies to new mail only"; moving the slider persists through `PATCH /api/settings`; a drag
+  saves **once**, not once per step; at the maximum the copy says every application email
+  waits; a failed save puts the slider back and says so; the theme switch works. The second
+  half of the done-when is T4.10's route test — a threshold set through `PATCH`, then an
+  ingest routed by it. The slider is a native range input, so the keyboard works without help,
+  and it announces "75%" rather than 0.75. The Gmail section says plainly that there is
+  nothing to connect in demo mode. In the browser, three arrow-key steps made one `PATCH`, and
+  `/api/settings` and `/api/me` both read 0.9.
 
 - [ ] **T6.5 — Accessibility pass** · Lane C · needs T6.1–T6.4
   Per [design.md §10](design.md): keyboard paths, `role="meter"` with text alternative,
@@ -1119,12 +1177,25 @@ The product's most important feature. Every task here serves SM-7.
   stage and deadline signal survives colour removal. *28 Sep:* RQ-09 names **WCAG 2.1 AA** —
   record the audit against it, including a contrast check, since nothing in the repository
   checks contrast today.
+  *5 Oct — gaps seen while building step 6, for the audit:* pipeline rows are still `div`s
+  with a click handler, so the panel cannot be opened by keyboard (design.md §10.2 says rows
+  are real buttons); the design system's `Switch` hides its checkbox at zero size, so the
+  theme switch shows no focus ring; no view has an `<h1>` — `TopBar` renders its title as a
+  `span`; a field's validation message sits inside its label, so it is read as part of the
+  field's name rather than announced; the search box's name includes its "/" hint.
 
-- [ ] **T6.6 — "Review required" marker on rows** · Lane C · needs T3.10, T6.3 · *new 28 Sep*
+- [x] **T6.6 — "Review required" marker on rows** · Lane C · needs T3.10, T6.3 · *new 28 Sep* · ✅ **2026-10-05**
   A row with a pending suggestion (T3.10) carries a small marker linking to that item in the
   review queue — the concrete meaning of the marker proposed on 1 September.
   *Done when:* the marker appears exactly while a pending suggestion exists, disappears once
   it is resolved, and is announced to assistive technology rather than carried by colour.
+  *Verified:* two tests written first and seen failing: the marker appears on exactly the rows
+  with an open question, as a link named "Review required: an email may belong to …" —
+  words, not a coloured dot — to `/review#review-<id>`; and it is gone once the server stops
+  reporting the question. Rows now sit in a `listitem` that carries the hairline and the
+  tints, so the marker's line reads as part of its row. In the browser, an ambiguous Macquarie
+  email run through the real pipeline put the marker on the Macquarie row only; answering the
+  question removed it.
 
 ---
 

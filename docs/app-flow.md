@@ -190,7 +190,8 @@ build your pipeline. Nothing is sent and nothing is stored." Never a dead end.
 
 Filters (stage chips, Active/Archived tabs) **re-filter but never re-sort**. Urgency order
 is the product's one opinion and it is not overridable — a student who sorts by company name
-has recreated their spreadsheet.
+has recreated their spreadsheet. The search box (D30, built 5 October) follows the same
+rule: it narrows by company or role, and the rows that survive keep their rank.
 
 ### 4.3 Journey C — Correct the AI *(workflow 6)*
 
@@ -216,6 +217,12 @@ mode, shows the error beneath the field, and never discards what was typed. **If
 changed the application while the panel was open**, Save says so and asks before
 overwriting. **Request failure** keeps the edits and shows an error toast with "Try again".
 
+*Built 5 October 2026 (T6.1).* Save with nothing changed sends nothing. The stale-edit
+warning names each changed field's new value and offers **Save anyway** or **Keep editing**;
+Keep editing shows the new values and keeps the student's own. A failed request keeps the
+edits with an error toast, and Save tries again — the toast carries no button of its own.
+`Escape` cancels; focus returns to **Edit**.
+
 ### 4.4 Journey D — Review queue *(workflow 6, low-confidence path)*
 
 **Goal:** the model asks instead of guessing.
@@ -236,6 +243,11 @@ overwriting. **Request failure** keeps the edits and shows an error toast with "
 **Why fields land here individually.** A student confirming a company but not a deadline
 should be able to say so — per-field confidence and per-field confirmation is what makes
 this a review rather than an all-or-nothing accept.
+
+*As built (T6.3, 5 October 2026).* The classifier reports **one confidence per email**, so a
+card shows one figure: "How sure the model is about this email". Per-field confirmation is
+**Edit**: the student changes or clears any field before confirming, and only the fields
+changed are sent. Confirm on an unanswered suggestion asks rather than guessing.
 
 **Suggested applications** *(28 September 2026, D26)*. When an email matches an existing
 application on company and sender alone, with a clearly different role, it lands here
@@ -301,6 +313,11 @@ the mesh.
 
 Rows are keyboard-navigable buttons. Selected rows take `--surface-selected`.
 
+*Built 5 October 2026:* a search box in the top bar narrows by company or role without
+reordering (D30, T5.11), and a row with an open question carries a "Review required" link to
+its card (T6.6). *Not yet:* rows are not keyboard-reachable — recorded for the accessibility
+pass (T6.5).
+
 ### 5.3 Detail panel
 
 Company and role (both editable) · `StageBadge` with a stage `Select` · extracted fields
@@ -317,13 +334,19 @@ never means showing stored email content.
 
 Header explaining the ask · one card per pending item with per-field confidence and source ·
 Confirm / Edit / Not an application · empty state as §4.4. An item carrying a suggested
-application asks **same application, or new?** before confirming (D26).
+application asks **same application, or new?** before confirming (D26). *Built 5 October
+2026 (T6.3)*; `/review#review-<id>` focuses one card, which is where a row's marker leads.
 
 ### 5.5 Settings
 
 Detection — review threshold slider, described as "How sure GradTracker must be before
 adding an application automatically", **stating that it applies to new mail only** (D28) ·
 follow-up reminder thresholds · profile · theme.
+
+*As built (T6.4, 5 October 2026):* the threshold slider — 0–100% in steps of 5, saved once
+the student stops moving it, with a line saying what the value means — and the theme.
+Reminder thresholds and profile are not in the redefined T6.4; follow-up staleness stays
+fixed per stage. A Gmail section says there is nothing to connect in demo mode.
 
 *Gmail connection and Disconnect are deferred with hosted OAuth (D23) — with no stored token
 there is nothing to disconnect. The behaviour below applies once OAuth is built.*
@@ -391,7 +414,7 @@ stuck, because that state most often means the gate is too high.
 | Student edits a field mid-sync | Provenance check happens inside the transaction; the human write wins regardless of ordering |
 | Student edits stage, then a later email suggests another | Human lock holds. Stage never changes again without the student |
 | Job with every field human-verified | Pipeline still records `email_events` for the timeline but writes no fields |
-| Confidence exactly at the threshold | `>=` accepts — the threshold is the accept boundary |
+| Confidence exactly at the threshold | `>=` accepts — the threshold is the accept boundary, except at the maximum, 1.0, which reviews everything (D28) |
 | Student lowers the threshold in Settings | Applies to future syncs only. Existing dismissed items stay dismissed |
 | Review item dismissed, same email re-fetched | UNIQUE constraint prevents re-queueing |
 | 200+ applications | Table virtualises past 50 rows. Ranking is unaffected |
@@ -410,8 +433,8 @@ stuck, because that state most often means the gate is too high.
 | Initial pipeline load | Skeleton rows, correct height — no layout shift when data arrives |
 | First scan | Progressive: rows appear as classified, with a live honest count |
 | Manual sync | Non-blocking. Button loading state; the table stays interactive |
-| Inline edit | Optimistic, with rollback on failure |
-| Confirm review item | Optimistic; item animates out; count decrements |
+| Panel edit (Save) | Waits for the server, saying "Saving…" — it checks for a stale edit first; on failure the edits stay *(revised 5 October 2026; was "inline edit, optimistic")* |
+| Confirm review item | Once the server agrees, the item animates out, focus moves to the next and the count decrements *(revised 5 October 2026; was optimistic)* |
 | Withdraw | Optimistic with an 8-second undo |
 | Any mutation | `Toast`, one line, sentence case, no trailing period |
 | Long operation (>2s) | Progress with a real number, never an indeterminate spinner alone |

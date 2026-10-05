@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { EmailEvent, FieldProvenance, Job } from "@gradtracker/shared";
 import {
   Button,
@@ -8,12 +8,25 @@ import {
   Icon,
   IconButton,
   StageBadge,
+  STAGES,
   Tag,
 } from "../ds";
-import { api } from "../api/client";
+import { api, ApiError, NetworkError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
 import { deadlineWording, formatDeadline, formatEventDate } from "../format";
+import {
+  EditFields,
+  FIELD_LABELS,
+  changedFields,
+  editableFieldOf,
+  formValues,
+  toPatch,
+  useFieldIds,
+  type EditableField,
+  type FieldError,
+  type FormValues,
+} from "./fields";
 
 /**
  * The 380px detail panel (T5.6).
@@ -23,6 +36,12 @@ import { deadlineWording, formatDeadline, formatEventDate } from "../format";
  * — never both, never neither (design.md §7). That is not decoration: it is
  * the difference between "the model guessed this" and "you told us this", and
  * a student correcting a deadline needs to know which they are looking at.
+ *
+ * **Edit mode (T6.1, D27).** All five extractable fields become editable
+ * together. Changes are held until Save commits them in one request; Cancel —
+ * or Escape — discards them. Save sends only the fields actually changed, and
+ * warns rather than silently replacing a value an ingest changed while the
+ * panel was open.
  */
 
 const GMAIL_SEARCH = "https://mail.google.com/mail/u/0/#search/";
@@ -38,6 +57,22 @@ export function DetailPanel({ jobId, onClose, onChanged }: DetailPanelProps) {
   const detail = useAsync(() => api.getJob(jobId), [jobId]);
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const editButtonId = useId();
+  // Closing the editor hands focus back to the control that opened it.
+  const refocusEdit = useRef(false);
+
+  useEffect(() => {
+    if (!editing && refocusEdit.current) {
+      refocusEdit.current = false;
+      document.getElementById(editButtonId)?.focus();
+    }
+  }, [editing, editButtonId]);
+
+  const closeEditor = () => {
+    refocusEdit.current = true;
+    setEditing(false);
+  };
 
   const withdraw = async () => {
     setBusy(true);
@@ -68,7 +103,12 @@ export function DetailPanel({ jobId, onClose, onChanged }: DetailPanelProps) {
         overflowY: "auto",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "var(--space-xs)" }}>
+        {detail.data && !editing ? (
+          <Button id={editButtonId} variant="quiet" size="sm" iconLeft="pencil" onClick={() => setEditing(true)}>
+            Edit
+          </Button>
+        ) : null}
         <IconButton icon="x" label="Close detail panel" onClick={onClose} />
       </div>
 
@@ -80,23 +120,242 @@ export function DetailPanel({ jobId, onClose, onChanged }: DetailPanelProps) {
         </p>
       ) : detail.data ? (
         <>
-          <Header job={detail.data.job} />
-          <Fields job={detail.data.job} />
+          {editing ? (
+            <EditForm
+              job={detail.data.job}
+              onCancel={closeEditor}
+              onSaved={() => {
+                closeEditor();
+                toast.show("Application updated");
+                detail.reload();
+                onChanged();
+              }}
+            />
+          ) : (
+            <>
+              <Header job={detail.data.job} />
+              <Fields job={detail.data.job} />
+            </>
+          )}
           <Timeline events={detail.data.timeline} />
-          <Button
-            variant="quiet"
-            iconLeft="archive"
-            disabled={busy}
-            fullWidth
-            onClick={() => void withdraw()}
-          >
-            Withdraw application
-          </Button>
+          {editing ? null : (
+            <Button
+              variant="quiet"
+              iconLeft="archive"
+              disabled={busy}
+              fullWidth
+              onClick={() => void withdraw()}
+            >
+              Withdraw application
+            </Button>
+          )}
         </>
       ) : null}
     </aside>
   );
 }
+
+// ── Edit mode ───────────────────────────────────────────────────────────────
+
+interface StaleEdit {
+  /** The application as it is now. */
+  latest: Job;
+  /** The fields the student changed that an ingest has also changed. */
+  fields: EditableField[];
+}
+
+function EditForm({ job, onCancel, onSaved }: { job: Job; onCancel: () => void; onSaved: () => void }) {
+  const toast = useToast();
+  const ids = useFieldIds();
+  const keepEditingId = useId();
+  // What the student is editing against. Moves only when they have seen a
+  // newer version — "Keep editing" after a stale-edit warning.
+  const [baseline, setBaseline] = useState<Job>(job);
+  // Only the fields the student has touched.
+  const [draft, setDraft] = useState<Partial<FormValues>>({});
+  const [error, setError] = useState<FieldError | null>(null);
+  const [stale, setStale] = useState<StaleEdit | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const original = formValues(baseline);
+  const values: FormValues = { ...original, ...draft };
+
+  // Where focus goes after the next render: the first field on opening, a
+  // refused field (with its typing kept), the safe choice when the stale-edit
+  // warning appears, and the changed field once the student has seen it.
+  const focusNext = useRef<string | null>(ids.company);
+  useEffect(() => {
+    if (focusNext.current === null) return;
+    document.getElementById(focusNext.current)?.focus();
+    focusNext.current = null;
+  });
+
+  const change = (field: EditableField, value: string) => {
+    setDraft((current) => ({ ...current, [field]: value }));
+    if (error?.field === field) setError(null);
+  };
+
+  const save = async (overwrite: boolean) => {
+    if (saving) return;
+    const fields = changedFields(values, original);
+    if (fields.length === 0) {
+      // Nothing to send — and nothing sent, so no field becomes Edited.
+      toast.show("No changes to save", "info");
+      onCancel();
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      if (!overwrite) {
+        // Did an ingest change any field the student is about to replace?
+        const latest = (await api.getJob(baseline.id)).job;
+        const now = formValues(latest);
+        const moved = fields.filter((field) => now[field] !== original[field]);
+        if (moved.length > 0) {
+          focusNext.current = keepEditingId;
+          setStale({ latest, fields: moved });
+          return;
+        }
+      }
+      setStale(null);
+      await api.updateJob(baseline.id, toPatch(values, fields));
+      onSaved();
+    } catch (cause) {
+      const field = cause instanceof ApiError ? editableFieldOf(cause.field) : null;
+      if (field && cause instanceof ApiError) {
+        focusNext.current = ids[field];
+        setError({ field, message: cause.message });
+      } else {
+        toast.show(
+          cause instanceof NetworkError
+            ? "You are offline — nothing was saved."
+            : cause instanceof Error
+              ? cause.message
+              : "Could not save",
+          "error",
+        );
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const keepEditing = () => {
+    if (!stale) return;
+    // The student has now seen the newer values. Their own edits stay.
+    focusNext.current = ids[stale.fields[0]!];
+    setBaseline(stale.latest);
+    setStale(null);
+  };
+
+  return (
+    <form
+      aria-label="Edit application"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void save(false);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+      style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}
+    >
+      <EditFields values={values} onChange={change} ids={ids} error={error} />
+
+      {stale ? (
+        <StaleWarning
+          stale={stale}
+          keepEditingId={keepEditingId}
+          onOverwrite={() => void save(true)}
+          onKeepEditing={keepEditing}
+        />
+      ) : (
+        <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+          <Button type="submit" aria-busy={saving || undefined}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+          <Button type="button" variant="quiet" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+      )}
+    </form>
+  );
+}
+
+/** The value a field has now, in the words the panel uses for it. */
+function describe(field: EditableField, job: Job): string {
+  switch (field) {
+    case "company":
+      return `“${job.company}”`;
+    case "role":
+      return `“${job.role}”`;
+    case "stage":
+      return STAGES[job.stage].label;
+    case "deadlineAt":
+      return job.deadlineAt ? formatDeadline(job.deadlineAt) : "not set";
+    case "nextAction":
+      return job.nextAction ? `“${job.nextAction}”` : "not set";
+  }
+}
+
+function StaleWarning({
+  stale,
+  keepEditingId,
+  onOverwrite,
+  onKeepEditing,
+}: {
+  stale: StaleEdit;
+  keepEditingId: string;
+  onOverwrite: () => void;
+  onKeepEditing: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-sm)",
+        padding: "var(--space-md)",
+        borderRadius: "var(--radius-md)",
+        border: "1px solid var(--border-strong)",
+        background: "var(--surface-sunken)",
+        fontSize: "var(--body-tabular-size)",
+      }}
+    >
+      <p style={{ margin: 0, display: "flex", gap: "var(--space-sm)", color: "var(--text-heading)" }}>
+        <Icon name="triangle-alert" size={16} />
+        This application changed while you were editing.
+      </p>
+      <ul style={{ margin: 0, paddingLeft: "var(--space-xl)", color: "var(--text-body)" }}>
+        {stale.fields.map((field) => (
+          <li key={field}>
+            {FIELD_LABELS[field]} is now {describe(field, stale.latest)}
+          </li>
+        ))}
+      </ul>
+      <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "var(--caption-size)" }}>
+        Save anyway replaces {stale.fields.length === 1 ? "it" : "them"} with yours.
+      </p>
+      <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+        <Button type="button" size="sm" onClick={onOverwrite}>
+          Save anyway
+        </Button>
+        <Button id={keepEditingId} type="button" size="sm" variant="quiet" onClick={onKeepEditing}>
+          Keep editing
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Reading ─────────────────────────────────────────────────────────────────
 
 function Header({ job }: { job: Job }) {
   return (

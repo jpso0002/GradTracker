@@ -128,14 +128,26 @@ export type ProcessOutcome =
   | { kind: "created-job"; jobId: string }
   | { kind: "updated-job"; jobId: string; stageChanged: boolean };
 
+/**
+ * There is deliberately no review threshold here. The pipeline reads the
+ * student's own on every email (T4.10): while callers passed one, the harvest
+ * importer passed a constant 0.75 and the student's setting was never read.
+ */
 export interface PipelineDeps {
   repo: Repository;
   classifier: EmailClassifier;
   /** The student's own address, so their sent mail is skipped. */
   ownAddress: string | null;
-  /** Below this, the email is queued for review rather than entering the
-   *  pipeline as fact. Per-user; defaults to 0.75. */
-  reviewThreshold: number;
+}
+
+/**
+ * Whether the model is too unsure for an email to enter the pipeline as fact.
+ *
+ * The maximum means "review everything" (D28). A strict less-than on its own
+ * would still assert an email the model scored 1.0.
+ */
+export function routesToReview(confidence: number, reviewThreshold: number): boolean {
+  return reviewThreshold >= 1 || confidence < reviewThreshold;
 }
 
 /**
@@ -215,9 +227,12 @@ export async function processEmail(
     return { kind: "queued-for-review", eventId: event!.id };
   };
 
-  // Below the gate the model is not confident enough for this to enter the
-  // pipeline as fact.
-  if (c.confidence < deps.reviewThreshold) return askTheStudent();
+  // Below the student's own threshold the model is not confident enough for
+  // this to enter the pipeline as fact. Read now, per email, so a change routes
+  // the next email ingested and nothing already stored (D28).
+  const settings = await deps.repo.getSettings(userId);
+  if (!settings) throw new Error(`No user ${userId} to ingest mail for.`);
+  if (routesToReview(c.confidence, settings.reviewThreshold)) return askTheStudent();
 
   // The model may recognise a withdrawal; only the student may apply one.
   // Checked before matching, so it holds on every path — a new application

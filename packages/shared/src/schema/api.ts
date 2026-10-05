@@ -61,14 +61,32 @@ export type JobDetailResponse = z.infer<typeof JobDetailResponseSchema>;
  * Inline correction. Every supplied field flips to `source: 'human'` and is
  * never overwritten by a later sync. At least one field must be present —
  * an empty patch is a 400, not a silent no-op.
+ *
+ * Messages are written for the student: the panel shows them beneath the
+ * field as they are (T6.1).
  */
 export const UpdateJobBodySchema = z
   .object({
-    company: z.string().trim().min(1).max(LIMITS.COMPANY_MAX).optional(),
-    role: z.string().trim().min(1).max(LIMITS.ROLE_MAX).optional(),
+    company: z
+      .string()
+      .trim()
+      .min(1, "Company cannot be empty.")
+      .max(LIMITS.COMPANY_MAX, `Company must be ${LIMITS.COMPANY_MAX} characters or fewer.`)
+      .optional(),
+    role: z
+      .string()
+      .trim()
+      .min(1, "Role cannot be empty.")
+      .max(LIMITS.ROLE_MAX, `Role must be ${LIMITS.ROLE_MAX} characters or fewer.`)
+      .optional(),
     stage: StageEnum.optional(),
-    deadlineAt: z.string().datetime().nullable().optional(),
-    nextAction: z.string().trim().max(LIMITS.NEXT_ACTION_MAX).nullable().optional(),
+    deadlineAt: z.string().datetime({ message: "Deadline must be a date and time." }).nullable().optional(),
+    nextAction: z
+      .string()
+      .trim()
+      .max(LIMITS.NEXT_ACTION_MAX, `Next action must be ${LIMITS.NEXT_ACTION_MAX} characters or fewer.`)
+      .nullable()
+      .optional(),
   })
   .refine((body) => Object.keys(body).length > 0, {
     message: "At least one field must be supplied.",
@@ -145,9 +163,27 @@ export type SyncResult = z.infer<typeof SyncResultSchema>;
 
 // ── Settings ────────────────────────────────────────────────────────────────
 
-export const UpdateSettingsBodySchema = z.object({
-  reviewThreshold: z.number().min(0).max(1).optional(),
+/**
+ * The student's own settings (T4.10). One today: how sure the model must be
+ * before an application enters the pipeline without asking (D28). A change
+ * applies to newly ingested mail only — re-routing mail already processed would
+ * un-assert applications the student may have acted on.
+ */
+export const SettingsResponseSchema = z.object({
+  reviewThreshold: z.number().min(0).max(1),
 });
+
+export type SettingsResponse = z.infer<typeof SettingsResponseSchema>;
+
+/** At least one setting must be supplied — an empty change is a 400, as it is
+ *  for `PATCH /api/jobs/:id`. */
+export const UpdateSettingsBodySchema = z
+  .object({
+    reviewThreshold: z.number().min(0).max(1).optional(),
+  })
+  .refine((body) => Object.keys(body).length > 0, {
+    message: "At least one setting must be supplied.",
+  });
 
 export type UpdateSettingsBody = z.infer<typeof UpdateSettingsBodySchema>;
 
