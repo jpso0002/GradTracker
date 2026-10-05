@@ -71,6 +71,15 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  // The body parser's own refusals — too large, not JSON — are the client's
+  // fault and carry a 4xx status. Answered as such, in fixed words: a 500
+  // misreports them, and the parser's message is not ours to repeat (T4.7).
+  const status = (error as { status?: unknown }).status;
+  if (typeof status === "number" && status >= 400 && status < 500) {
+    res.status(status).json({ error: status === 413 ? "Request body too large." : "Malformed request." });
+    return;
+  }
+
   const message = error instanceof Error ? error.message : "Unknown error";
   console.error("[api]", message);
   res.status(500).json({ error: "Internal server error." });

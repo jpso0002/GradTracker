@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type { ConfirmReviewBody, ReviewItem } from "@gradtracker/shared";
-import { Button, ConfidenceMeter, EmptyState, Icon, StageBadge, TopBar } from "../ds";
+import { Button, EmptyState, Icon, StageBadge, TopBar } from "../ds";
+import { ViewTitle } from "../shell/ViewTitle";
+import { Meter } from "./Meter";
 import { api, ApiError, NetworkError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
@@ -88,6 +90,7 @@ export function ReviewView({ onChanged }: ReviewViewProps) {
   const count = items.length;
   return (
     <>
+      <ViewTitle title="Needs review" />
       <TopBar
         title="Needs review"
         {...(queue.data && count > 0 ? { subtitle: `${count} ${count === 1 ? "email" : "emails"} to check` } : {})}
@@ -288,6 +291,7 @@ function ReviewCard({
       {editing ? (
         <form
           aria-label="Correct what GradTracker read"
+          className="gt-fields"
           onSubmit={(e) => {
             e.preventDefault();
             void confirm();
@@ -397,7 +401,7 @@ function ReviewCard({
         </span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-sm)" }}>
           How sure the model is about this email
-          <ConfidenceMeter value={item.confidence} label="How sure the model is about this email" />
+          <Meter value={item.confidence} label="How sure the model is about this email" />
         </span>
       </footer>
     </article>
@@ -422,7 +426,7 @@ function SameOrNew({
 }) {
   const suggestion = item.suggestedJob!;
   const option = (value: Answer, id: string, label: string) => (
-    <label htmlFor={id} style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-sm)", cursor: "pointer" }}>
+    <label htmlFor={id} className="gt-touch" style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-sm)", cursor: "pointer" }}>
       <input
         id={id}
         type="radio"
@@ -454,7 +458,21 @@ function SameOrNew({
       {option("same", sameId, "Same application")}
       {option("new", newId, "New application")}
       {error ? (
-        <p role="alert" style={{ margin: 0, flexBasis: "100%", color: "var(--ruby-deep)", fontSize: "var(--micro-size)" }}>
+        // Body text with an icon, not `--ruby-deep`: that red is 2.23:1 on a
+        // dark card (contrast.test.ts). The words carry the error.
+        <p
+          role="alert"
+          style={{
+            margin: 0,
+            flexBasis: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-xs)",
+            color: "var(--text-body)",
+            fontSize: "var(--caption-size)",
+          }}
+        >
+          <Icon name="alert-circle" size={14} />
           {error}
         </p>
       ) : null}

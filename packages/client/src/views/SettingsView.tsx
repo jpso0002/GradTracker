@@ -4,6 +4,8 @@ import { api, NetworkError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
 import { useTheme } from "../theme/theme";
+import { ViewTitle } from "../shell/ViewTitle";
+import { useShortcuts } from "../preferences";
 
 /**
  * Settings (T6.4).
@@ -37,6 +39,7 @@ export function SettingsView() {
   const settings = useAsync(() => api.getSettings(), []);
   const toast = useToast();
   const { theme, toggle } = useTheme();
+  const [shortcuts, setShortcuts] = useShortcuts();
   const sliderId = useId();
   const helpId = useId();
   // The value last saved, once the student has saved one this visit.
@@ -76,6 +79,7 @@ export function SettingsView() {
 
   return (
     <>
+      <ViewTitle title="Settings" />
       <TopBar title="Settings" />
       <div
         style={{
@@ -129,12 +133,27 @@ export function SettingsView() {
         </Section>
 
         <Section title="Appearance">
-          <Switch
-            checked={theme === "dark"}
-            onChange={() => toggle()}
-            label="Dark theme"
-            description="GradTracker follows your system setting until you choose."
-          />
+          {/* `gt-switch`: the design system hides the checkbox at zero size,
+              so app.css draws the focus ring on the track instead (T6.5). */}
+          <span className="gt-switch">
+            <Switch
+              checked={theme === "dark"}
+              onChange={() => toggle()}
+              label="Dark theme"
+              description="GradTracker follows your system setting until you choose."
+            />
+          </span>
+        </Section>
+
+        <Section title="Keyboard">
+          <span className="gt-switch">
+            <Switch
+              checked={shortcuts}
+              onChange={(on) => setShortcuts(on)}
+              label="Press / to search"
+              description="Turn this off if you use speech input or switch control — a stray slash would jump to the search box."
+            />
+          </span>
         </Section>
 
         <Section title="Gmail">

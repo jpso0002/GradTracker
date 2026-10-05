@@ -363,6 +363,10 @@ cheerleading.**
 Target: **WCAG 2.1 AA**. Beyond what the design system already guarantees, these are
 GradTracker's obligations.
 
+*Audited 5 October 2026 — [accessibility-audit.md](accessibility-audit.md): 36 of the 50 A and
+AA criteria pass, 4 partly, 1 untested, 9 do not apply. The design system's tokens hold most of
+what does not pass — §3 of the audit lists each with a fix.*
+
 ### 10.1 Colour is never the only signal
 
 The most important rule in this section, because the product's central signal is a coloured
@@ -374,7 +378,8 @@ pill.
 - AI vs human is carried by **the "Edited" tag and the meter's presence**, not by a colour
   difference.
 
-All stage `bg`/`fg` pairs are AA in both themes, verified in `tokens/stages.css`.
+All stage `bg`/`fg` pairs are AA in both themes — now computed from the token files by
+`contrast.test.ts` (4.92–8.65:1), where before this was only claimed in a comment.
 
 ### 10.2 Keyboard
 
@@ -422,7 +427,13 @@ case even though the criterion only says "standard web browser".
 | **≥1280px — desktop** | Full chrome: 240px sidebar, 380px detail panel inline beside the table. The reference layout. |
 | **1024–1279px — small desktop** | Sidebar persists. Detail panel becomes an overlay from the right with a scrim, rather than displacing the table. |
 | **768–1023px — tablet** | Sidebar collapses to a 56px icon rail with tooltips. Detail panel is a full-height right overlay. Stat strip wraps to two rows. |
-| **<768px — mobile** | Sidebar becomes a bottom tab bar (Pipeline · Review · Settings). The table becomes stacked cards: company and role on line one, `StageBadge` and `DeadlinePill` on line two, next action on line three. Detail panel is a full-screen sheet with a back control. |
+| **<768px — mobile** | Sidebar becomes a bottom tab bar (Applications · Review · Settings · Docs — *built with all four, so nothing on the desktop is out of reach*). The table becomes stacked cards: company and role on line one, `StageBadge` and `DeadlinePill` on line two, next action on line three. Detail panel is a full-screen sheet with a back control. |
+
+*As built, 5 October 2026 (T5.8).* **Cards are chosen by the list's own width, not the
+viewport**: the design system's row needs 788px, so below 800px of list — a phone, a
+tablet, or a 1280px laptop with the panel open — it is cards. The detail panel over the list
+(768–1279px) is a modal dialog: focus is held inside, Escape closes it, and focus returns to
+the row. Touch sizes for design-system controls are restated in `app.css` below 1024px.
 
 **Rules that hold at every width:**
 

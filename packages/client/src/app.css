@@ -1,0 +1,127 @@
+/*
+ * GradTracker's own stylesheet — rules the design system's tokens cannot
+ * express inline. Every value is a token; no colour is declared here.
+ */
+
+/* ── Focus is always visible (design.md §10.4, T6.5) ────────────────────────
+ * The design system's base rule is `*:focus-visible { box-shadow: var(--focus-ring) }`.
+ * A control that sets an inline `box-shadow`, or `all: unset`, beats a
+ * stylesheet rule — so the sidebar's items, the tabs and the stage chips
+ * showed no focus at all. Restated with the weight to win. */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring) !important;
+}
+
+/* The design system's Switch hides its checkbox at zero size; the ring goes on
+ * the visible track instead. */
+.gt-switch label:has(input:focus-visible) > span:last-of-type {
+  box-shadow: var(--focus-ring);
+}
+
+/* ── The Documentation Center's rendered markdown (T5.9) ──────────────────── */
+.gt-docs {
+  max-width: calc(var(--container-max) * 0.7);
+  min-width: 0;
+  color: var(--text-body);
+  font-size: var(--body-md-size);
+  line-height: var(--body-md-lh);
+}
+.gt-docs h2 {
+  margin: var(--space-xl) 0 var(--space-md);
+  font-size: var(--heading-lg-size);
+  line-height: var(--heading-lg-lh);
+}
+.gt-docs h2:first-child {
+  margin-top: 0;
+}
+.gt-docs h3 {
+  margin: var(--space-xl) 0 var(--space-sm);
+  font-size: var(--heading-sm-size);
+  line-height: var(--heading-sm-lh);
+}
+.gt-docs p,
+.gt-docs ul,
+.gt-docs ol,
+.gt-docs blockquote {
+  margin: 0 0 var(--space-md);
+}
+.gt-docs ul,
+.gt-docs ol {
+  padding-left: var(--space-xl);
+}
+.gt-docs blockquote {
+  padding-left: var(--space-lg);
+  border-left: 2px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+.gt-docs code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 0 var(--space-xxs);
+  border-radius: var(--radius-xs);
+  background: var(--surface-sunken);
+}
+.gt-docs pre {
+  margin: 0 0 var(--space-md);
+  padding: var(--space-md);
+  overflow-x: auto;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  line-height: 1.35;
+}
+.gt-docs pre code {
+  padding: 0;
+  background: none;
+  font-size: var(--caption-size);
+}
+.gt-docs table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0 0 var(--space-md);
+  border-collapse: collapse;
+  font-size: var(--body-tabular-size);
+}
+.gt-docs th,
+.gt-docs td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-hairline);
+  text-align: left;
+  vertical-align: top;
+}
+.gt-docs th {
+  color: var(--text-heading);
+  font-weight: var(--weight-regular);
+}
+
+/* ── Touch targets: 44px below 1024px (design.md §11, T5.8) ──────────────────
+ * The design system draws desktop sizes — 36px buttons, 40px fields, 38px
+ * tabs — and specifies no breakpoints. Below 1024px every control a finger
+ * presses is at least `--touch-min`. Controls GradTracker draws itself set this
+ * inline; these are the design system's, whose inline sizes need the weight. */
+@media (max-width: 1023px) {
+  button,
+  [role="tab"],
+  .gt-switch label,
+  .gt-touch {
+    min-height: var(--touch-min) !important;
+    box-sizing: border-box;
+  }
+  /* Icon-only buttons carry a title; square them up too. */
+  button[title] {
+    min-width: var(--touch-min) !important;
+  }
+  /* A field's box is its label's second child (label text, box, hint). */
+  .gt-fields label > span:nth-child(2) {
+    min-height: var(--touch-min) !important;
+  }
+  input[type="range"] {
+    min-height: var(--touch-min);
+  }
+}

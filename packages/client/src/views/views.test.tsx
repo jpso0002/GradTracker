@@ -116,7 +116,9 @@ describe("PipelineView", () => {
     vi.spyOn(api, "listJobs").mockResolvedValue(listResponse([]));
     renderPipeline();
 
-    await waitFor(() => expect(screen.getByText("No applications yet")).toBeDefined());
+    // 612 emails read and none an application (T5.7 distinguishes this from
+    // "never read anything").
+    await waitFor(() => expect(screen.getByText("No applications found")).toBeDefined());
 
     await userEvent.click(screen.getByRole("button", { name: "Offer received" }));
     await waitFor(() =>
@@ -211,6 +213,90 @@ describe("DetailPanel — the AI-vs-human contract (design.md §7)", () => {
     const link = await screen.findByRole("link", { name: /Open in Gmail/ });
     expect(link.getAttribute("href")).toContain("rfc822msgid");
     expect(link.getAttribute("href")).toContain("msg-1");
+  });
+});
+
+// ── T5.7 — empty and error states (app-flow.md §6, §7) ───────────────────────
+
+describe("empty and error states (T5.7)", () => {
+  const stats = (over: Partial<ListJobsResponse["stats"]> = {}): ListJobsResponse["stats"] => ({
+    liveApplications: 0,
+    dueThisWeek: 0,
+    needsReview: 0,
+    emailsRead: 0,
+    ...over,
+  });
+
+  function renderWithDestinations() {
+    return render(
+      <ToastHost>
+        <MemoryRouter initialEntries={["/pipeline"]}>
+          <Routes>
+            <Route path="/pipeline" element={<PipelineView />} />
+            <Route path="/settings" element={<p>Settings screen</p>} />
+            <Route path="/review" element={<p>Review screen</p>} />
+          </Routes>
+        </MemoryRouter>
+      </ToastHost>,
+    );
+  }
+
+  it("says nothing has been read yet, and offers no action it cannot take", async () => {
+    vi.spyOn(api, "listJobs").mockResolvedValue({ jobs: [], stats: stats() });
+    renderWithDestinations();
+
+    expect(await screen.findByText("No applications yet")).toBeDefined();
+    expect(screen.getByText(/No mail has been read yet/)).toBeDefined();
+    // "Scan inbox" is the hosted product's action; in the demo nothing can scan.
+    expect(screen.queryByRole("button", { name: /Scan inbox/ })).toBeNull();
+  });
+
+  it("after reading mail and finding nothing, routes the student to the threshold", async () => {
+    vi.spyOn(api, "listJobs").mockResolvedValue({ jobs: [], stats: stats({ emailsRead: 612 }) });
+    renderWithDestinations();
+
+    expect(await screen.findByText("No applications found")).toBeDefined();
+    expect(screen.getByText(/GradTracker read 612 emails and didn't find any job applications/)).toBeDefined();
+    expect(screen.getByText(/lower the review threshold in Settings/)).toBeDefined();
+
+    await userEvent.click(screen.getByRole("button", { name: "Open Settings" }));
+    expect(screen.getByText("Settings screen")).toBeDefined();
+  });
+
+  it("routes to the review queue instead when emails are already waiting there", async () => {
+    // A high threshold sends applications to review rather than losing them —
+    // so "found nothing" with a full queue means "go and look", not "lower it".
+    vi.spyOn(api, "listJobs").mockResolvedValue({ jobs: [], stats: stats({ emailsRead: 612, needsReview: 3 }) });
+    renderWithDestinations();
+
+    expect(await screen.findByText(/3 it wasn't sure about are waiting in Needs review/)).toBeDefined();
+    await userEvent.click(screen.getByRole("button", { name: "Open Needs review" }));
+    expect(screen.getByText("Review screen")).toBeDefined();
+  });
+
+  it("an empty Archived tab says nothing is archived", async () => {
+    vi.spyOn(api, "listJobs").mockResolvedValue({ jobs: [], stats: stats({ emailsRead: 612, liveApplications: 4 }) });
+    renderWithDestinations();
+    await screen.findByText("No applications found");
+
+    await userEvent.click(screen.getByRole("tab", { name: "Archived" }));
+    expect(await screen.findByText("Nothing archived")).toBeDefined();
+  });
+
+  it("a link to an application that no longer exists says so and leads back", async () => {
+    vi.spyOn(api, "getJob").mockRejectedValue(new ApiError(404, "Application not found."));
+    const onClose = vi.fn();
+    render(
+      <ToastHost>
+        <MemoryRouter>
+          <DetailPanel jobId="gone" onClose={onClose} onChanged={() => {}} />
+        </MemoryRouter>
+      </ToastHost>,
+    );
+
+    expect(await screen.findByText("That application no longer exists.")).toBeDefined();
+    await userEvent.click(screen.getByRole("button", { name: "Back to the pipeline" }));
+    expect(onClose).toHaveBeenCalled();
   });
 });
 
@@ -474,6 +560,20 @@ describe("search (T5.11, D30)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Clear search" }));
     expect(shown()).toEqual(["Zip Co", "Atlassian", "KPMG", "Canva", "Zeller"]);
     expect(searchBox().value).toBe("");
+  });
+
+  it("the / shortcut can be turned off — WCAG 2.1.4, for speech input", async () => {
+    window.localStorage.setItem("gradtracker.shortcuts", "off");
+    vi.spyOn(api, "listJobs").mockResolvedValue(listResponse(ranked));
+    renderPipeline();
+    await screen.findByText("Zip Co");
+
+    await userEvent.keyboard("/");
+    expect(document.activeElement).not.toBe(searchBox());
+    // No hint promising a shortcut that is off, and none declared.
+    expect(screen.queryByText("/")).toBeNull();
+    expect(searchBox().getAttribute("aria-keyshortcuts")).toBeNull();
+    window.localStorage.removeItem("gradtracker.shortcuts");
   });
 
   it("/ moves focus to the search box, as its hint says", async () => {

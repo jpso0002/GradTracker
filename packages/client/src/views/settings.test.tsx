@@ -85,6 +85,17 @@ describe("SettingsView (T6.4)", () => {
     await waitFor(async () => expect((await slider()).value).toBe("0.8"));
   });
 
+  it("turns the / search shortcut off and on (WCAG 2.1.4)", async () => {
+    renderSettings();
+    const shortcut = await screen.findByRole("checkbox", { name: /Press \/ to search/ });
+    expect((shortcut as HTMLInputElement).checked).toBe(true);
+
+    await userEvent.click(shortcut);
+    expect(window.localStorage.getItem("gradtracker.shortcuts")).toBe("off");
+    await userEvent.click(shortcut);
+    expect(window.localStorage.getItem("gradtracker.shortcuts")).toBe("on");
+  });
+
   it("switches the theme", async () => {
     renderSettings();
     const before = document.documentElement.getAttribute("data-theme");

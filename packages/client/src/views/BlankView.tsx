@@ -1,4 +1,5 @@
 import { EmptyState, TopBar } from "../ds";
+import { ViewTitle } from "../shell/ViewTitle";
 
 /**
  * A surface that exists in the navigation but has no design yet.
@@ -18,6 +19,7 @@ export function BlankView({
 }) {
   return (
     <>
+      <ViewTitle title={title} />
       <TopBar title={title} />
       <div style={{ padding: "var(--space-xl)" }}>
         <EmptyState icon={icon} title={title} description={description} />

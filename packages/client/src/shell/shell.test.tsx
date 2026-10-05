@@ -5,7 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { App } from "../App";
 import { ThemeProvider } from "../theme/theme";
-import { api } from "../api/client";
+import { api, NetworkError } from "../api/client";
+import { connectivity } from "../connectivity";
 
 /**
  * T5.10 / decision D29. Calendar and Archive were sidebar entries leading to
@@ -23,6 +24,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  connectivity.reset();
 });
 
 function renderAt(path: string) {
@@ -58,6 +60,61 @@ describe("sidebar (T5.10)", () => {
     expect(screen.getAllByText("Not found").length).toBeGreaterThan(0);
     expect(screen.queryByText(/No design exists for this yet/)).toBeNull();
     expect(screen.queryByText(/are on the Archived tab of your pipeline/)).toBeNull();
+  });
+});
+
+describe("offline (T5.7, app-flow.md §7)", () => {
+  const kpmg = {
+    id: "j1",
+    company: "KPMG",
+    role: "Vacationer Program",
+    stage: "assessment" as const,
+    deadlineAt: null,
+    nextAction: "Complete online assessment",
+    senderDomain: "smartrecruiters.com",
+    confidence: 0.93,
+    status: "active" as const,
+    firstSeenAt: "2026-08-01T00:00:00.000Z",
+    lastEventAt: "2026-08-14T00:00:00.000Z",
+    daysLeft: null,
+    followUpRequired: false,
+    pendingReviewId: null,
+    provenance: [],
+  };
+  const loaded = {
+    jobs: [kpmg],
+    stats: { liveApplications: 1, dueThisWeek: 0, needsReview: 0, emailsRead: 40 },
+  };
+
+  it("keeps the pipeline readable while offline, under a banner that says so", async () => {
+    vi.spyOn(api, "listJobs")
+      .mockResolvedValueOnce(loaded)
+      .mockRejectedValueOnce(new NetworkError(new TypeError("Failed to fetch")));
+    renderAt("/pipeline");
+    await screen.findByText("KPMG");
+
+    await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+
+    expect(await screen.findByText(/You're offline/)).toBeDefined();
+    // What was loaded stays on screen — the student can still read it.
+    expect(screen.getByText("KPMG")).toBeDefined();
+  });
+
+  it("Try again re-reads what failed, and the banner goes once it succeeds", async () => {
+    const listJobs = vi
+      .spyOn(api, "listJobs")
+      .mockResolvedValueOnce(loaded)
+      .mockRejectedValueOnce(new NetworkError(new TypeError("Failed to fetch")))
+      .mockResolvedValue(loaded);
+    renderAt("/pipeline");
+    await screen.findByText("KPMG");
+    await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await screen.findByText(/You're offline/);
+
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    await waitFor(() => expect(screen.queryByText(/You're offline/)).toBeNull());
+    expect(listJobs).toHaveBeenCalledTimes(3);
   });
 });
 

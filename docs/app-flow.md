@@ -61,6 +61,12 @@ Settings · Documentation. Theme toggle bottom-left.
 
 **Detail panel** (380px): opens on row click, pushes a route, closes on `Escape`, on the
 close control, or on selecting another row (which swaps content without closing).
+*As built (T5.8, T6.5):* opening it moves focus into it; closing returns focus to the row.
+Below 1280px it is a modal over the list — click the scrim to close — and on a phone a
+full-screen sheet with "Back to applications".
+
+**Documentation** (`/docs`, T5.9): five pages — Architecture, Components, Data flow, API,
+Dependencies — each a section of a file in `docs/`, rendered.
 
 **Navigation rules.**
 - The pipeline is always one click away from anywhere.
@@ -315,8 +321,8 @@ Rows are keyboard-navigable buttons. Selected rows take `--surface-selected`.
 
 *Built 5 October 2026:* a search box in the top bar narrows by company or role without
 reordering (D30, T5.11), and a row with an open question carries a "Review required" link to
-its card (T6.6). *Not yet:* rows are not keyboard-reachable — recorded for the accessibility
-pass (T6.5).
+its card (T6.6). Rows are keyboard-operable buttons (T6.5), and the list becomes stacked cards
+whenever it is narrower than a row needs (T5.8).
 
 ### 5.3 Detail panel
 
@@ -373,6 +379,13 @@ Every one admits the gap rather than filling space ([design.md §9](design.md)).
 The "synced, none found" state routes the student to the threshold rather than leaving them
 stuck, because that state most often means the gate is too high.
 
+*As built, 5 October 2026 (T5.7).* Every row above renders. **Never synced** reads "No mail
+has been read yet. In this demo, applications arrive through the local import." with no
+"Scan inbox" — nothing in the demo can scan, and a button that cannot work is worse than none.
+**Synced, none found** routes to the threshold in Settings — unless emails are already waiting
+in Needs review, which a high threshold causes, and then it routes there. "Filtered out" keeps
+its more specific `filter-x` icon.
+
 ---
 
 ## 7. Error states
@@ -395,6 +408,14 @@ stuck, because that state most often means the gate is too high.
 | Cross-user access | `:id` belongs to another user | **404, never 403** — existence is not disclosed | — |
 | Session expired | Cookie expired | Redirect to Connect preserving the intended route | Sign in → return to that route |
 | Offline | Network unavailable | Banner "You're offline." Cached pipeline stays readable; edits queue and flush on reconnect. | Automatic |
+
+*As built, 5 October 2026 (T5.7).* **Offline:** the banner and the readable pipeline are
+built, for the browser losing its network and for the server not answering; Try again, or the
+browser coming back online, re-reads what failed. **Edits do not queue** — an edit made offline
+fails with "You are offline — nothing was saved." and the typing stays, so Save tries again.
+**Job not found** is built. **Token revoked** is deferred with sign-in (T4.1–T4.3): in demo
+mode there is no token to lose. **Edit request fails** no longer rolls back an optimistic
+update; Save waits for the server (§9).
 
 ---
 

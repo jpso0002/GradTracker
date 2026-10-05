@@ -13,13 +13,18 @@ each is in [decision-record.md](decision-record.md).
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Client | React 18 + Vite + TypeScript | Consumes `GradTracker Design System/components/` directly |
-| Server | Node 20 + Express + TypeScript | ESM throughout |
-| Database | Postgres (production) · SQLite (dev + test) | Same schema, same SQL, via Drizzle ORM |
-| Validation | Zod | One schema reused by the classifier, the API, and the client |
-| Testing | Vitest + Supertest | `npm test` runs with zero external services |
+| Client | React 19 + Vite 7 + TypeScript, React Router 7 | Consumes the design system through a vendored copy (§9.2) |
+| Server | Node 20 or later (developed on 24) + Express 5 + TypeScript | ESM throughout |
+| Database | Postgres (production) · SQLite (dev + test) | Same schema, same SQL, via Drizzle ORM; Postgres checked in-process with PGlite |
+| Validation | Zod 3 | One schema reused by the classifier, the API, and the client |
+| Testing | Vitest 4 + Supertest + Testing Library | `npm test` runs with zero external services |
 | LLM | `claude-haiku-4-5`, escalating to `claude-sonnet-5` | See §7.4 |
-| Mail | Gmail API v1, `gmail.readonly` scope | Behind the `GmailClient` port |
+| Mail | Gmail API v1, `gmail.readonly` scope; Google Takeout `.mbox` and `.eml` through `mailparser` | Behind the `GmailClient` port; exports through the mailbox reader (T7.8) |
+| Documentation | `marked` renders `docs/` inside the app | The Documentation Center (T5.9) |
+
+*Versions corrected 5 October 2026 — this table said React 18 and Node 20 while the code ran
+React 19 on Node 24. The Documentation Center renders this section, and lists every installed
+package from the package files themselves, so that list cannot go stale the way this one did.*
 
 **Two declared divergences from the submitted architecture** (React + Node/Python + MySQL):
 Node over Python, Postgres/SQLite over MySQL. Full reasoning in the decision record §1.
@@ -682,6 +687,15 @@ duration, so a fading card is removed when the token says, and at once under red
 `shell/VisuallyHidden.tsx` — a label with no room on screen. The deadline input is
 `datetime-local` in the browser's timezone, the zone the client already sends as `x-timezone`.
 
+**Step 7 *(T5.7, T5.8, T5.9, T6.5 — 5 October 2026)*.** `hooks/useBreakpoint.ts` names the four
+layouts of design.md §11; `hooks/useElementWidth.ts` measures the list itself, which decides
+rows or cards. `connectivity.ts` tracks whether the server can be reached — the API client and
+`useAsync` both report to it — and drives the shell's offline banner and its Try again.
+`documentation/pages.ts` imports sections of `docs/` with Vite's `?raw` and renders them with
+`marked`; `preferences.ts` holds the "/" shortcut's off switch. `src/app.css` is the one app
+stylesheet: focus rings and touch sizes the design system's inline styles defeat, and the
+rendered markdown's typography — tokens only.
+
 ### Version constraint worth knowing
 
 `@vitejs/plugin-react@6` requires Vite 8; Vitest 3 pins Vite below 8. Both cannot be
@@ -707,6 +721,15 @@ refresh wrapper. The production build still succeeds, so the failure appears onl
 
 Additional: `helmet` for baseline headers, rate limiting on auth and sync routes, secrets
 never logged, CORS restricted to the client origin.
+
+*As built, 5 October 2026 (T4.7).* `security.test.ts` is SM-5's owning test for what exists on
+the demo track: no credential or plaintext-token column in either dialect, and a refresh token
+only as ciphertext, IV and tag; an invalid value for every editable field refused with its
+name and nothing stored, guarded by a check that fails if the schema gains a field without a
+case; another student's id answering 404 on every route; demo authentication refusing
+production; bodies that are too large or malformed answered 413 and 400, never 500. The rows
+above for OAuth, token encryption, HTTPS, sessions and the read-only scope are `it.todo` until
+T4.1–T4.3 — the gap shows in every test run. `helmet`, rate limiting and CORS are not built.
 
 ---
 

@@ -19,6 +19,7 @@ import {
   type Stage,
 } from "@gradtracker/shared";
 import { z } from "zod";
+import { connectivity } from "../connectivity";
 
 /**
  * The typed API client (T5.3).
@@ -90,8 +91,11 @@ async function request<S extends z.ZodTypeAny>(
       },
     });
   } catch (cause) {
+    connectivity.reportUnreachable();
     throw new NetworkError(cause);
   }
+  // Any answer at all — even a refusal — means the server is reachable.
+  connectivity.reportReachable();
 
   const text = await response.text();
   const body: unknown = text ? JSON.parse(text) : null;

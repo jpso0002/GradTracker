@@ -460,12 +460,16 @@ A React single-page app, built with Vite.
 src/
 ├── main.tsx        Boots React, installs icons, wraps in providers
 ├── App.tsx         The routes
-├── shell/          Sidebar + toasts — the frame around every page
-├── views/          The actual screens: pipeline + detail panel, review queue, settings
+├── shell/          Navigation (sidebar, icon rail, tab bar), toasts, the offline banner
+├── views/          The screens: pipeline + detail panel, review queue, settings, documentation
+├── documentation/  Which sections of docs/ the Documentation Center shows, and the renderer
 ├── api/client.ts   Typed wrapper around fetch()
-├── hooks/          useAsync — loading/error/data state
+├── hooks/          useAsync (loading/error/data), useBreakpoint, useElementWidth
+├── connectivity.ts Can the server be reached? Drives the offline banner and Try again
+├── preferences.ts  Per-browser preferences — the "/" shortcut's off switch
 ├── format.ts       Date formatting, and nothing else
 ├── motion.ts       Reads a motion token's duration, for animations that end in removal
+├── app.css         Focus rings, touch sizes and docs typography — tokens only
 └── ds/             The design system
 ```
 
@@ -473,7 +477,15 @@ src/
 
 `App.tsx` maps URLs to views. The interesting choice: the detail panel is a **route** (`/pipeline/:jobId`), not a piece of component state. That means a student can bookmark one application, and the browser back button closes the panel instead of leaving the pipeline entirely.
 
-`/docs` and unknown URLs render a `BlankView` that says what is missing and when it is planned. Blank means blank — no placeholder content pretending to be a feature. (`/review` and `/settings` did too, until their screens were built on 5 October.)
+Unknown URLs render a `BlankView` that says so. Blank means blank — no placeholder content pretending to be a feature. (`/review`, `/settings` and `/docs` were blank too, until their screens were built on 5 October.)
+
+### One screen, four widths
+
+The layout follows `hooks/useBreakpoint.ts`: the sidebar from 1024px, an icon rail on a tablet, a bottom tab bar on a phone. The pipeline's rows become cards whenever the *list* is narrower than the design system's row needs (800px) — measured with `useElementWidth`, because whether the row fits depends on the sidebar and on whether the detail panel is open, not just on the window. The order never changes; a test checks it at four widths.
+
+### The Documentation Center — `documentation/pages.ts`
+
+The `/docs` pages are not written for the app. Each is a *section of a file in `docs/`*, imported as text when the app is built (`import implementation from "../../../../docs/implementation.md?raw"`) and rendered with the `marked` library. Edit the markdown and the page changes; rename a heading a page uses and `docs.test.tsx` fails, rather than the page going quietly blank.
 
 ### Data fetching — `hooks/useAsync.ts`
 
@@ -592,7 +604,7 @@ One more test worth knowing about: `labelling/guide.test.ts` fails if the labell
 
 ## 13. The tests
 
-30 test files, run with `npm test` (Vitest). They fall into three groups:
+36 test files, run with `npm test` (Vitest). They fall into three groups:
 
 **Logic tests** — pure functions with known answers: `match.test.ts`, `engine.test.ts`, `rank.test.ts`, `apply.test.ts`, `pipeline.test.ts`.
 
@@ -607,6 +619,10 @@ One more test worth knowing about: `labelling/guide.test.ts` fails if the labell
 | `no-hardcoded-colour.test.ts` | any file in `src/` writes a raw colour |
 | `harness.test.ts` | a deliberately broken classifier *doesn't* fail the gate |
 | `labelling.test.ts` | the toolkit writes inside the repository, or the harness scores a held-out set changed since it was frozen |
+| `security.test.ts` | a credential column appears, an editable field goes unvalidated, or one student can reach another's data |
+| `performance.test.ts` | the pipeline or an edit round-trip on the 25-application seed slows past its stated budget |
+| `contrast.test.ts` | a colour pair the app relies on falls below WCAG AA — computed from the design system's own token files |
+| `a11y.test.tsx` | the main journey stops working by keyboard alone, or a stage or deadline is shown only in colour |
 
 That last one is a nice idea: it tests the test. A quality gate that cannot detect a broken classifier is worthless, so they break one on purpose and assert that the harness notices.
 
@@ -690,7 +706,7 @@ Being clear about this saves you hunting for code that does not exist:
 - **The live Gmail adapter** (T7.2) — the fake reads fixtures; real emails come in via harvest
 - **The live Claude adapter** (T7.3) — same
 - **The sync orchestrator** (T3.8) — no incremental "Refresh"; `POST /api/sync` honestly returns 501
-- **The Documentation Center** (T5.9) — `/docs` is blank on purpose. Calendar and Archive were removed (D29); the review queue and Settings were built on 5 October
+- **Calendar and Archive** — removed on purpose (D29). The review queue, Settings and the Documentation Center were all built on 5 October
 - **Postgres deployment** (T8.5) — the schema exists and is parity-tested; nothing is deployed
 
 Each is deferred with its acceptance criteria intact in `docs/tasks.md`, not deleted.

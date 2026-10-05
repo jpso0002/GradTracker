@@ -1,10 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { EmailEvent, FieldProvenance, Job } from "@gradtracker/shared";
+import { Meter } from "./Meter";
 import {
   Button,
   Card,
-  ConfidenceMeter,
   DeadlinePill,
+  EmptyState,
   Icon,
   IconButton,
   StageBadge,
@@ -46,14 +47,25 @@ import {
 
 const GMAIL_SEARCH = "https://mail.google.com/mail/u/0/#search/";
 
+/**
+ * How the panel sits (design.md §11, T5.8): beside the list from 1280px; over
+ * it, with a scrim, from 768px; and on a phone, a full-screen sheet with a way
+ * back. Over the list, it is a modal dialog — focus stays inside until Escape.
+ */
+export type PanelLayout = "inline" | "overlay" | "sheet";
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export interface DetailPanelProps {
   jobId: string;
   onClose: () => void;
   /** Called after a mutation so the list behind the panel re-reads. */
   onChanged: () => void;
+  layout?: PanelLayout;
 }
 
-export function DetailPanel({ jobId, onClose, onChanged }: DetailPanelProps) {
+export function DetailPanel({ jobId, onClose, onChanged, layout = "inline" }: DetailPanelProps) {
   const detail = useAsync(() => api.getJob(jobId), [jobId]);
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -61,6 +73,13 @@ export function DetailPanel({ jobId, onClose, onChanged }: DetailPanelProps) {
   const editButtonId = useId();
   // Closing the editor hands focus back to the control that opened it.
   const refocusEdit = useRef(false);
+  const asideRef = useRef<HTMLElement>(null);
+
+  // Opening an application moves focus into it: from a row, by keyboard, the
+  // next Tab is the panel's first control, not the next row (T6.5).
+  useEffect(() => {
+    asideRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (!editing && refocusEdit.current) {
@@ -88,13 +107,63 @@ export function DetailPanel({ jobId, onClose, onChanged }: DetailPanelProps) {
     }
   };
 
-  return (
-    <aside
+  const modal = layout !== "inline";
+  // A landmark beside the list; a dialog over it. `aside` may not carry the
+  // dialog role, so the element changes with it.
+  const Element = modal ? "div" : "aside";
+
+  /** Over the list, Tab cycles inside the panel; Escape is the way out. */
+  const holdFocus = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key !== "Tab" || !asideRef.current) return;
+    const focusable = [...asideRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === asideRef.current)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  const place: React.CSSProperties =
+    layout === "sheet"
+      ? { position: "fixed", inset: 0, zIndex: 31 }
+      : layout === "overlay"
+        ? {
+            position: "fixed",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 31,
+            width: "var(--panel-w, 380px)",
+            maxWidth: "100%",
+            boxShadow: "var(--shadow-3)",
+            borderLeft: "1px solid var(--border-hairline)",
+          }
+        : { width: "var(--panel-w, 380px)", flex: "0 0 auto", borderLeft: "1px solid var(--border-hairline)" };
+
+  const panel = (
+    <Element
+      // `div` or `aside`: both are plain HTMLElements, which is all the ref needs.
+      ref={asideRef as React.RefObject<HTMLDivElement>}
       aria-label="Application detail"
+      {...(modal ? { role: "dialog", "aria-modal": true } : {})}
+      tabIndex={-1}
+      onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => {
+        // Escape closes the panel (app-flow.md §2) — unless an editor inside
+        // already used it to cancel.
+        if (e.key === "Escape" && !e.defaultPrevented) {
+          e.preventDefault();
+          onClose();
+          return;
+        }
+        if (modal) holdFocus(e);
+      }}
       style={{
-        width: "var(--panel-w, 380px)",
-        flex: "0 0 auto",
-        borderLeft: "1px solid var(--border-hairline)",
+        ...place,
         background: "var(--surface-card)",
         padding: "var(--space-lg)",
         display: "flex",
@@ -103,17 +172,38 @@ export function DetailPanel({ jobId, onClose, onChanged }: DetailPanelProps) {
         overflowY: "auto",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "var(--space-xs)" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: layout === "sheet" ? "space-between" : "flex-end",
+          alignItems: "center",
+          gap: "var(--space-xs)",
+        }}
+      >
+        {layout === "sheet" ? (
+          <Button variant="ghost" iconLeft="chevron-left" onClick={onClose}>
+            Back to applications
+          </Button>
+        ) : null}
         {detail.data && !editing ? (
           <Button id={editButtonId} variant="quiet" size="sm" iconLeft="pencil" onClick={() => setEditing(true)}>
             Edit
           </Button>
         ) : null}
-        <IconButton icon="x" label="Close detail panel" onClick={onClose} />
+        {layout === "sheet" ? null : <IconButton icon="x" label="Close detail panel" onClick={onClose} />}
       </div>
 
       {detail.loading && !detail.data ? (
         <p style={{ color: "var(--text-muted)" }}>Loading…</p>
+      ) : detail.error instanceof ApiError && detail.error.status === 404 ? (
+        // A bookmarked or shared link to an application that has gone — not
+        // yours, or never was (app-flow.md §7). Say so, and lead back.
+        <EmptyState
+          icon="layers"
+          title="That application no longer exists."
+          action={<Button onClick={onClose}>Back to the pipeline</Button>}
+          compact
+        />
       ) : detail.error ? (
         <p style={{ color: "var(--text-muted)" }}>
           {detail.offline ? "You are offline." : detail.error.message}
@@ -151,7 +241,24 @@ export function DetailPanel({ jobId, onClose, onChanged }: DetailPanelProps) {
           )}
         </>
       ) : null}
-    </aside>
+    </Element>
+  );
+
+  if (layout !== "overlay") return panel;
+
+  return (
+    <>
+      {/* The scrim: the list behind is still there, dimmed, and a click on it
+          closes the panel. Hidden from assistive technology — Escape and the
+          close button are the named ways out. */}
+      <div
+        data-scrim
+        aria-hidden="true"
+        onClick={onClose}
+        style={{ position: "fixed", inset: 0, zIndex: 30, background: "var(--scrim)" }}
+      />
+      {panel}
+    </>
   );
 }
 
@@ -253,6 +360,7 @@ function EditForm({ job, onCancel, onSaved }: { job: Job; onCancel: () => void; 
   return (
     <form
       aria-label="Edit application"
+      className="gt-fields"
       onSubmit={(e) => {
         e.preventDefault();
         void save(false);
@@ -391,20 +499,29 @@ function Header({ job }: { job: Job }) {
  * outstanding" reads as "94% confident there is nothing to do", which is a
  * claim the product never made.
  */
-function Provenance({ entry, hasValue }: { entry: FieldProvenance | undefined; hasValue: boolean }) {
-  if (!entry || !hasValue) return null;
+function provenanceShown(entry: FieldProvenance | undefined, hasValue: boolean): boolean {
+  return entry !== undefined && hasValue && (entry.source === "human" || entry.confidence !== null);
+}
+
+function Provenance({ entry, id }: { entry: FieldProvenance; id: string }) {
+  // The id is what the field's value points at with `aria-describedby`, so a
+  // screen reader hears "Edited" or the confidence with it (design.md §10.3).
   return entry.source === "human" ? (
-    <Tag>Edited</Tag>
-  ) : entry.confidence !== null ? (
-    <ConfidenceMeter value={entry.confidence} showValue />
-  ) : null;
+    <span id={id}>
+      <Tag>Edited</Tag>
+    </span>
+  ) : (
+    <Meter id={id} value={entry.confidence ?? 0} />
+  );
 }
 
 function Fields({ job }: { job: Job }) {
   const provenance = (field: string) => job.provenance.find((p) => p.field === field);
 
+  // The card surface, not the sunken one: the field labels are muted text,
+  // which falls just short of 4.5:1 on the sunken surface (T6.5).
   return (
-    <Card padding="compact" surface="sunken" elevation={0}>
+    <Card padding="compact" surface="card" elevation={0}>
       <dl style={{ margin: 0, display: "grid", gap: "var(--space-md)" }}>
         <Field label="Deadline" provenance={provenance("deadline_at")} hasValue={job.deadlineAt !== null}>
           {job.deadlineAt ? (
@@ -453,6 +570,8 @@ function Field({
   hasValue: boolean;
   children: React.ReactNode;
 }) {
+  const provenanceId = useId();
+  const shown = provenanceShown(provenance, hasValue);
   return (
     <div>
       <dt
@@ -469,9 +588,12 @@ function Field({
         }}
       >
         {label}
-        <Provenance entry={provenance} hasValue={hasValue} />
+        {shown && provenance ? <Provenance entry={provenance} id={provenanceId} /> : null}
       </dt>
-      <dd style={{ margin: 0, color: "var(--text-body)", fontSize: "var(--body-size)" }}>
+      <dd
+        aria-describedby={shown ? provenanceId : undefined}
+        style={{ margin: 0, color: "var(--text-body)", fontSize: "var(--body-size)" }}
+      >
         {children}
       </dd>
     </div>
@@ -533,6 +655,7 @@ function Timeline({ events }: { events: EmailEvent[] }) {
                 href={`${GMAIL_SEARCH}${encodeURIComponent(`rfc822msgid:${event.gmailMessageId}`)}`}
                 target="_blank"
                 rel="noreferrer"
+                className="gt-touch"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",

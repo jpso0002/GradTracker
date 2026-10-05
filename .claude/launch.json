@@ -3,6 +3,18 @@
   "configurations": [
     {
       "name": "gradtracker-client",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--config", "packages/client/vite.config.ts", "packages/client"],
+      "port": 5173
+    },
+    {
+      "name": "gradtracker-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file-if-exists=.env", "packages/server/dist/server.js"],
+      "port": 3000
+    },
+    {
+      "name": "gradtracker-client-bun",
       "runtimeExecutable": "/Users/jidds/.bun/bin/bunx",
       "runtimeArgs": ["vite", "--config", "packages/client/vite.config.ts", "packages/client"],
       "port": 5173

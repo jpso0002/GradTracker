@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { ThemeProvider } from "./theme/theme";
 import { installIcons } from "./ds/icons";
+import "./app.css";
 
 installIcons();
 

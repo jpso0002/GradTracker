@@ -1,6 +1,7 @@
 import { useId, useMemo, type ChangeEvent } from "react";
 import { StageEnum, type Stage, type UpdateJobBody } from "@gradtracker/shared";
 import { Input, Select, STAGES } from "../ds";
+import { visuallyHidden } from "../shell/VisuallyHidden";
 
 /**
  * The five extractable fields, as the two editors hold them: the detail
@@ -168,6 +169,13 @@ export function EditFields({ values, onChange, ids, error, allowNoStage = false 
         {...invalid("deadlineAt")}
       />
       <Input {...text("nextAction")} />
+      {/* Announced at once, by field (design.md §10.3: validation errors are
+          assertive). The message beneath the field is for the eye. */}
+      {error ? (
+        <span role="alert" style={visuallyHidden}>
+          {`${FIELD_LABELS[error.field]}: ${error.message}`}
+        </span>
+      ) : null}
     </>
   );
 }

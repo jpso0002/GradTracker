@@ -20,15 +20,15 @@ when its dependencies are checked off.
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** |
 | 2 — Harness | 2–3 | T2.1–T2.12 | ◐ T2.1–T2.7, T2.9, **T2.11** done · **T2.12** written, completes at T8.3 · T2.8 waits on B3 · T2.10 open |
 | 3 — Pipeline | 3–5 | T3.1–T3.12 | ◐ T3.1–T3.7, T3.9–T3.12 done · **T3.8 reinstated** as drop-folder sync |
-| 4 — API | 5–6 | T4.1–T4.10 | ◐ T4.4, T4.5, T4.8, T4.9, **T4.10** done · T4.6 partial · auth deferred |
-| 5 — Dashboard | 6–8 | T5.1–T5.12 | ◐ T5.1–T5.3, T5.5, T5.6, T5.10, **T5.11** done · T5.7 partial · T5.4 deferred · T5.12 open |
-| 6 — Human-in-the-loop | 8–9 | T6.1–T6.6 | ◐ **T6.1, T6.3, T6.4, T6.6** done · T6.2, T6.5 open |
+| 4 — API | 5–6 | T4.1–T4.10 | ◐ T4.4, T4.5, T4.8, T4.9, T4.10, **T4.7** (for what exists) done · T4.6 partial · auth deferred |
+| 5 — Dashboard | 6–8 | T5.1–T5.12 | ◐ T5.1–T5.3, T5.5–T5.12 done · T5.4 deferred |
+| 6 — Human-in-the-loop | 8–9 | T6.1–T6.6 | ◐ T6.1, T6.3–T6.6 done · T6.2 open |
 | 7 — Ingestion & live classifier | 9–11 | T7.1–T7.10 | ◐ **T7.8 done** (pulled forward for T2.11) · **T7.3 reinstated** · **T7.7, T7.9, T7.10 new** · T7.1, T7.2, T7.4–T7.6 deferred |
 | 8 — Traceability | 11–12 | T8.1–T8.5 | ◐ **T8.3 reinstated** · the rest deferred |
 
-**510 tests green.** Steps 1, 2, 5 and 6 of the Plan of record are complete, and T3.12 of
-step 3 (5 October 2026); every other task marked **new** or **reinstated** above is open,
-except T7.8, pulled forward.
+**630 tests green, 5 recorded as todo** (the security clauses deferred with sign-in). Steps
+1, 2, 5, 6 and 7 of the Plan of record are complete, and T3.12 of step 3 (5 October 2026);
+every other task marked **new** or **reinstated** above is open, except T7.8, pulled forward.
 
 ---
 
@@ -67,7 +67,7 @@ T3.12, now done; its T7.3 and T2.8 wait on **B3**.
 | **4** | T7.7 · T7.9 · T7.10 · T3.8 · T4.6 | Hybrid ingestion: event source and correct Gmail links (**C10**), unlabelled harvest, one ingest command, drop-folder sync — the mailbox reader (T7.8) already exists | T7.3 |
 | **5** ✅ | T3.10 · T3.11 | Ambiguous matches routed to review (**C18**) · confirming onto an existing application applies the email, not a correction (**C16**) — *done 5 Oct* | — |
 | **6** ✅ | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search — *done 5 Oct*, fixing **C23** on the way | — |
-| **7** | T5.7 · T5.8 · T6.5 · T4.7 · T5.12 · T5.9 | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
+| **7** ✅ | T5.7 · T5.8 · T6.5 · T4.7 · T5.12 · T5.9 | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center — *done 5 Oct*; the audit is [accessibility-audit.md](accessibility-audit.md) | — |
 | **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run. **Exporting and labelling can start now** — the toolkit and guide exist | **B6** · measuring: T7.3 |
 
 ### Demo modes
@@ -959,13 +959,24 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   the threshold through `PATCH` and then ingests; in the browser, an 85%-sure email went to
   review once the slider stood at 90%.
 
-- [ ] **T4.7 — Security test suite** · Lane B · needs T4.1–T4.6
+- [x] **T4.7 — Security test suite** · Lane B · needs T4.1–T4.6 · ✅ **2026-10-05** *for the 28 Sep scope*
   Consolidates: no password column, token encryption, HTTPS, session flags, validation,
   cross-user isolation, read-only scope.
   *Done when:* `security.test.ts` covers every clause of SM-5 and is green.
   *28 Sep:* write it now for what exists — no credential column, validation on every editable
   field, cross-user isolation returning 404 — and add the transport, session and token clauses
   if T4.1–T4.3 are reinstated. RQ-08 is marked Partial on exactly this basis.
+  *Verified:* `security.test.ts`, 20 tests: no credential or plaintext-token column in either
+  dialect, and a refresh token only as ciphertext, IV and tag; an invalid value for **every**
+  editable field is a 400 naming it with nothing stored — and a coverage check fails if the
+  schema gains a field without a case; review corrections and the threshold validated; fields
+  a student may not set are stripped; every route taking another student's id answers 404 and
+  changes nothing; no list leaks another student's data; demo authentication refuses
+  production and runs only with the opt-in; a failure answers in generic words. **Found on
+  the way:** an oversized or malformed body came back as **500** — the error handler ignored
+  the parser's 4xx — now 413 and 400, in fixed words. The five deferred clauses (OAuth only,
+  token encryption, HTTPS, session flags, read-only scope) are `it.todo`, so the gap shows in
+  every run; RQ-08 stays Partial until T4.1–T4.3.
 
 ---
 
@@ -1040,7 +1051,7 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   by using the app: a withdrawn job showed a 94% meter beside "Nothing outstanding", which
   reads as "94% sure there is nothing to do" — a claim the product never made.
 
-- [ ] **T5.7 — Empty and error states** · Lane C · needs T5.5 — ◐ *partial 2026-08-18*
+- [x] **T5.7 — Empty and error states** · Lane C · needs T5.5 — ◐ *partial 2026-08-18* · ✅ **2026-10-05**
   All seven empty states from [app-flow.md §6](app-flow.md), the offline banner, the
   disconnected banner.
   *Done when:* every state in the table renders, including "synced, none found" routing to the
@@ -1049,19 +1060,57 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   distinguishable from the others, plus a row-shaped loading skeleton rather than a spinner.
   The remaining states from app-flow.md §6 and the disconnected banner are not built, and
   "synced, none found" cannot route to a threshold setting that does not exist yet (T6.5).
+  *Verified:* seven tests written first and seen failing. Every state in §6's table renders:
+  **never filled** ("No applications yet", and no "Scan inbox" — nothing in the demo can scan,
+  and a button that cannot work is worse than none); **synced, none found** ("GradTracker read
+  612 emails…"), routing to the threshold in Settings — or, when emails are already waiting,
+  to Needs review, since a high threshold sends applications there rather than losing them;
+  filtered to nothing; **Nothing archived**; the review queue's own; and a timeline with one
+  event. From §7, a link to an application that no longer exists says so and leads back. The
+  **offline banner** is the shell's, over whatever was last loaded — a failed reload no longer
+  replaces the pipeline with an error — and Try again, or the browser coming back online,
+  re-reads what failed. A changed tab or filter now starts empty rather than showing the
+  previous answer under the new question. **The disconnected banner is deferred with T4.1–T4.3**:
+  in demo mode there is no token to lose. Found on the way, in the browser: Vite's watcher
+  missed one of two quick saves to a file and served a stale module — a dev-server quirk, cured
+  by a restart, recorded here because it looked exactly like a code bug.
 
-- [ ] **T5.8 — Responsive behaviour** · Lane C · needs T5.5, T5.6
+- [x] **T5.8 — Responsive behaviour** · Lane C · needs T5.5, T5.6 · ✅ **2026-10-05**
   Four breakpoints per [design.md §11](design.md). Below 768px the table becomes stacked
   cards and the sidebar becomes a bottom tab bar.
   *Done when:* the pipeline is usable at 375px with 44px touch targets and **identical
   ranking** — SM-4 is not a desktop-only promise.
+  *Verified:* twelve tests (eight written first and seen failing; the four ranking checks
+  passed from the start, as they should). At 375px: a bottom tab bar keeping all four
+  destinations; stacked cards — company and role, stage and deadline, next action; a
+  full-screen sheet with Back. 768–1023px: a 56px icon rail. 768–1279px: the panel over the
+  list with a scrim, a modal dialog holding focus until Escape. **Identical ranking at 375, 900,
+  1100 and 1440px.** In the browser, every control on the pipeline at 375px and 900px measured
+  ≥44px (the search input's own box is 20px inside a 44px label that focuses it); no
+  horizontal scroll at 320, 375, 900, 1100 or 1280px. **Found on the way:** at the desktop
+  reference size with the panel open, the design system's row needs 788px and had 579 — rows
+  spilled under the panel. **Cards are chosen by the list's own width, below 800px, at any
+  screen size**, not by the viewport alone; at 1280px with the panel open the list is now
+  cards, with nothing overflowing. Touch sizes for design-system controls are restated in
+  `app.css` under 1024px.
 
-- [ ] **T5.9 — Documentation Center (`/docs` app route)** · Lane C · needs T5.2
+- [x] **T5.9 — Documentation Center (`/docs` app route)** · Lane C · needs T5.2 · ✅ **2026-10-05**
   In-app documentation pages: Architecture, Components, Data flow, API, Dependencies.
   Rendered from the markdown in `docs/` rather than hand-written, so the two cannot drift.
   **New scope, added 16 August 2026** — not part of the original MVP definition.
   *Done when:* `/docs` renders all five pages inside the app shell, and editing a file in
   `docs/` changes the rendered page with no second edit.
+  *Verified:* each page **is** a section of a file in `docs/`, imported as text at build time
+  and rendered with `marked` (MIT, no dependencies; added to the client): Architecture and
+  API from implementation.md §2 and §9, Components from design.md §4–5, Data flow from
+  codebase-guide.md §2, Dependencies from implementation.md §1 plus the installed packages,
+  generated from the package files. Eleven tests: the five pages inside the shell; each one
+  shows its heading and first sentence **as the file has them, read from disk by the test**;
+  a renamed heading fails the build rather than blanking a page — checked by renaming one;
+  links to other docs become plain text rather than dead links. In the browser, a sentence
+  added to implementation.md appeared on the open Architecture page with no reload and no
+  second edit, then was removed. **Found on the way:** implementation.md §1 still said React 18
+  and Node 20 — corrected, since the page would have published it.
 
 - [x] **T5.10 — Remove Calendar and Archive** · Lane C · needs T5.2 · ✅ **2026-09-28**
   **D29.** Deadline pills already show due and overdue on every row, which is what a calendar
@@ -1088,10 +1137,17 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   of the ranking, and clearing restored all 22. Found on the way: every row's tooltip read
   "Detected from Detected from …", because the row adds the phrase itself — fixed.
 
-- [ ] **T5.12 — Performance measurement** · Lane B · needs T5.5 · *new 28 Sep*
+- [x] **T5.12 — Performance measurement** · Lane B · needs T5.5 · *new 28 Sep* · ✅ **2026-10-05**
   RQ-09's performance clause and SM-8: time the pipeline render and an edit round-trip on the
   seeded 25-application database. The lower-priority part of RQ-09.
   *Done when:* `performance.test.ts` records both timings against a stated budget.
+  *Verified:* budgets stated in the test — pipeline ≤ 200 ms and edit round-trip (`PATCH`,
+  then the pipeline re-read) ≤ 300 ms, at p95 of 20 runs after warm-up, on the real seed (all
+  25 applications asserted present). First run: pipeline p50 6.8 / p95 8.0 ms; round-trip
+  p50 9.4 / p95 11.2 ms. SM-8's manual half, in Chromium against a scratch copy of the
+  seeded database (22 rows on screen), on the Vite dev server — unbundled, so slower than a
+  build: DOMContentLoaded 65 ms, largest contentful paint 148 ms, the pipeline request 13–25 ms,
+  and an edit round-trip from the page through the dev proxy p50 47 ms, worst 62 ms.
 
 ---
 
@@ -1170,7 +1226,7 @@ The product's most important feature. Every task here serves SM-7.
   nothing to connect in demo mode. In the browser, three arrow-key steps made one `PATCH`, and
   `/api/settings` and `/api/me` both read 0.9.
 
-- [ ] **T6.5 — Accessibility pass** · Lane C · needs T6.1–T6.4
+- [x] **T6.5 — Accessibility pass** · Lane C · needs T6.1–T6.4 · ✅ **2026-10-05** — audit: [accessibility-audit.md](accessibility-audit.md)
   Per [design.md §10](design.md): keyboard paths, `role="meter"` with text alternative,
   `aria-live` regions, focus management in dialogs and inline editors, 200% zoom.
   *Done when:* the primary journey is completable by keyboard alone with no trap, and every
@@ -1183,6 +1239,32 @@ The product's most important feature. Every task here serves SM-7.
   theme switch shows no focus ring; no view has an `<h1>` — `TopBar` renders its title as a
   `span`; a field's validation message sits inside its label, so it is read as part of the
   field's name rather than announced; the search box's name includes its "/" hint.
+  *5 Oct — contrast, computed from the token files (WCAG formula):* stage badges pass in both
+  themes (4.92–8.65:1). **Failures:** the "Review required" marker uses `Badge tone="ai"`,
+  which in dark mode is 1.07:1 — **unreadable; switch it to `Tag`** (passes both themes);
+  `--ruby-deep` error text (the design system's `Input`, and the review card) is 2.23:1 in
+  dark; light `--text-muted` is 4.49 / 4.42 / 4.21:1 on sunken, hover and selected surfaces;
+  dark primary-button hover text is 3.94:1; input and select borders are under 3:1 (1.4.11).
+  Fix what is app code; the rest are design-system tokens — a source change for the team to
+  decide ("supplied; consumed, never edited"). Pin them in a contrast test either way.
+  *Also found:* the sidebar's items and the stage chips set an inline `box-shadow`, which
+  overrides the global focus ring, so keyboard focus is invisible on both.
+  *Verified:* **the primary journey by keyboard alone** — tab to the most urgent row, open it,
+  edit and save, Escape, focus back on the row, Tab moves on, no trap — is a test, as is each
+  fix: rows are buttons (Enter or Space), named with everything they show, stage and deadline
+  urgency in words ("…3 days overdue"); the panel takes focus and Escape closes it; meters
+  have `role="meter"` and "AI confidence 93 percent"; fields are described by their
+  provenance; refused fields are announced assertively; each headline number is spoken whole;
+  every view has an `<h1>` and a title; the search box is named without its hint. The **gaps
+  above are closed** — the marker is a `Tag`, the switch and the sidebar, tabs and chips show
+  their focus ring (checked with the keyboard in the browser), muted labels moved off sunken
+  surfaces. **`contrast.test.ts`** now computes contrast from the token files: 21 required
+  pairs pass in both themes, and the design system's nine failing pairs and its focus ring
+  are pinned as failing, for a fix at the source. The audit covers all 50 WCAG 2.1 A and AA
+  criteria: 36 pass, 4 partial, 1 not tested, 9 not applicable. **It found one more failure,
+  fixed:** the "/" shortcut had no off switch (2.1.4) — Settings → Keyboard now has one. Still
+  open, for the team: the design system's token failures, and an unconfirmed, irreversible
+  dismiss in the review queue (3.3.4).
 
 - [x] **T6.6 — "Review required" marker on rows** · Lane C · needs T3.10, T6.3 · *new 28 Sep* · ✅ **2026-10-05**
   A row with a pending suggestion (T3.10) carries a small marker linking to that item in the

@@ -120,6 +120,7 @@ Keep entries concise. One line per decision when possible.
 - **There is no `?sort=`.** Ranking is the product's single opinion about what matters today. A client that can re-sort by company name has rebuilt the spreadsheet GradTracker exists to replace.
 - **Validation errors return the offending `field` alongside `error`**, so an inline editor can attach the message to the input rather than showing a banner.
 - **Validation messages are written for the student.** The editors show them beneath the field as they are, so the shared schema states them as sentences — "Company cannot be empty." — never Zod's defaults.
+- **A request the body parser refuses is the client's error, in fixed words**: 413 "Request body too large.", 400 "Malformed request." — never a 500, and never the parser's own message.
 - **Unknown body fields are stripped, not rejected and not persisted.** A client must not be able to smuggle `status` or `confidence` into a `PATCH`.
 - **An empty patch is a 400, not a 200 no-op.** Silently accepting a request that changes nothing hides a broken client.
 - **Every confirmed field is written as `human`, not `ai`.** Confirming is the moment a machine guess becomes a human fact; a later sync must not overwrite what the student looked at and accepted.
@@ -157,6 +158,16 @@ Keep entries concise. One line per decision when possible.
 - **After an action, focus goes somewhere deliberate:** the next review card, or the empty queue; Edit, when the editor closes; the refused field, after a refusal; the safe choice, when a warning appears. Never to the page.
 - **An animation that gates removal reads its duration from the motion token** (`tokenDurationMs`), never a second constant. `prefers-reduced-motion` zeroes the token, and the removal follows it.
 - **The threshold slider saves once per gesture.** It waits for the student to stop, and a failed save restores the stored value and says so.
+- **The pipeline is cards whenever the list is narrower than the design system's row needs (800px), at any screen size** — measured on the list, not inferred from the viewport. The row needs 788px; at the 1280px reference size with the panel open it had 579 and spilled under the panel (T5.8).
+- **Below 1024px every control is a 44px touch target.** GradTracker's own controls set `--touch-min` inline; the design system's are restated in `app.css`, with `!important`, because their inline sizes beat a stylesheet.
+- **Over the list, the detail panel is a modal dialog** (below 1280px): focus is held inside, Escape always closes it, and focus returns to the row that opened it. Beside the list it is a landmark (`aside`). A phone gets a full-screen sheet with Back.
+- **Rows are buttons, named with everything they show** — stage and deadline urgency in words — because the design system's row is a `div` no keyboard reaches.
+- **Every view renders `ViewTitle`**: the document title and an `<h1>`, since `TopBar` draws its title as a `span`.
+- **What was loaded stays through a failed reload; a different question starts empty.** Offline, the shell's banner says so over the last pipeline; a new tab or filter never shows the previous answer.
+- **A single-key shortcut has an off switch** (WCAG 2.1.4). "/" to search is turned off in Settings → Keyboard.
+- **`app.css` holds only what tokens cannot express inline** — focus rings, touch sizes, rendered markdown — and declares no colour of its own.
+- **Contrast is computed from the token files, not assumed** (`contrast.test.ts`). A pair the app relies on must pass; the design system's known failures are pinned as failing until fixed at the source.
+- **Documentation pages are sections of `docs/`, compiled in** — never copied into the app. A link to another docs file becomes plain text, not a dead link.
 
 ## Business Logic
 

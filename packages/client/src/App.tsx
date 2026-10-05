@@ -4,6 +4,7 @@ import { ToastHost } from "./shell/ToastHost";
 import { PipelineView } from "./views/PipelineView";
 import { ReviewView } from "./views/ReviewView";
 import { SettingsView } from "./views/SettingsView";
+import { DocsView } from "./views/DocsView";
 import { BlankView } from "./views/BlankView";
 import { api } from "./api/client";
 import { useAsync } from "./hooks/useAsync";
@@ -33,16 +34,8 @@ export function App() {
               follows what the student has handled. */}
           <Route path="/review" element={<ReviewView onChanged={review.reload} />} />
           <Route path="/settings" element={<SettingsView />} />
-          <Route
-            path="/docs"
-            element={
-              <BlankView
-                title="Documentation"
-                icon="book-open"
-                description="The Documentation Center arrives with T5.9."
-              />
-            }
-          />
+          <Route path="/docs" element={<Navigate to="/docs/architecture" replace />} />
+          <Route path="/docs/:page" element={<DocsView />} />
           <Route
             path="*"
             element={

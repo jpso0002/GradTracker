@@ -5,8 +5,8 @@
 > on opening a file. Written to be blunt rather than diplomatic — if you use it to help
 > explain the project to teammates, soften it yourself.
 >
-> **Accurate as of:** 5 October 2026 — steps 1, 2, 5 and 6 of the Plan of record are built,
-> with step 3's prompt v2; steps 3 and 4 wait on blocker B3.
+> **Accurate as of:** 5 October 2026 — steps 1, 2, 5, 6 and 7 of the Plan of record are
+> built, with step 3's prompt v2; steps 3 and 4 wait on blocker B3.
 >
 > **On meeting minutes.** Treat any team meeting minutes as **reference, not fact.** They may
 > describe work that does not exist in the repository, or plans since changed. When minutes
@@ -81,9 +81,9 @@ team chose classifies live (D23, §4).
 | **1 — Foundation** | Monorepo, shared Zod schemas, DB schema, migrations, repository, seed | ✅ Complete |
 | **2 — Harness** | Ports, fakes, prompt, 80-fixture corpus, accuracy harness, Wilson intervals, labelling toolkit and guide | ✅ T2.1–T2.7, T2.9, **T2.11** · ◐ **T2.12** written, completes at T8.3 · T2.8 benchmark waits on B3 · ☐ T2.10 |
 | **3 — Pipeline** | Matching, stage engine, provenance, pipeline, ranking, harvest | ✅ T3.1–T3.7, T3.9–T3.12 · **T3.8 reinstated** as drop-folder sync |
-| **4 — API** | Job, review, settings and sync routes | ✅ T4.4, T4.5, T4.8, T4.9, **T4.10** · ◐ T4.6 · ⏸ T4.1–T4.3 auth · ☐ T4.7 |
-| **5 — Dashboard** | Design system, shell, API client, pipeline, detail panel, search | ✅ T5.1–T5.3, T5.5, T5.6, T5.10, **T5.11** · ◐ T5.7 · ⏸ T5.4 · ☐ T5.8, T5.9, T5.12 |
-| **6 — Human-in-the-loop** | Editing, review queue, settings, accessibility | ✅ **T6.1, T6.3, T6.4, T6.6** · ☐ T6.2, T6.5 |
+| **4 — API** | Job, review, settings and sync routes | ✅ T4.4, T4.5, T4.8, T4.9, T4.10, **T4.7** (for what exists) · ◐ T4.6 · ⏸ T4.1–T4.3 auth |
+| **5 — Dashboard** | Design system, shell, pipeline, panel, search, states, responsive, docs, performance | ✅ T5.1–T5.3, T5.5–T5.12 · ⏸ T5.4 |
+| **6 — Human-in-the-loop** | Editing, review queue, settings, accessibility | ✅ T6.1, T6.3–T6.6 · ☐ T6.2 |
 | **7 — Ingestion & live classifier** | Live classifier, hybrid ingestion | ✅ **T7.8** mailbox reader (pulled forward) · ☐ **T7.3 reinstated** · **T7.7, T7.9, T7.10 new** · ⏸ hosted Gmail (T7.1, T7.2) |
 | **8 — Traceability** | Real labelled corpus, traceability, limitations | ☐ **T8.3 reinstated** · rest deferred |
 
@@ -91,12 +91,14 @@ team chose classifies live (D23, §4).
 
 | | |
 |---|---|
-| Tests | **510 passing**, 30 files |
-| Source | ~16,000 lines of TypeScript/TSX in the three packages' `src/` — ~9,600 application, ~6,400 tests (excludes the vendored design system and build output; counted 5 October) |
+| Tests | **630 passing**, 36 files, plus 5 recorded as todo (the security clauses deferred with sign-in) |
+| Source | ~18,300 lines of TypeScript/TSX in the three packages' `src/` — ~10,700 application, ~7,600 tests (excludes the vendored design system and build output; counted 5 October) |
+| Accessibility | WCAG 2.1 AA audit: 36 of 50 criteria pass, 4 partly — the rest is mostly the design system's tokens ([accessibility-audit.md](accessibility-audit.md)) |
+| Performance | Seeded 25-application pipeline: API p95 8 ms (budget 200), edit round-trip p95 11 ms (budget 300); browser largest paint 148 ms |
 | Fixture corpus | 80 labelled emails — 55 application / 25 not; 27 deadline-bearing; 15 hard negatives |
 | Real emails harvested | 32 → 8 applications, 20 updates, 4 correctly rejected |
 | Gates | `test`, `lint`, `typecheck`, `accuracy` — all green |
-| Commits | All 30 by Jordan (`jpso0002`); a single repository (D22) |
+| Commits | All 31 by Jordan (`jpso0002`); a single repository (D22) |
 
 ---
 
@@ -172,7 +174,7 @@ the repository.
 | **4** | Hybrid ingestion: event source + correct Gmail links (C10), unlabelled harvest, one `ingest` command, drop-folder sync | Step 3 |
 | **5** ✅ | Ambiguous matches → review (C18) · confirming onto an application applies the email (C16) — **done 5 Oct** | — |
 | **6** ✅ | Panel editing · review queue screen · row marker · settings API + slider · search — **done 5 Oct** | — |
-| **7** | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
+| **7** ✅ | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center — **done 5 Oct** | — |
 | **Alongside** | Evaluation dataset: export → inventory → label → freeze → measure. Exporting and labelling can start now | **B6** |
 
 **No hard target for 7 or 9 October** — the team's position is that wherever the work has
@@ -220,10 +222,10 @@ deleted. Two Complete, six Partial, one Deferred — justified.
 | **RQ-03** | ≥95% accuracy on held-out data; precision, recall, FN separately, each with an interval | Partial | Pipeline, prompt and harness built. **No model measured.** Interval on accuracy only (C12). No held-out set yet (C14) |
 | **RQ-04** | Extract company, role, stage, deadline, next action; ≥80% deadline detection | Partial | Contract, stage logic and deadline scoring built. Measurement pending. Next action has no scoring method (C13) |
 | **RQ-05** | One view, ordered by urgency | **Complete** | Built and tested; order independent of arrival. R09 filter flag → resolved by D30 |
-| **RQ-06** | Review and correct every field; corrections persist and are distinguishable; low-confidence goes to review | Partial | Provenance complete and tested. **Editing UI and review screen not built** — the largest remaining user-facing work |
+| **RQ-06** | Review and correct every field; corrections persist and are distinguishable; low-confidence goes to review | Partial → **built 5 Oct** | Provenance complete and tested; panel edit mode, the review screen, row markers and the threshold slider built (step 6). The RTM row needs updating |
 | **RQ-07** | No raw email content persisted | **Complete** | The best-evidenced requirement: enforced by the type system, two guards verified in the failing direction |
-| **RQ-08** | Transit/rest protection, validation, sessions, per-user isolation | Partial | Isolation and validation built and tested; transport, sessions, tokens deferred with RQ-01; security suite unwritten |
-| **RQ-09** | Browser, mobile + desktop widths, WCAG 2.1 AA, prompt interactions | Partial | Browser, no install. Responsive, accessibility audit and performance measurement not built |
+| **RQ-08** | Transit/rest protection, validation, sessions, per-user isolation | Partial | Isolation and validation built and tested; `security.test.ts` written for what exists (5 Oct); transport, sessions, tokens deferred with RQ-01, listed as todo |
+| **RQ-09** | Browser, mobile + desktop widths, WCAG 2.1 AA, prompt interactions | Partial → **largely met 5 Oct** | Responsive at four widths with identical ranking; WCAG 2.1 AA audited — 36 of 50 pass, 4 partly, the gaps mostly design-system tokens; performance measured against stated budgets |
 
 ### Recommended v4 amendments *(not yet applied to the RTM)*
 
@@ -456,7 +458,7 @@ Windows, **PowerShell 5.1**: `&&` is a parser error and `npm.ps1` is blocked by 
 policy. Use `npm.cmd`, one command per line.
 
 ```
-npm.cmd test              # 510 tests
+npm.cmd test              # 630 tests, 5 todo
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run accuracy      # the CI gate; --demo shows the report shape, --invert proves it fails
