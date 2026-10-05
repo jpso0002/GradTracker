@@ -177,7 +177,9 @@ Keep entries concise. One line per decision when possible.
 - **False negatives are the costly failure** and are counted and named explicitly in every harness run.
 - **Threshold changes apply to future syncs only.** Dismissed items stay dismissed.
 - **The threshold is per user** — `users.review_threshold`, set from the Settings slider. Ingest passes each user's own value; nothing may substitute the constant.
-- **A match resting on sender domain alone, with low role similarity, is not a match.** It goes to review with a suggested application. Domains like `criteriacorp.com` serve several employers, and a silent merge destroys an application's history.
+- **A match resting on sender domain alone, with low role similarity, is not a match.** It goes to review with a suggested application. Domains like `criteriacorp.com` serve several employers, and a silent merge destroys an application's history. `findMatch` returns `match`, `ambiguous` or none (T3.10).
+- **Every review item names its likely application when there is one**, so the card can ask "same application, or a new one?" — and confirming such an item requires that answer. A confirmed item with no suggestion attaches only on a clear match.
+- **One step applies an email to an application — `applyEmailToJob` — for the pipeline and the review queue alike.** An email older than the application's latest event changes no detail and never moves `lastEventAt` back; an older offer or rejection never overrules newer news; an older email that moves the stage forward still counts.
 
 ### Ranking
 - **Lexicographic:** urgency bucket → stage rank descending → `last_event_at` ascending → company A–Z.
@@ -273,7 +275,7 @@ Keep entries concise. One line per decision when possible.
 - **Positives are enriched to about half, and the report says so.** On a natural inbox, answering "no" to everything scores about 98%.
 - **Every reported proportion carries its Wilson 95% interval.** The claim is a point estimate with its interval, not a guaranteed floor.
 - **0/0 prints "—", never "0.0 %".** An empty denominator is nothing to measure, and a zero would claim a result — the same rule that stops SM-3 passing vacuously.
-- **Confirming onto an existing application is an email, not a correction.** Only fields the student edited on the card become human; everything else goes through the stage engine and the provenance write path like any other email (defect C16, T3.11).
+- **Confirming onto an existing application is an email, not a correction.** Only fields the student edited on the card become human; everything else goes through `applyEmailToJob` like any other email (defect C16, T3.11). The one exception is a stage only the student may set: confirming a withdrawal is the student's own act.
 - **Next action is judged after the run, not labelled before it.** Free text has no single right answer to match.
 
 ## Labelling *(28 September 2026)*

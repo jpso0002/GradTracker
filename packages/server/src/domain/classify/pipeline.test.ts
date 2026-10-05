@@ -244,17 +244,14 @@ describe("processEmail", () => {
     expect(job?.stage).toBe("rejected");
   });
 
-  // KNOWN DEFECT C18, fixed by T3.10 — `it.fails` passes while the defect
-  // exists. When T3.10 lands this starts failing: change it to `it`.
+  // Defect C18, fixed by T3.10 (this test ran as `it.fails` until then).
   //
   // Deloitte Audit (001), then a Deloitte application for a different role
   // from the same sender, as one employer's ATS sends every stream's email.
-  // Today the sender-domain fallback merges the second into the first and
-  // overwrites its role. Under D26 the second becomes a review item suggesting
-  // the first; either way, the first application must survive intact.
-  // (matching's "different role at the same company" test passes only because
-  // it uses a null sender domain, which real mail never has.)
-  it.fails("never overwrites one application with another at the same employer", async () => {
+  // The sender-domain fallback used to merge the second into the first and
+  // overwrite its role. Under D26 the second becomes a review item suggesting
+  // the first, and the first survives intact.
+  it("never overwrites one application with another at the same employer", async () => {
     const audit = await email("fixture-001");
     const consulting: Fixture = {
       email: {
@@ -275,14 +272,32 @@ describe("processEmail", () => {
     const classifier = new FakeEmailClassifier({ fixtures: [...corpus, consulting] });
 
     await processEmail(deps({ classifier }), userId, audit);
-    await processEmail(deps({ classifier }), userId, {
+    const outcome = await processEmail(deps({ classifier }), userId, {
       ...audit,
       gmailMessageId: "extra-deloitte-consulting",
       gmailThreadId: "extra-t-deloitte-consulting",
     });
 
     const jobs = await repo.listJobs(userId);
-    expect(jobs.map((j) => j.role)).toContain("Audit Graduate Program");
+    expect(jobs.map((j) => j.role)).toEqual(["Audit Graduate Program"]);
+    expect(outcome.kind).toBe("queued-for-review");
+    const [item] = await repo.listPendingReview(userId);
+    expect(item?.suggestedJobId).toBe(jobs[0]!.id);
+    expect(item?.detectedRole).toBe("Technology Consulting Graduate");
+  });
+
+  it("names the likely application on a low-confidence email, so the card can ask (D26)", async () => {
+    // 001 creates Deloitte Audit; 023 is a later Deloitte Audit email. Read with
+    // low confidence it goes to review — carrying the application it probably
+    // belongs to, rather than leaving the student to remember.
+    await processEmail(deps(), userId, await email("fixture-001"));
+    const unsure = new FakeEmailClassifier({ fixtures: corpus, confidenceFor: () => 0.4 });
+    const outcome = await processEmail(deps({ classifier: unsure }), userId, await email("fixture-023"));
+
+    expect(outcome.kind).toBe("queued-for-review");
+    const [job] = await repo.listJobs(userId);
+    const [item] = await repo.listPendingReview(userId);
+    expect(item?.suggestedJobId).toBe(job!.id);
   });
 
   it("advances lastEventAt even when no field changed", async () => {
@@ -375,6 +390,43 @@ describe("a withdrawal the model detects (C17, T3.12)", () => {
     const [job] = await repo.listJobs(userId);
     expect(job?.stage).toBe("interview");
     expect(job?.status).toBe("active");
+  });
+});
+
+describe("the 18 August harvest's Macquarie emails, replayed (T3.10)", () => {
+  it("yields one Macquarie application and one review item suggesting it — never a silent merge", async () => {
+    // The two Macquarie classifications from the real harvest, as the
+    // real-inbox demo database stored them — extracted fields only; the harvest
+    // file itself lived outside the repository. One sender, two programs. They
+    // were merged into one application showing the Data role as rejected, so
+    // the Technology application looked rejected too (C18, D26).
+    const macquarie = (id: string, receivedAt: string, role: string, stage: "applied" | "rejected"): Fixture => ({
+      email: {
+        id,
+        gmailMessageId: id,
+        gmailThreadId: `t-${id}`,
+        receivedAt,
+        fromAddress: "noreply@recruitment.macquarie.com",
+        subject: "s",
+        body: "b",
+      },
+      expected: { isApplication: true, company: "Macquarie Group", role, stage, deadlineAt: null, hasExplicitDeadlineLanguage: false },
+    });
+    const harvest = [
+      macquarie("macquarie-technology", "2026-03-12T03:14:03+00:00", "Graduate Program 2027 - Technology", "applied"),
+      macquarie("macquarie-data", "2026-05-21T06:01:25+00:00", "Graduate Program 2027 - Data (Sydney)", "rejected"),
+    ];
+    const classifier = new FakeEmailClassifier({ fixtures: harvest });
+    for (const { email: e } of harvest) {
+      await processEmail(deps({ classifier }), userId, { ...e, receivedAt: new Date(e.receivedAt) });
+    }
+
+    const jobs = await repo.listJobs(userId);
+    expect(jobs.map((j) => [j.role, j.stage])).toEqual([["Graduate Program 2027 - Technology", "applied"]]);
+    const pending = await repo.listPendingReview(userId);
+    expect(pending.map((p) => [p.detectedRole, p.detectedStage, p.suggestedJobId])).toEqual([
+      ["Graduate Program 2027 - Data (Sydney)", "rejected", jobs[0]!.id],
+    ]);
   });
 });
 

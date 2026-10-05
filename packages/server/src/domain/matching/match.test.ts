@@ -117,7 +117,7 @@ describe("findMatch", () => {
       { company: "Deloitte", role: "Audit Graduate Programme", senderDomain: "greenhouse.io" },
       [candidate()],
     );
-    expect(match?.reason).toBe("role-similarity");
+    expect(match?.kind).toBe("match");
     expect(match?.candidate.id).toBe("job-1");
   });
 
@@ -137,22 +137,34 @@ describe("findMatch", () => {
     expect(match).toBeNull();
   });
 
-  it("starts a new job for a different role at the same company", () => {
-    // A student may hold two live applications at one employer. Merging them
-    // would destroy one application's history.
-    const match = findMatch(
-      { company: "Deloitte", role: "Consulting Graduate Program", senderDomain: null },
+  it("never merges a different role at the same company (D26, C18)", () => {
+    // A student may hold two live applications at one employer, and one
+    // employer's applicant-tracking system sends every stream's email from one
+    // domain. This case used to pass only because the email had no sender
+    // domain — real mail always has one, and with it the two merged.
+    const sameSender = findMatch(
+      { company: "Deloitte", role: "Consulting Graduate Program", senderDomain: "greenhouse.io" },
       [candidate()],
     );
-    expect(match).toBeNull();
+    expect(sameSender?.kind).toBe("ambiguous"); // a question for the student, never a merge
+    expect(sameSender?.candidate.id).toBe("job-1");
+
+    const otherSender = findMatch(
+      { company: "Deloitte", role: "Consulting Graduate Program", senderDomain: "deloitte.com.au" },
+      [candidate()],
+    );
+    expect(otherSender).toBeNull(); // a new application
   });
 
-  it("falls back to sender domain when a role is renamed mid-process", () => {
+  it("asks rather than assumes when only the sender links a renamed role", () => {
+    // "Audit Graduate Program" renamed "Assurance Analyst, Graduate Intake" is
+    // the same application; "Consulting Graduate Program" from the same system
+    // is not. Nothing in the email tells the two apart, so the student decides.
     const match = findMatch(
       { company: "Deloitte", role: "Assurance Analyst, Graduate Intake", senderDomain: "greenhouse.io" },
       [candidate()],
     );
-    expect(match?.reason).toBe("sender-domain");
+    expect(match?.kind).toBe("ambiguous");
   });
 
   it("never matches two unknown sender domains to each other", () => {

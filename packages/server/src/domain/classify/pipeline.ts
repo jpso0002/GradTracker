@@ -9,8 +9,7 @@ import type { EmailClassifier, RawEmail } from "../../ports/index.js";
 import { senderDomain } from "../../ports/index.js";
 import type { Repository } from "../../db/repository.js";
 import { findMatch, normaliseCompany, type MatchCandidate } from "../matching/match.js";
-import { decideStage } from "../stages/engine.js";
-import { applyExtraction } from "../provenance/apply.js";
+import { applyEmailToJob } from "./apply-email.js";
 
 /**
  * The classification pipeline (T3.4).
@@ -127,7 +126,7 @@ export type ProcessOutcome =
   | { kind: "not-application" }
   | { kind: "queued-for-review"; eventId: string }
   | { kind: "created-job"; jobId: string }
-  | { kind: "updated-job"; jobId: string; stageChanged: boolean; matchReason: string };
+  | { kind: "updated-job"; jobId: string; stageChanged: boolean };
 
 export interface PipelineDeps {
   repo: Repository;
@@ -185,13 +184,33 @@ export async function processEmail(
     classifierModel: classified.model,
   };
 
+  // Where the email would go, worked out before the review gates: an email
+  // sent to review can then name the application it probably belongs to.
+  const match =
+    c.company !== null && c.role !== null
+      ? findMatch(
+          { company: c.company, role: c.role, senderDomain: classified.senderDomain },
+          (await deps.repo.listJobs(userId)).map(
+            (job): MatchCandidate => ({
+              id: job.id,
+              companyNormalised: job.companyNormalised,
+              role: job.role,
+              senderDomain: job.senderDomain,
+            }),
+          ),
+        )
+      : null;
+
   // A question for the student instead of a fact — with no job attached, so
-  // nothing is asserted until they confirm. One helper for every reason to ask.
+  // nothing is asserted until they confirm. One helper for every reason to ask,
+  // and each question names the likely application, so the card can ask "the
+  // same application, or a new one?" (D26).
   const askTheStudent = async (): Promise<ProcessOutcome> => {
     const event = await deps.repo.insertEmailEvent(userId, {
       ...common,
       jobId: null,
       reviewStatus: "pending" satisfies ReviewStatus,
+      suggestedJobId: match?.candidate.id ?? null,
     });
     return { kind: "queued-for-review", eventId: event!.id };
   };
@@ -209,17 +228,10 @@ export async function processEmail(
   // treat it as a question rather than inventing a job called "null".
   if (c.company === null || c.role === null) return askTheStudent();
 
-  const candidates: MatchCandidate[] = (await deps.repo.listJobs(userId)).map((job) => ({
-    id: job.id,
-    companyNormalised: job.companyNormalised,
-    role: job.role,
-    senderDomain: job.senderDomain,
-  }));
-
-  const match = findMatch(
-    { company: c.company, role: c.role, senderDomain: classified.senderDomain },
-    candidates,
-  );
+  // The same company and sender but a clearly different role: a renamed role,
+  // or a second application through the same employer's system. Never merged
+  // on that alone (D26) — that merge once overwrote an application (C18).
+  if (match?.kind === "ambiguous") return askTheStudent();
 
   if (match === null) {
     const job = await deps.repo.insertJob(userId, {
@@ -248,35 +260,16 @@ export async function processEmail(
     return { kind: "created-job", jobId: job!.id };
   }
 
-  const existing = await deps.repo.findJob(userId, match.candidate.id);
-  const stageLocked = await deps.repo.isFieldLocked(userId, match.candidate.id, "stage");
-
-  const stageDecision = decideStage({
-    current: existing!.stage,
-    detected: c.stage,
-    humanLocked: stageLocked,
-  });
-
-  // The stage engine owns whether the stage moves. Passing it through to
-  // applyExtraction unchanged would let a stale email drag a job backwards.
-  await applyExtraction(
-    deps.repo,
-    userId,
-    match.candidate.id,
-    {
-      company: c.company,
-      role: c.role,
-      stage: stageDecision.applies ? stageDecision.stage : null,
-      deadlineAt: common.detectedDeadlineAt,
-      nextAction: c.nextAction,
-    },
-    c.confidence,
-  );
-
-  // `lastEventAt` advances on every accepted email, including ones that changed
-  // no field — an employer replying "still reviewing" is not a stale job.
-  await deps.repo.updateJob(userId, match.candidate.id, {
-    lastEventAt: classified.receivedAt,
+  // The stage engine, the human locks and the order of arrival are all handled
+  // in the one step the review queue shares (T3.11).
+  const applied = await applyEmailToJob(deps.repo, userId, match.candidate.id, {
+    receivedAt: classified.receivedAt,
+    company: c.company,
+    role: c.role,
+    stage: c.stage,
+    deadlineAt: common.detectedDeadlineAt,
+    nextAction: c.nextAction,
+    confidence: c.confidence,
   });
 
   await deps.repo.insertEmailEvent(userId, {
@@ -285,10 +278,5 @@ export async function processEmail(
     reviewStatus: "auto_accepted",
   });
 
-  return {
-    kind: "updated-job",
-    jobId: match.candidate.id,
-    stageChanged: stageDecision.applies,
-    matchReason: match.reason,
-  };
+  return { kind: "updated-job", jobId: match.candidate.id, stageChanged: applied.stageChanged };
 }

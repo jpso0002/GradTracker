@@ -19,16 +19,15 @@ when its dependencies are checked off.
 | 0 — De-risk | 1 | T0.1–T0.3 | ⏸ Descoped for the demo track |
 | 1 — Foundation | 1–2 | T1.1–T1.7 | ✅ **Complete** |
 | 2 — Harness | 2–3 | T2.1–T2.12 | ◐ T2.1–T2.7, T2.9, **T2.11** done · **T2.12** written, completes at T8.3 · T2.8 waits on B3 · T2.10 open |
-| 3 — Pipeline | 3–5 | T3.1–T3.12 | ◐ T3.1–T3.7, T3.9, **T3.12** done · **T3.8 reinstated** as drop-folder sync · **T3.10, T3.11 new** |
+| 3 — Pipeline | 3–5 | T3.1–T3.12 | ◐ T3.1–T3.7, T3.9–T3.12 done · **T3.8 reinstated** as drop-folder sync |
 | 4 — API | 5–6 | T4.1–T4.10 | ◐ T4.4, T4.5, T4.8, **T4.9** done · T4.6 partial · T4.10 open · auth deferred |
 | 5 — Dashboard | 6–8 | T5.1–T5.12 | ◐ T5.1–T5.3, T5.5, T5.6, **T5.10** done · T5.7 partial · T5.4 deferred · T5.11, T5.12 open |
 | 6 — Human-in-the-loop | 8–9 | T6.1–T6.6 | ☐ Not started · **T6.1, T6.3, T6.4 redefined** · **T6.6 new** |
 | 7 — Ingestion & live classifier | 9–11 | T7.1–T7.10 | ◐ **T7.8 done** (pulled forward for T2.11) · **T7.3 reinstated** · **T7.7, T7.9, T7.10 new** · T7.1, T7.2, T7.4–T7.6 deferred |
 | 8 — Traceability | 11–12 | T8.1–T8.5 | ◐ **T8.3 reinstated** · the rest deferred |
 
-**453 tests green, plus one known-defect test that fails on purpose** (C18 — it flips when
-T3.10 lands). Steps 1 and 2 of the Plan of record are complete, and T3.12 of step 3
-(28 September 2026); every other task marked **new** or **reinstated** above is open, except
+**468 tests green.** Steps 1, 2 and 5 of the Plan of record are complete, and T3.12 of step 3
+(5 October 2026); every other task marked **new** or **reinstated** above is open, except
 T7.8, pulled forward.
 
 ---
@@ -66,8 +65,8 @@ T3.12, now done; its T7.3 and T2.8 wait on **B3**.
 | **2** ✅ | T2.11 · T2.12 · T7.8 | Labelling toolkit and guide — early, because labelling is human time — with the mailbox reader (T7.8) pulled forward, since the toolkit reads exports — *done 28 Sep; T2.12's done-when completes at T8.3* | — |
 | **3** ◐ | T3.12 · T7.3 · T2.8 | Prompt v2, so the prompt and the labelling guide agree (**C17**, **C20**) before anything is measured — *done 28 Sep* — then the live classifier, then the Haiku-vs-Sonnet benchmark | T7.3, T2.8: **B3** |
 | **4** | T7.7 · T7.9 · T7.10 · T3.8 · T4.6 | Hybrid ingestion: event source and correct Gmail links (**C10**), unlabelled harvest, one ingest command, drop-folder sync — the mailbox reader (T7.8) already exists | T7.3 |
-| **5** | T3.10 · T3.11 | Ambiguous matches routed to review (**C18**) · confirming onto an existing application applies the email, not a correction (**C16**) | — |
-| **6** | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search | T4.9, T3.10 |
+| **5** ✅ | T3.10 · T3.11 | Ambiguous matches routed to review (**C18**) · confirming onto an existing application applies the email, not a correction (**C16**) — *done 5 Oct* | — |
+| **6** | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search | — *(T4.9 and T3.10 are done)* |
 | **7** | T5.7 · T5.8 · T6.5 · T4.7 · T5.12 · T5.9 | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
 | **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run. **Exporting and labelling can start now** — the toolkit and guide exist | **B6** · measuring: T7.3 |
 
@@ -242,12 +241,12 @@ the documents right now.
 | C14 | RQ-03 requires a dataset the classifier "was not tuned against". The 80 fixtures shaped the prompt, so they are not held-out. | They become the tuning set; the held-out set is new, real, and frozen before any model run (D32). | **T8.3** |
 | ~~C15~~ | **Fixed 28 September 2026.** ~~Docs gave the unit as FIT3163 — the semester-1 code — for a project now in FIT3162 / FIT3164 / FIT3189 (Software Project Part 2).~~ | ~~Both semesters' codes recorded.~~ | Done |
 | ~~C17~~ | **Fixed 28 September 2026 by T3.12** — an AI-detected withdrawal now becomes a review item on every path, and the prompt asks the model to label one. ~~The prompt tells the model **never** to assign `withdrawn`, but withdrawal confirmations are labelled `withdrawn` — in the corpus (057, 058) and by the labelling guide — so a model that obeys its prompt is scored wrong on every one. Worse, the pipeline's **new-application path sets the detected stage directly** (`pipeline.ts`, `stage: c.stage ?? "applied"`), bypassing the stage engine's user-only guard. A probe on 28 September sent IBM's withdrawal confirmation, with no matching application, through the real pipeline: it **created an application straight into `withdrawn`**, archived, AI-provenanced, stage unlocked — the rule "`withdrawn` is never AI-assigned" broken. Latent until the live classifier sees a withdrawal with no history.~~ | ~~The prompt asks the model to *label* a withdrawal confirmation; the pipeline never *applies* an AI-detected user-only stage — it becomes a review item, on every path.~~ | ~~**T3.12**~~ Done |
-| C18 | A second application at the same employer **merges into the first and overwrites its role.** When roles differ, `findMatch` falls back to the sender domain — and one employer's ATS sends every stream's email from one domain. `match.test.ts`'s "different role at the same company" case passes only because it uses a **null** sender domain, which real mail never has. Found 28 September rewriting a pipeline test that T2.12's corpus fixes had broken; pinned by an `it.fails` test in `pipeline.test.ts`. | D26 already routes exactly this case to review; this is the evidence for it. | **T3.10** |
+| ~~C18~~ | **Fixed 5 October 2026 by T3.10.** ~~A second application at the same employer **merges into the first and overwrites its role.** When roles differ, `findMatch` falls back to the sender domain — and one employer's ATS sends every stream's email from one domain. `match.test.ts`'s "different role at the same company" case passes only because it uses a **null** sender domain, which real mail never has. Found 28 September rewriting a pipeline test that T2.12's corpus fixes had broken; pinned by an `it.fails` test in `pipeline.test.ts`.~~ | ~~D26 already routes exactly this case to review; this is the evidence for it.~~ | ~~**T3.10**~~ Done |
 | ~~C19~~ | **Fixed 28 September 2026** — six labels by T2.12, and by T3.12 five company names reconciled with prompt v2's naming rule (016, 025, 035 → CommBank; 031, 045 → Zip, the name each email uses). ~~Six authored labels disagreed with the prompt or with each other. **Fixed 28 September (T2.12):** 020 labelled a role the email never states — the model sees one email, and the prompt asks for the role "as stated"; 027 was "unresolvable" though "by Friday" is the prompt's own example of a date to resolve, so obeying the prompt scored as an invented deadline; "within N days" meant 23:59 in 023 and 037 but the received time in 020, 030 and 045, so no consistent model could score full marks on exact time; 046's note said "no response deadline" beside a correct one; 001's "Friday 23 May" is a Saturday. **Still open:** 016, 025 and 035 say "Commonwealth Bank" and 045 "Zip Co" where the emails say CommBank and Zip — the guide's naming rule disagrees, and the current prompt sets none.~~ | ~~Relabelled to the guide's rules (§5), which are the prompt's own wherever it has one. The four names are reconciled together with prompt v2, which adopts the guide's naming rule.~~ | ~~T2.12 · **T3.12**~~ Done |
 | ~~C20~~ | **Fixed 28 September 2026 by T3.12.** ~~The model was shown each email's received time in **UTC only**, while relative deadlines count from the local date — the prompt said to resolve them "against the email's received date". At 08:00 in Melbourne it is still the previous day in UTC, so "within 7 days" would resolve a day early. Hidden in the corpus, where every email arrives after 10:00 Melbourne time. Found writing prompt v2.~~ | ~~The user message gives the received time in the student's timezone as well as UTC.~~ | ~~**T3.12**~~ Done |
 | ~~C21~~ | **Fixed 29 September 2026 (T7.8 reopened).** ~~The mailbox reader returned an **empty body** for HTML mail in two shapes the parser does not convert: Workday nests its HTML in multipart/related with no text part, and Criteria Corp sends a whitespace-only text part beside the real HTML. Found on the first real export — 7 of 120 emails, all from applicant-tracking systems, each with 600–2,500 characters of visible text. They could not have been labelled, and at ingestion the classifier would have seen an empty email from exactly the senders that send assessments. The reader's HTML test had covered only single-part HTML, which the parser does convert.~~ | ~~When no plain text survives, the HTML is converted with the parser's own library (`html-to-text`) at its defaults; both shapes tested.~~ | ~~**T7.8**~~ Done |
 | ~~C22~~ | **Fixed 29 September 2026.** ~~A path containing a space reached the labelling toolkit mangled — `^C:\…\GradTracker^ export.mbox^` — so the documented command failed on every Takeout export, whose file is named `GradTracker export.mbox`. On Windows, npm escapes `--` arguments for cmd.exe, twice when the script begins with a batch file, and `npm run typecheck && node …` begins with `npm.cmd`. The end-to-end check had used a path without spaces.~~ | ~~`label` and `accuracy` start with `node`; their build step moved into `prelabel` and `preaccuracy`. A test fails if either script stops starting with `node`.~~ | Done |
-| C16 | Confirming a review item that **matches an existing application** writes every detected field as a human correction. An older, low-confidence "application received" email confirmed onto an application at interview moves its stage **back** to applied, moves `lastEventAt` **back** from 14 to 2 August, and locks all five fields — so a later offer or rejection can never move it again. Found 28 September by a probe while fixing C11 on the same code path. Latent today — no seeded review item matches an existing application — but T3.10 routes more items through exactly this path. | A match applies the email as the pipeline would; only fields the student edited become human. | **T3.11** |
+| ~~C16~~ | **Fixed 5 October 2026 by T3.11.** ~~Confirming a review item that **matches an existing application** writes every detected field as a human correction. An older, low-confidence "application received" email confirmed onto an application at interview moves its stage **back** to applied, moves `lastEventAt` **back** from 14 to 2 August, and locks all five fields — so a later offer or rejection can never move it again. Found 28 September by a probe while fixing C11 on the same code path. Latent today — no seeded review item matches an existing application — but T3.10 routes more items through exactly this path.~~ | ~~A match applies the email as the pipeline would; only fields the student edited become human.~~ | ~~**T3.11**~~ Done |
 
 ---
 
@@ -766,7 +765,7 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   idempotent, a concurrent run is refused, and a processed file is skipped. A skipped email is
   a missed application.
 
-- [ ] **T3.10 — Ambiguous matches go to review** · Lane A · needs T3.1, T4.5 · *new 28 Sep*
+- [x] **T3.10 — Ambiguous matches go to review** · Lane A · needs T3.1, T4.5 · ✅ **2026-10-05**
   **D26.** `findMatch` returns three outcomes, not two: **match** (company plus role
   similarity), **ambiguous** (company plus sender domain alone, with role similarity actively
   low), or **none**. An ambiguous email becomes a pending review item carrying a
@@ -779,8 +778,25 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   retention guard passes unmodified; the known-defect test in `pipeline.test.ts` ("never
   overwrites one application with another at the same employer") is changed from `it.fails`
   to `it` and passes; and `match.test.ts`'s different-role case uses a real sender domain.
+  *Verified:* all five. **The Macquarie case, replayed:** the harvest file is gone, but the
+  real-inbox demo database still held both emails' stored classifications — and the merge, one
+  application showing the Data role as *rejected*. Those extracted fields (no content) are now a
+  permanent test: one Macquarie application (Technology, applied) and one review item suggesting
+  it. With the new rule removed, the replay reproduces August's merge exactly. **Both answers
+  are tested:** "same application" attaches the email and creates nothing; "new application"
+  creates one and leaves the suggestion alone; confirming a suggested item without an answer is
+  a 400. `findMatch` now returns `match`, `ambiguous` or none; every review item names its
+  likely application when there is one, not only the ambiguous ones, so the card can ask (and a
+  confirmed item with no suggestion attaches only on a clear match, never on company and sender
+  alone). New `email_events.suggested_job_id` (generated migrations for both dialects; the
+  SQLite one omits `ON DELETE SET NULL`, a drizzle-kit limitation for added columns — harmless,
+  since nothing deletes jobs and Postgres has it). `GET /api/jobs` gives each application its
+  open question as `pendingReviewId`, cleared once confirmed or dismissed; `GET /api/review`
+  gives each card its `suggestedJob`. The retention guard passes unmodified; the known-defect
+  test is an ordinary test again; the three guards were each broken on purpose and their tests
+  failed.
 
-- [ ] **T3.11 — Confirming onto an existing application applies the email** · Lane A · needs T4.5 · *new 28 Sep*
+- [x] **T3.11 — Confirming onto an existing application applies the email** · Lane A · needs T4.5 · ✅ **2026-10-05**
   Fixes **C16**. When a confirmed review item matches an existing application, apply it the
   way the pipeline applies any email: the stage through the stage engine (forward-only, human
   locks respected), `lastEventAt` only ever moving forward, and fields the student did not
@@ -791,6 +807,16 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   *Done when:* confirming an older, lower-stage email onto an application at interview leaves
   its stage, `lastEventAt` and field provenance unchanged, and a later offer email still moves
   it — all asserted.
+  *Verified:* exactly that, as a route test, written first and seen failing. One step now
+  applies an email to an application — `applyEmailToJob` — and both the pipeline and the review
+  queue call it, so they cannot drift apart. It makes arrival order irrelevant: an email older
+  than the application's latest event changes no detail and never moves `lastEventAt` back, an
+  **older offer or rejection no longer overrules newer news**, and an older email that moves the
+  stage forward still counts. The pipeline had the same flaws for out-of-order mail — it set
+  `lastEventAt` to whatever arrived — and is fixed by the same step. Only fields the student
+  changed on the card become human (tested); confirming a withdrawal is the student's own act,
+  so that stage is set as human (C17's test still passes). Breaking the staleness rule turned
+  four tests red.
 
 - [x] **T3.12 — Prompt v2: the prompt and the labelling guide agree** · Lane A · needs T2.12 · ✅ **2026-09-28**
   Fixes **C17** and the open half of **C19**. Must land **before the first live measurement**

@@ -112,6 +112,11 @@ export const emailEvents = sqliteTable(
     detectedDeadlineAt: integer("detected_deadline_at", { mode: "timestamp_ms" }),
     detectedNextAction: text("detected_next_action"),
 
+    /** While pending: the existing application this email may belong to (D26,
+     *  T3.10). Matching found the company and sender but not the role, so it
+     *  asks instead of merging. An id, not content. */
+    suggestedJobId: text("suggested_job_id").references(() => jobs.id, { onDelete: "set null" }),
+
     confidence: real("confidence").notNull(),
     reviewStatus: text("review_status").$type<ReviewStatus>().notNull(),
     classifierModel: text("classifier_model").$type<ClassifierModel>().notNull(),

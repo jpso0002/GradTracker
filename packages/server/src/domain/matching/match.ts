@@ -177,21 +177,28 @@ export interface MatchInput {
   senderDomain: string | null;
 }
 
-export type MatchReason = "role-similarity" | "sender-domain";
+/**
+ * `match` — the same company and a similar role: the same application.
+ * `ambiguous` — the same company and sender, but a clearly different role: a
+ * renamed role, or a second application through the same employer's system.
+ * Nothing in the email tells the two apart, so the student is asked (D26).
+ */
+export type MatchKind = "match" | "ambiguous";
 
 export interface Match {
+  kind: MatchKind;
   candidate: MatchCandidate;
-  reason: MatchReason;
   roleSimilarity: number;
 }
 
 /**
- * Finds the existing job an email belongs to, or null to start a new one.
+ * Finds the existing job an email belongs to: a `match`, an `ambiguous`
+ * candidate to ask about, or null to start a new one.
  *
- * Company must match exactly after normalisation. Then either the role is
- * similar enough, or the sender domain already belongs to a job at that
- * company — the second rule catches an employer who renames a role mid-process
- * ("Graduate Engineer" becoming "Software Engineer, Graduate").
+ * Company must match exactly after normalisation. A similar role is a match.
+ * The sender domain alone is never enough to merge (C18): one employer's
+ * applicant-tracking system sends every stream's email from one domain, so a
+ * domain shared with a dissimilar role is only a question for the student.
  */
 export function findMatch(input: MatchInput, candidates: MatchCandidate[]): Match | null {
   const company = normaliseCompany(input.company);
@@ -210,20 +217,16 @@ export function findMatch(input: MatchInput, candidates: MatchCandidate[]): Matc
   const best = scored[0]!;
 
   if (best.roleSimilarity >= ROLE_SIMILARITY_THRESHOLD) {
-    return { candidate: best.candidate, reason: "role-similarity", roleSimilarity: best.roleSimilarity };
+    return { kind: "match", candidate: best.candidate, roleSimilarity: best.roleSimilarity };
   }
 
-  // Fall back to sender domain — but only when it is set on both sides.
-  // A null domain must never match another null: "unknown" is not an identity,
-  // and treating it as one is precisely how unrelated applications get merged.
+  // A shared sender domain makes it a question, never a merge — and only when
+  // the domain is set on both sides. A null domain must never pair with
+  // another null: "unknown" is not an identity.
   if (input.senderDomain !== null) {
     const byDomain = scored.find((s) => s.candidate.senderDomain === input.senderDomain);
     if (byDomain) {
-      return {
-        candidate: byDomain.candidate,
-        reason: "sender-domain",
-        roleSimilarity: byDomain.roleSimilarity,
-      };
+      return { kind: "ambiguous", candidate: byDomain.candidate, roleSimilarity: byDomain.roleSimilarity };
     }
   }
 

@@ -429,6 +429,10 @@ Two emails belong to the same job when, **within one user**:
 2. role titles match with **Dice coefficient ≥ 0.6** on normalised bigrams, **or** the
    `sender_domain` matches an existing job for that company.
 
+*Built 5 October (T3.10, D26):* the sender domain alone no longer merges. It makes the email
+**ambiguous** — a review item suggesting that job — and the student answers "same application"
+or "new application". See §15.2.
+
 `normaliseCompany()`: lowercase, strip legal suffixes (`pty ltd`, `ltd`, `inc`, `llc`,
 `limited`, `group`, `australia`), strip punctuation, collapse whitespace.
 
@@ -579,7 +583,7 @@ mandatory first argument on every method.
 | `PATCH` | `/api/jobs/:id` | Correct fields → marks `human` |
 | `POST` | `/api/jobs/:id/withdraw` | Terminal stage, user-set |
 | `GET` | `/api/review` | Pending review queue |
-| `POST` | `/api/review/:eventId/confirm` | Accept, optionally with edits |
+| `POST` | `/api/review/:eventId/confirm` | Accept, optionally with edits; an item suggesting an application also needs `application: "same" \| "new"` (D26) |
 | `POST` | `/api/review/:eventId/dismiss` | Not an application |
 | `POST` | `/api/sync` | Incremental sync; 409 if already running |
 | `GET` | `/api/sync/status` | Progress for the in-flight sync |
@@ -861,11 +865,13 @@ harvest JSON ─┐
 
 ### 15.2 Matching: a third outcome *(D26)*
 
-`findMatch` returns **match**, **ambiguous** or **none**. Ambiguous — company and sender
-domain agree, role similarity is actively low — creates a pending review item with
-`email_events.suggested_job_id` set, instead of merging. Supersedes the sender-domain
-tiebreak in §7.6, which today merges a second application at one employer into the first and
-overwrites its role (C18).
+✅ **Built 5 October (T3.10, T3.11).** `findMatch` returns **match**, **ambiguous** or
+**none**. Ambiguous — company and sender domain agree, role similarity is low — creates a
+pending review item with `email_events.suggested_job_id` set, instead of merging; every review
+item carries a suggestion when there is a likely application. `GET /api/review` returns it as
+`suggestedJob`; `GET /api/jobs` gives each application its open question as
+`pendingReviewId`. Confirming onto an existing application goes through `applyEmailToJob`,
+the step the pipeline uses, so only the fields the student changed become human (C16).
 
 ### 15.3 Correction and settings *(D27, D28)*
 

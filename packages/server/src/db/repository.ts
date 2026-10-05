@@ -112,6 +112,8 @@ export interface NewEmailEvent {
   detectedStage?: Stage | null;
   detectedDeadlineAt?: Date | null;
   detectedNextAction?: string | null;
+  /** A pending item's likely application, when matching found one (D26). */
+  suggestedJobId?: string | null;
   confidence: number;
   reviewStatus: ReviewStatus;
   classifierModel: ClassifierModel;
@@ -221,6 +223,7 @@ export function createRepository(db: Database) {
           detectedStage: input.detectedStage ?? null,
           detectedDeadlineAt: input.detectedDeadlineAt ?? null,
           detectedNextAction: input.detectedNextAction ?? null,
+          suggestedJobId: input.suggestedJobId ?? null,
           confidence: input.confidence,
           reviewStatus: input.reviewStatus,
           classifierModel: input.classifierModel,

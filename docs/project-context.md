@@ -80,7 +80,7 @@ team chose classifies live (D23, §4).
 | **0 — De-risk** | Google Cloud, API key spike | ⏸ Descoped |
 | **1 — Foundation** | Monorepo, shared Zod schemas, DB schema, migrations, repository, seed | ✅ Complete |
 | **2 — Harness** | Ports, fakes, prompt, 80-fixture corpus, accuracy harness, Wilson intervals, labelling toolkit and guide | ✅ T2.1–T2.7, T2.9, **T2.11** · ◐ **T2.12** written, completes at T8.3 · T2.8 benchmark waits on B3 · ☐ T2.10 |
-| **3 — Pipeline** | Matching, stage engine, provenance, pipeline, ranking, harvest | ✅ T3.1–T3.7, T3.9, **T3.12** · **T3.8 reinstated** as drop-folder sync · ☐ **T3.10, T3.11 new** |
+| **3 — Pipeline** | Matching, stage engine, provenance, pipeline, ranking, harvest | ✅ T3.1–T3.7, T3.9–T3.12 · **T3.8 reinstated** as drop-folder sync |
 | **4 — API** | Job, review and sync routes | ✅ T4.4, T4.5, T4.8, **T4.9** · ◐ T4.6 · ☐ T4.10 · ⏸ T4.1–T4.3 auth · ☐ T4.7 |
 | **5 — Dashboard** | Design system, shell, API client, pipeline, detail panel | ✅ T5.1–T5.3, T5.5, T5.6, **T5.10** · ◐ T5.7 · ⏸ T5.4 · ☐ T5.8, T5.9, T5.11, T5.12 |
 | **6 — Human-in-the-loop** | Editing, review queue, settings, accessibility | ☐ Not started · **T6.1, T6.3, T6.4 redefined** · **T6.6 new** |
@@ -91,7 +91,7 @@ team chose classifies live (D23, §4).
 
 | | |
 |---|---|
-| Tests | **453 passing**, 27 files — plus one known-defect test that fails on purpose (C18) |
+| Tests | **468 passing**, 28 files |
 | Source | ~10,160 lines of TypeScript/TSX (excludes the vendored design system and build output) |
 | Fixture corpus | 80 labelled emails — 55 application / 25 not; 27 deadline-bearing; 15 hard negatives |
 | Real emails harvested | 32 → 8 applications, 20 updates, 4 correctly rejected |
@@ -170,8 +170,8 @@ the repository.
 | **2** ✅ | Labelling toolkit and guide, with the mailbox reader pulled forward — **done 28 Sep** | — |
 | **3** ◐ | Prompt v2, so prompt and labels agree — **done 28 Sep** → live classifier → Haiku-vs-Sonnet benchmark | **B3** |
 | **4** | Hybrid ingestion: event source + correct Gmail links (C10), unlabelled harvest, one `ingest` command, drop-folder sync | Step 3 |
-| **5** | Ambiguous matches → review (C18) | — |
-| **6** | Panel editing · review queue screen · row marker · settings API + slider · search | Steps 1, 5 |
+| **5** ✅ | Ambiguous matches → review (C18) · confirming onto an application applies the email (C16) — **done 5 Oct** | — |
+| **6** | Panel editing · review queue screen · row marker · settings API + slider · search | — (steps 1 and 5 done) |
 | **7** | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center | — |
 | **Alongside** | Evaluation dataset: export → inventory → label → freeze → measure. Exporting and labelling can start now | **B6** |
 
@@ -385,8 +385,7 @@ duplicate protection cannot see an overlap.
 | **C10** | Every "Open in Gmail" link in the real-inbox demo is **broken** — it searches `rfc822msgid:` with a Gmail API id. The test checked the link's shape only. | T7.7 |
 | **C13** | Next action has no scoring method. | T2.10 |
 | **C14** | The 80 fixtures are not held-out. | T8.3 |
-| **C16** | Confirming a review item onto an **existing** application moves its stage and `lastEventAt` **backwards** and locks all five fields, so no later offer or rejection can move it. Latent today; T3.10 would route more items through it. | T3.11 |
-| **C18** | A second application at the same employer **merges into the first and overwrites its role** (sender-domain fallback). Pinned by an `it.fails` test. | T3.10 |
+
 
 **Fixed 28 September:** **C11** — status is now derived from stage inside the repository, so
 no code path can archive inconsistently; that also fixed a third affected path, review
@@ -400,7 +399,10 @@ creating an application straight into `withdrawn`; prompt v2 asks the model to l
 "within 7 days" counts from the right day. **Fixed 29 September:** **C21** — HTML-only mail from
 Workday and Criteria Corp read as empty (7 of the first real export's 120 emails); the reader now
 converts the HTML. **C22** — paths with spaces were mangled by npm on Windows, breaking the
-documented command on every Takeout export.
+documented command on every Takeout export. **Fixed 5 October:** **C18** — a second application
+at the same employer is asked about, never merged; the August Macquarie merge, replayed, now
+asks. **C16** — confirming onto an application applies the email, not a correction, through the
+one step the pipeline also uses.
 
 Also: `users.review_threshold` exists but **nothing reads it** — `/api/me` reports the
 constant and the harvest hard-codes 0.75 (T4.10). And "Emails read: 0" after a harvest,
@@ -451,7 +453,7 @@ Windows, **PowerShell 5.1**: `&&` is a parser error and `npm.ps1` is blocked by 
 policy. Use `npm.cmd`, one command per line.
 
 ```
-npm.cmd test              # 453 tests, plus one that fails on purpose (C18)
+npm.cmd test              # 468 tests
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run accuracy      # the CI gate; --demo shows the report shape, --invert proves it fails

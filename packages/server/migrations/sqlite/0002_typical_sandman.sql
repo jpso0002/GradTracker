@@ -1,0 +1,1 @@
+ALTER TABLE `email_events` ADD `suggested_job_id` text REFERENCES jobs(id);

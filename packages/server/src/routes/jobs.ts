@@ -40,7 +40,25 @@ const ListQuerySchema = z.preprocess((raw) => {
 
 type DbJob = Awaited<ReturnType<Repository["listJobs"]>>[number];
 
-function toJob(ranked: RankedJob<DbJob>, provenance: FieldProvenance[], now: Date): Job {
+/**
+ * Each application with an open question about it: the newest pending review
+ * item suggesting it (D26). The row's "Review required" marker links there.
+ */
+function openQuestions(pending: Awaited<ReturnType<Repository["listPendingReview"]>>): Map<string, string> {
+  const byJob = new Map<string, string>();
+  for (const item of pending) {
+    // Newest first, so the first item seen for a job is the one to link to.
+    if (item.suggestedJobId && !byJob.has(item.suggestedJobId)) byJob.set(item.suggestedJobId, item.id);
+  }
+  return byJob;
+}
+
+function toJob(
+  ranked: RankedJob<DbJob>,
+  provenance: FieldProvenance[],
+  now: Date,
+  pendingReviewId: string | null,
+): Job {
   const job = ranked.job;
   return {
     id: job.id,
@@ -61,6 +79,7 @@ function toJob(ranked: RankedJob<DbJob>, provenance: FieldProvenance[], now: Dat
     lastEventAt: job.lastEventAt.toISOString(),
     daysLeft: ranked.daysLeft,
     followUpRequired: ranked.followUpRequired,
+    pendingReviewId,
     provenance,
   };
 }
@@ -115,8 +134,12 @@ export function jobRoutes(repo: Repository, clock: () => Date = () => new Date()
         includeTerminal: query.status === "archived",
       });
 
+      const pending = await repo.listPendingReview(req.userId);
+      const questions = openQuestions(pending);
       const jobs = await Promise.all(
-        ranked.map(async (r) => toJob(r, toProvenance(await repo.listProvenance(req.userId, r.job.id)), now)),
+        ranked.map(async (r) =>
+          toJob(r, toProvenance(await repo.listProvenance(req.userId, r.job.id)), now, questions.get(r.job.id) ?? null),
+        ),
       );
 
       // Stats describe the **pipeline**, not the current tab. Computing them
@@ -137,7 +160,7 @@ export function jobRoutes(repo: Repository, clock: () => Date = () => new Date()
       res.json({
         jobs,
         stats: pipelineStats(active, {
-          needsReview: (await repo.listPendingReview(req.userId)).length,
+          needsReview: pending.length,
           emailsRead: sync?.emailsReadTotal ?? 0,
         }),
       });
@@ -158,8 +181,9 @@ export function jobRoutes(repo: Repository, clock: () => Date = () => new Date()
     const [ranked] = rankJobs([row], { now, timeZone: req.timeZone, includeTerminal: true });
     const provenance = toProvenance(await repo.listProvenance(req.userId, row.id));
     const timeline = (await repo.listEventsForJob(req.userId, row.id)).map(toEvent);
+    const question = openQuestions(await repo.listPendingReview(req.userId)).get(row.id) ?? null;
 
-    res.json({ job: toJob(ranked!, provenance, now), timeline });
+    res.json({ job: toJob(ranked!, provenance, now, question), timeline });
   });
 
   // ── PATCH /api/jobs/:id ───────────────────────────────────────────────────
@@ -190,8 +214,9 @@ export function jobRoutes(repo: Repository, clock: () => Date = () => new Date()
       const now = clock();
       const [ranked] = rankJobs([row], { now, timeZone: req.timeZone, includeTerminal: true });
 
+      const question = openQuestions(await repo.listPendingReview(req.userId)).get(jobId) ?? null;
       res.json({
-        job: toJob(ranked!, toProvenance(await repo.listProvenance(req.userId, jobId)), now),
+        job: toJob(ranked!, toProvenance(await repo.listProvenance(req.userId, jobId)), now, question),
         corrected,
       });
     },

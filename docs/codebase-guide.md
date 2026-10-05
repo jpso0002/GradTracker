@@ -335,11 +335,13 @@ score = (2 × 4) / (9 + 8) = 0.47
 
 1. Normalised company must match **exactly**. No fuzzy matching on company — that is the guard against merging PwC with PwC Legal.
 2. Among that company's jobs, if role similarity ≥ 0.6, it's a match.
-3. Otherwise fall back to the **sender domain** — the same ATS domain at the same company. This catches employers who rename a role mid-process.
+3. Otherwise, the same **sender domain** at the same company makes the email **ambiguous** — not a match. It might be a renamed role, or a second application through the same employer's system, and nothing in the email tells the two apart. So it becomes a review item that names the likely application, and the student answers "same application" or "new application".
 
-A known cost of rule 3, found by running this on a real inbox: two genuinely different applications at the *same* employer, sent from the *same* ATS, will merge. Macquarie's "Graduate Program – Technology" and "ANZ Graduate Program – Data (Sydney)" both come from `recruitment.macquarie.com`, and they collapsed into one job. The file's own header warns about exactly this trade-off.
+Rule 3 used to merge, and running it on a real inbox showed why that was wrong: Macquarie's "Graduate Program 2027 – Technology" and "Graduate Program 2027 – Data (Sydney)" both come from `recruitment.macquarie.com`, collapsed into one job, and the Technology application then showed as rejected. That case is now a test (defect C18, decision D26).
 
 Rule 3 also has a subtle guard worth noticing: a `null` domain never matches another `null` domain. "Unknown" is not an identity.
+
+Once an email is matched, `domain/classify/apply-email.ts` applies it — the same step the review queue uses when the student says "same application". It makes arrival order irrelevant: an older email never overwrites newer details or moves `lastEventAt` back, and an older offer or rejection never overrules newer news.
 
 ### 8b. The stage engine — should this application move forward?
 

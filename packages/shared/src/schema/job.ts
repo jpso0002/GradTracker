@@ -64,6 +64,10 @@ export const JobSchema = z.object({
   daysLeft: z.number().int().nullable(),
   /** True when `now - lastEventAt` exceeds this stage's staleness threshold. */
   followUpRequired: z.boolean(),
+  /** The review item asking whether an email belongs to this application,
+   *  while that question is open (D26, T3.10). The row's "Review required"
+   *  marker links to it (T6.6). */
+  pendingReviewId: z.string().uuid().nullable().default(null),
 
   provenance: z.array(FieldProvenanceSchema),
 });

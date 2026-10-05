@@ -88,14 +88,28 @@ export const ReviewItemSchema = z.object({
   deadlineAt: z.string().datetime().nullable(),
   nextAction: z.string().nullable(),
   confidence: z.number().min(0).max(1),
+  /** The existing application this email may belong to (D26). When present,
+   *  confirming needs an answer: the same application, or a new one. */
+  suggestedJob: z
+    .object({ id: z.string().uuid(), company: z.string(), role: z.string() })
+    .nullable()
+    .default(null),
 });
 
 export type ReviewItem = z.infer<typeof ReviewItemSchema>;
 
-/** Confirm, optionally with corrections. Any field supplied here is treated as
- *  human-verified on the resulting job. */
+/**
+ * Confirm, optionally with corrections — the fields the student changed.
+ *
+ * Onto a new application, every confirmed field is human: the card *is* the
+ * application (T4.8). Onto an existing one, the email is applied as any email
+ * is and only the corrected fields become human (T3.11).
+ */
 export const ConfirmReviewBodySchema = z.object({
   corrections: UpdateJobBodySchema.optional(),
+  /** Required when the item suggests an application (D26): is this email
+   *  about that application, or a new one? */
+  application: z.enum(["same", "new"]).optional(),
 });
 
 export type ConfirmReviewBody = z.infer<typeof ConfirmReviewBodySchema>;

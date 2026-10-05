@@ -3,10 +3,12 @@ import request from "supertest";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { migrate } from "drizzle-orm/libsql/migrator";
-import { asUserId, type UserId } from "@gradtracker/shared";
+import { asUserId, type Fixture, type UserId } from "@gradtracker/shared";
 import { createTestDatabase, type DatabaseHandle } from "../db/client.js";
 import { createRepository, createIdentityRepository, type Repository } from "../db/repository.js";
 import { createApp } from "../app.js";
+import { processEmail } from "../domain/classify/pipeline.js";
+import { FakeEmailClassifier } from "../adapters/classifier/fake.js";
 
 const MIGRATIONS = join(dirname(fileURLToPath(import.meta.url)), "../../migrations/sqlite");
 const NOW = new Date("2026-08-16T02:00:00Z");
@@ -447,6 +449,169 @@ describe("review routes", () => {
     });
     await request(app).post(`/api/review/${theirs!.id}/dismiss`).expect(404);
     expect(await repo.listPendingReview(otherUserId)).toHaveLength(1);
+  });
+
+  // ── T3.10 / D26 — suggested applications ──────────────────────────────────
+  describe("an item suggesting an existing application (T3.10)", () => {
+    async function suggested() {
+      const job = await seedJob(userId);
+      const pending = await seedPending({
+        suggestedJobId: job!.id,
+        detectedCompany: "KPMG",
+        detectedRole: "Graduate Program, Audit",
+        detectedStage: "applied",
+        senderDomain: "smartrecruiters.com",
+        confidence: 0.9,
+      });
+      return { job: job!, pending: pending! };
+    }
+
+    it("names the suggested application on the card", async () => {
+      const { job } = await suggested();
+      const res = await request(app).get("/api/review").expect(200);
+      expect(res.body.items[0].suggestedJob).toEqual({ id: job.id, company: "KPMG", role: "Vacationer Program" });
+    });
+
+    it("asks for an answer — same or new — before confirming", async () => {
+      const { pending } = await suggested();
+      const res = await request(app).post(`/api/review/${pending.id}/confirm`).send({}).expect(400);
+      expect(res.body.field).toBe("application");
+      expect(await repo.listPendingReview(userId)).toHaveLength(1);
+    });
+
+    it("'same application' attaches the email to the suggested application and creates nothing", async () => {
+      const { job, pending } = await suggested();
+      const res = await request(app)
+        .post(`/api/review/${pending.id}/confirm`)
+        .send({ application: "same" })
+        .expect(200);
+
+      expect(res.body).toEqual({ jobId: job.id, matched: true });
+      expect(await repo.listJobs(userId)).toHaveLength(1);
+      const [event] = await repo.listEventsForJob(userId, job.id);
+      expect(event?.reviewStatus).toBe("confirmed");
+    });
+
+    it("'new application' creates one and leaves the suggested application alone", async () => {
+      const { job, pending } = await suggested();
+      const res = await request(app)
+        .post(`/api/review/${pending.id}/confirm`)
+        .send({ application: "new" })
+        .expect(200);
+
+      expect(res.body.matched).toBe(false);
+      expect(res.body.jobId).not.toBe(job.id);
+      const roles = (await repo.listJobs(userId)).map((j) => j.role).sort();
+      expect(roles).toEqual(["Graduate Program, Audit", "Vacationer Program"]);
+    });
+
+    it("without a suggestion, never merges on company and sender alone", async () => {
+      // Nothing asked the student, so a domain-only match is not a match (D26):
+      // confirming starts a new application rather than merging silently.
+      await seedJob(userId);
+      const pending = await seedPending({
+        detectedCompany: "KPMG",
+        detectedRole: "Graduate Program, Audit",
+        senderDomain: "smartrecruiters.com",
+      });
+      const res = await request(app).post(`/api/review/${pending!.id}/confirm`).send({}).expect(200);
+
+      expect(res.body.matched).toBe(false);
+      expect(await repo.listJobs(userId)).toHaveLength(2);
+    });
+
+    it("marks the suggested application's row while the question is open", async () => {
+      const { job, pending } = await suggested();
+      const open = await request(app).get("/api/jobs").expect(200);
+      expect(open.body.jobs.find((j: { id: string }) => j.id === job.id).pendingReviewId).toBe(pending.id);
+
+      await request(app).post(`/api/review/${pending.id}/dismiss`).expect(200);
+      const closed = await request(app).get("/api/jobs").expect(200);
+      expect(closed.body.jobs.find((j: { id: string }) => j.id === job.id).pendingReviewId).toBeNull();
+    });
+  });
+
+  // ── T3.11 / C16 — confirming onto an existing application ─────────────────
+  it("confirming an older email onto a later-stage application changes nothing it should not (C16)", async () => {
+    // The application is at interview, last heard from on 14 August. An older,
+    // low-confidence "application received" email (2 August) is confirmed onto
+    // it. It used to move the stage back to applied, move lastEventAt back and
+    // lock every field as human, so no later email could ever move it again.
+    const job = await seedJob(userId, { stage: "interview" });
+    for (const field of ["company", "role", "stage", "deadline_at", "next_action"] as const) {
+      await repo.setProvenance(userId, job!.id, field, "ai", 0.93);
+    }
+    const provenance = async () =>
+      (await repo.listProvenance(userId, job!.id))
+        .map((p) => `${p.field}:${p.source}:${p.confidence}`)
+        .sort();
+    const before = await provenance();
+
+    const pending = await seedPending({
+      detectedCompany: "KPMG",
+      detectedRole: "Vacationer Program",
+      detectedStage: "applied",
+      senderDomain: "smartrecruiters.com",
+      receivedAt: new Date("2026-08-02T00:00:00Z"),
+      confidence: 0.41,
+    });
+    const res = await request(app).post(`/api/review/${pending!.id}/confirm`).send({}).expect(200);
+
+    expect(res.body).toEqual({ jobId: job!.id, matched: true });
+    const after = await repo.findJob(userId, job!.id);
+    expect(after!.stage).toBe("interview");
+    expect(after!.lastEventAt.toISOString()).toBe("2026-08-14T00:00:00.000Z");
+    expect(await provenance()).toEqual(before);
+
+    // And a later offer email still moves it — nothing was locked.
+    const offer: Fixture = {
+      email: {
+        id: "offer-1",
+        gmailMessageId: "offer-1",
+        gmailThreadId: "offer-t1",
+        receivedAt: "2026-08-20T00:00:00+00:00",
+        fromAddress: "noreply@smartrecruiters.com",
+        subject: "s",
+        body: "b",
+      },
+      expected: {
+        isApplication: true,
+        company: "KPMG",
+        role: "Vacationer Program",
+        stage: "offer",
+        deadlineAt: null,
+        hasExplicitDeadlineLanguage: false,
+      },
+    };
+    await processEmail(
+      { repo, classifier: new FakeEmailClassifier({ fixtures: [offer] }), ownAddress: null, reviewThreshold: 0.75 },
+      userId,
+      { ...offer.email, receivedAt: new Date(offer.email.receivedAt) },
+    );
+    expect((await repo.findJob(userId, job!.id))!.stage).toBe("offer");
+  });
+
+  it("makes only the fields the student changed human when confirming onto an application", async () => {
+    const job = await seedJob(userId);
+    const pending = await seedPending({
+      detectedCompany: "KPMG",
+      detectedRole: "Vacationer Program",
+      detectedStage: "interview",
+      senderDomain: "smartrecruiters.com",
+      receivedAt: new Date("2026-08-15T00:00:00Z"),
+      confidence: 0.6,
+    });
+    await request(app)
+      .post(`/api/review/${pending!.id}/confirm`)
+      .send({ corrections: { nextAction: "Book the panel interview" } })
+      .expect(200);
+
+    const sources = Object.fromEntries(
+      (await repo.listProvenance(userId, job!.id)).map((p) => [p.field, p.source]),
+    );
+    expect(sources["next_action"]).toBe("human");
+    expect(sources["stage"]).toBe("ai"); // the email's own stage, through the stage engine
+    expect((await repo.findJob(userId, job!.id))!.stage).toBe("interview");
   });
 });
 
