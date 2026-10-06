@@ -28,6 +28,8 @@
     "db:seed": "node --env-file-if-exists=.env packages/server/dist/db/seed-cli.js",
     "dev:server": "node --env-file-if-exists=.env packages/server/dist/server.js",
     "harvest": "node --env-file-if-exists=.env packages/server/dist/harvest/import.js",
+    "predemo": "npm run typecheck --silent",
+    "demo": "node --env-file-if-exists=.env packages/server/dist/demo-server.js",
     "db:reset": "node -e \"require('node:fs').rmSync('dev.db',{force:true})\" && npm run db:migrate && npm run db:seed",
     "dev:client": "vite --config packages/client/vite.config.ts packages/client",
     "build:client": "vite build --config packages/client/vite.config.ts packages/client"

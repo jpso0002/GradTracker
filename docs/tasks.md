@@ -26,7 +26,7 @@ when its dependencies are checked off.
 | 7 — Ingestion & live classifier | 9–11 | T7.1–T7.10 | ◐ **T7.8 done** (pulled forward for T2.11) · **T7.3 reinstated** · **T7.7, T7.9, T7.10 new** · T7.1, T7.2, T7.4–T7.6 deferred |
 | 8 — Traceability | 11–12 | T8.1–T8.5 | ◐ **T8.3 reinstated** · the rest deferred |
 
-**630 tests green, 5 recorded as todo** (the security clauses deferred with sign-in). Steps
+**637 tests green, 5 recorded as todo** (the security clauses deferred with sign-in). Steps
 1, 2, 5, 6 and 7 of the Plan of record are complete, and T3.12 of step 3 (5 October 2026);
 every other task marked **new** or **reinstated** above is open, except T7.8, pulled forward.
 
@@ -79,6 +79,7 @@ One pipeline, three ways to fill it. Each is its own database, selected with `DA
 | **Single account** | One team member's real inbox, by connector harvest or export |
 | **Test inbox** | Real job-board mail from a dedicated test account, plus authored application emails, marked synthetic |
 | **Hybrid** | Both, in one pipeline |
+| **Presentation** *(6 Oct, D35)* | The seeded sample mailbox — 25 synthetic applications — in `demo.db`, rebuilt by `npm run demo` on every start, behind the simulated sign-in |
 
 **One mailbox, one path.** The connector yields Gmail API ids; exports yield RFC 822
 Message-IDs. The same email arriving both ways gets two ids, so the duplicate protection
@@ -1025,6 +1026,14 @@ Lanes diverge here. A owns the domain, B owns sync and security, C starts the sh
   are deferred on the demo track. A Connect screen with a "Continue with Google" button that
   cannot connect would misrepresent what the demo does. The app announces demo mode in the
   sidebar instead. Reinstate with T7.1.
+  *6 Oct — built as a simulated walkthrough for the final presentation (**D35**).* The Connect
+  screen exists, per app-flow.md §5.1, followed by a stand-in for Google's read-only consent
+  screen and a scan of the sample mailbox that ends on the dashboard; **every step says it is
+  simulated**, so it does not misrepresent the demo. `npm run demo` serves `demo.db`, rebuilt
+  from the seed on every start, never a real inbox. Five client tests and two server tests;
+  walked through in the browser at desktop and phone widths. The done-when is still unmet —
+  there is no OAuth round trip and no denied consent — so the task stays deferred with
+  T4.1–T4.3.
 
 - [x] **T5.5 — Pipeline view** · Lane C · needs T5.2, T5.3 — *done 2026-08-18*
   Four `StatCard`s, Active/Archived tabs, stage filter chips, ranked `ApplicationRow` list,

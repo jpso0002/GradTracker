@@ -14,6 +14,12 @@
       "port": 3000
     },
     {
+      "name": "gradtracker-demo",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file-if-exists=.env", "packages/server/dist/demo-server.js"],
+      "port": 3000
+    },
+    {
       "name": "gradtracker-client-bun",
       "runtimeExecutable": "/Users/jidds/.bun/bin/bunx",
       "runtimeArgs": ["vite", "--config", "packages/client/vite.config.ts", "packages/client"],

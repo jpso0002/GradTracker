@@ -91,7 +91,7 @@ team chose classifies live (D23, §4).
 
 | | |
 |---|---|
-| Tests | **630 passing**, 36 files, plus 5 recorded as todo (the security clauses deferred with sign-in) |
+| Tests | **637 passing**, 38 files, plus 5 recorded as todo (the security clauses deferred with sign-in) |
 | Source | ~18,300 lines of TypeScript/TSX in the three packages' `src/` — ~10,700 application, ~7,600 tests (excludes the vendored design system and build output; counted 5 October) |
 | Accessibility | WCAG 2.1 AA audit: 36 of 50 criteria pass, 4 partly — the rest is mostly the design system's tokens ([accessibility-audit.md](accessibility-audit.md)) |
 | Performance | Seeded 25-application pipeline: API p95 8 ms (budget 200), edit round-trip p95 11 ms (budget 300); browser largest paint 148 ms |
@@ -445,6 +445,12 @@ urgency buckets, 4 review items. Deadlines are offsets from the day the seed run
 data ages** — re-run `npm.cmd run db:reset` on the morning of any demo, or the urgency
 colours drain to red.
 
+**Presentation demo** *(6 October, D35)* — the same seeded data in its own `demo.db`, rebuilt
+by `npm.cmd run demo` every time it starts, so it never ages and never touches `dev.db`. The
+app opens on a **simulated** Google sign-in — the Connect screen, a stand-in for the read-only
+consent screen, a scan counting through the sample mailbox — that lands on the dashboard.
+Every step says it is simulated; hosted sign-in (RQ-01) stays deferred.
+
 **Real-inbox demo** — 32 emails from Jordan's Gmail → 8 applications (3 active, 5 archived),
 4 hard negatives correctly rejected. NAB Graduate Program 2027 is reconstructed from 5 events
 across two sender domains; PwC from 7 across three. Real deadlines were pulled from bodies.
@@ -458,7 +464,7 @@ Windows, **PowerShell 5.1**: `&&` is a parser error and `npm.ps1` is blocked by 
 policy. Use `npm.cmd`, one command per line.
 
 ```
-npm.cmd test              # 630 tests, 5 todo
+npm.cmd test              # 637 tests, 5 todo
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run accuracy      # the CI gate; --demo shows the report shape, --invert proves it fails
@@ -467,6 +473,7 @@ npm.cmd run label -- inventory|export|import|agreement|verify ...   # see labell
 npm.cmd run db:reset      # wipe, migrate, seed
 npm.cmd run harvest -- <path-to-harvest.json>
 npm.cmd run dev:server    # API on :3000
+npm.cmd run demo          # the presentation: API on :3000 serving demo.db, rebuilt from the seed (D35)
 npm.cmd run dev:client    # dashboard on :5173, proxies /api to :3000
 ```
 

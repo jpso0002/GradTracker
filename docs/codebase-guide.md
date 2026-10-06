@@ -662,10 +662,11 @@ SERVER_ORIGIN=http://localhost:3000 ~/.bun/bin/bunx vite --config packages/clien
 
 The npm scripts use `node --env-file-if-exists=.env`, a Node-specific flag Bun doesn't accept — which is why these call the compiled files in `dist/` directly and pass `DATABASE_URL` inline. Bun loads `.env` automatically anyway.
 
-### Three ways to fill the database
+### Four ways to fill the database
 
 | | Command | Gives you |
 |---|---|---|
+| **Demo** | `npm run demo` | The seed, in its own `demo.db`, rebuilt every time it starts — and the API serving it. Open the app and it begins at a **simulated** Google sign-in that "scans" this sample mailbox and lands on the dashboard (D35). Best for the presentation: never a real inbox, never `dev.db`. |
 | **Seed** | `npm run db:seed` | 25 invented applications covering every stage and every urgency bucket. Deadlines are relative to now, so it never goes stale. Best for UI work. |
 | **Fixtures** | the fake adapters, used by tests | The 80-email corpus. Best for testing the pipeline. |
 | **Harvest** | `npm run harvest -- <file.json>` | Real emails from a real inbox, classified in-session, run through the **real** pipeline. Best for finding out what actually breaks. |

@@ -39,8 +39,8 @@ duplicated the pipeline's Archived tab.
 
 | Route | View | Auth | Notes |
 |---|---|---|---|
-| `/` | Redirect | — | → `/pipeline` if authenticated, else `/connect` |
-| `/connect` | ConnectView | public | Redirects away if already authenticated |
+| `/` | Redirect | — | → `/pipeline` if authenticated, else `/connect` *(demo: "authenticated" means the simulated walkthrough is done in this tab — D35)* |
+| `/connect` | ConnectView | public | Redirects away if already authenticated *(built 6 Oct as the simulated walkthrough)* |
 | `/pipeline` | PipelineView | required | Default landing surface |
 | `/pipeline/:jobId` | PipelineView + DetailPanel | required | Deep-linkable and shareable |
 | `/review` | ReviewView | required | Badge count in sidebar |
@@ -172,6 +172,16 @@ impression, and the count is honest work-in-progress rather than a fake progress
 
 If step 4 is denied → return to Connect with "GradTracker needs read access to your Gmail to
 build your pipeline. Nothing is sent and nothing is stored." Never a dead end.
+
+*As built for the final presentation, 6 October 2026 (D35) — a **simulated** walkthrough of
+this journey.* Steps 1–2 are the real Connect screen. Steps 3–4 are a stand-in for Google's
+consent screen, as the demo database's sample student, asking only for read-only access;
+Cancel returns to Connect. Steps 5–7 count up through the sample mailbox's own numbers —
+"170 of 612 emails", applications found, items to review, each company as it is "found" — on
+a scanning screen of its own rather than over the pipeline, then open the dashboard with
+"Inbox scanned — 25 applications found, 4 to review". Every step says it is simulated, and no
+session is created: the tab only remembers that the walkthrough is done. `npm run demo` serves
+the sample mailbox (`demo.db`), rebuilt on every start.
 
 ### 4.2 Journey B — Daily check *(workflow 4, the primary journey)*
 

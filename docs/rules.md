@@ -168,6 +168,8 @@ Keep entries concise. One line per decision when possible.
 - **`app.css` holds only what tokens cannot express inline** — focus rings, touch sizes, rendered markdown — and declares no colour of its own.
 - **Contrast is computed from the token files, not assumed** (`contrast.test.ts`). A pair the app relies on must pass; the design system's known failures are pinned as failing until fixed at the source.
 - **Documentation pages are sections of `docs/`, compiled in** — never copied into the app. A link to another docs file becomes plain text, not a dead link.
+- **The simulated sign-in says it is simulated, on every step** (D35). It authenticates no one and contacts no one; it decides only where the app opens. A mock sign-in without the label would look like a working one.
+- **A route decision that depends on session state is made by a component at the route**, never in `App`'s render: `App` does not re-render on navigation, so a decision made there goes stale. Written that way first, Sign out sent the student straight back to the dashboard; a test caught it.
 
 ## Business Logic
 
@@ -210,6 +212,7 @@ Keep entries concise. One line per decision when possible.
 - **The server ranks using the client's IANA timezone.** One clock governs both ranking and display.
 
 ### Data and retention
+- **The presentation demo runs on `demo.db`, rebuilt from the seed on every start — never on `dev.db`**, which may hold a real inbox (D35). It is emptied and re-seeded rather than deleted: on Windows a closed SQLite file stays locked for a while.
 - **No raw email content is ever persisted** — no subject, body, snippet, or full sender address, in the database or in any log.
 - **Forbidden columns are enforced by a test** that fails CI if one is added.
 - **The email body exists only inside `classifyOne()`**, which returns a body-free result.

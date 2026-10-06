@@ -537,6 +537,33 @@ though the app never applies it.
 prompt says to resolve but the label calls unresolvable — scores the prompt, not the model.
 Checking the authored corpus against this found six such labels (C19).
 
+### D35 — A simulated sign-in for the final demo *(6 October 2026)*
+
+**Chosen:** the final presentation shows Google sign-in as a **walkthrough of how it would
+work**: the Connect screen, a stand-in for Google's consent screen asking only for read-only
+Gmail access, and a scan of a sample mailbox that ends on the dashboard. Nothing contacts
+Google, and **every step says it is simulated**. The demo runs on its own database,
+`demo.db`, rebuilt from the seed each time it starts (`npm run demo`) — the 25 synthetic
+applications — never on a member's real inbox.
+
+**Rejected:**
+
+| Option | Why not |
+|---|---|
+| Implement OAuth for the demo | T4.1–T4.3 are deferred on effort, and `gmail.readonly` is a restricted scope — the reasoning RQ-01 records |
+| Show RQ-01 only as a deferral | Leaves the first requirement with nothing to see; the intended design, and its read-only scope, is worth showing |
+| Demo on a real inbox | Real applications in front of staff, on slides and on screen |
+| An unlabelled mock sign-in | Indistinguishable from a working one — a demo that looks like a logged-in product misleads (P5) |
+
+**Reasoning:** the walkthrough demonstrates the design RQ-01 describes without claiming it is
+built. The scan counts the demo database's own numbers, so what it "finds" is what the
+dashboard then shows.
+
+**Consequence:** RQ-01 stays "Deferred — justified", and T5.4's done-when — the OAuth round
+trip, a denied consent returning with an explanation — stays unmet. The app opens on the
+Connect screen until the walkthrough is done in that browser tab; Settings → Sign out starts
+it again.
+
 ---
 
 ## 3. Defects found reviewing the specification *(Revision 2)*

@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button, EmptyState, Switch, TopBar } from "../ds";
+import { isSignedIn, signOut } from "../session";
 import { api, NetworkError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
@@ -40,6 +42,8 @@ export function SettingsView() {
   const toast = useToast();
   const { theme, toggle } = useTheme();
   const [shortcuts, setShortcuts] = useShortcuts();
+  const navigate = useNavigate();
+  const signedIn = isSignedIn();
   const sliderId = useId();
   const helpId = useId();
   // The value last saved, once the student has saved one this visit.
@@ -158,9 +162,22 @@ export function SettingsView() {
 
         <Section title="Gmail">
           <p style={{ margin: 0, color: "var(--text-muted)" }}>
-            Demo mode: mail reaches GradTracker through the local import, so there is no connection to
-            manage here. Connecting and disconnecting Gmail arrive with sign-in.
+            Demo mode: the sign-in is a walkthrough, not a real Google connection, and mail reaches
+            GradTracker through the local import. Sign out to start the walkthrough again.
           </p>
+          {signedIn ? (
+            <div>
+              <Button
+                variant="quiet"
+                onClick={() => {
+                  signOut();
+                  navigate("/connect");
+                }}
+              >
+                Sign out
+              </Button>
+            </div>
+          ) : null}
         </Section>
       </div>
     </>
