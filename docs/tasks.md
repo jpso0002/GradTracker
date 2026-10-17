@@ -68,6 +68,7 @@ T3.12, now done; its T7.3 and T2.8 wait on **B3**.
 | **5** ✅ | T3.10 · T3.11 | Ambiguous matches routed to review (**C18**) · confirming onto an existing application applies the email, not a correction (**C16**) — *done 5 Oct* | — |
 | **6** ✅ | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search — *done 5 Oct*, fixing **C23** on the way | — |
 | **7** ✅ | T5.7 · T5.8 · T6.5 · T4.7 · T5.12 · T5.9 | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center — *done 5 Oct*; the audit is [accessibility-audit.md](accessibility-audit.md) | — |
+| **P** ✅ | D36 | **Presentation MVP** — Refresh reads a demo Gmail inbox over IMAP; a scripted classifier for the two live emails; Ctrl+Alt+R backup; a correction holds until newer mail; the inbox guide and RTM wording draft — *done 17 Oct, for the 20 Oct presentation* | Team: create the inbox, enter the app password, agree the RTM wording |
 | **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run. **Exporting and labelling can start now** — the toolkit and guide exist | **B6** · measuring: T7.3 |
 
 ### Demo modes
@@ -79,7 +80,7 @@ One pipeline, three ways to fill it. Each is its own database, selected with `DA
 | **Single account** | One team member's real inbox, by connector harvest or export |
 | **Test inbox** | Real job-board mail from a dedicated test account, plus authored application emails, marked synthetic |
 | **Hybrid** | Both, in one pipeline |
-| **Presentation** *(6 Oct, D35)* | The seeded sample mailbox — 25 synthetic applications — in `demo.db`, rebuilt by `npm run demo` on every start, behind the simulated sign-in |
+| **Presentation** *(6 Oct, D35; 17 Oct, D36)* | The seeded sample mailbox — 25 synthetic applications — in `demo.db`, rebuilt by `npm run demo` on every start, behind the simulated sign-in. Refresh adds whatever a teammate sends to the demo inbox, classified by the scripted classifier ([demo-inbox-guide.md](demo-inbox-guide.md)) |
 
 **One mailbox, one path.** The connector yields Gmail API ids; exports yield RFC 822
 Message-IDs. The same email arriving both ways gets two ids, so the duplicate protection

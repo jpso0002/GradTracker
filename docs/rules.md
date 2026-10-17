@@ -169,6 +169,9 @@ Keep entries concise. One line per decision when possible.
 - **Contrast is computed from the token files, not assumed** (`contrast.test.ts`). A pair the app relies on must pass; the design system's known failures are pinned as failing until fixed at the source.
 - **Documentation pages are sections of `docs/`, compiled in** — never copied into the app. A link to another docs file becomes plain text, not a dead link.
 - **The simulated sign-in says it is simulated, on every step** (D35). It authenticates no one and contacts no one; it decides only where the app opens. A mock sign-in without the label would look like a working one.
+- **The demo's classifier is scripted, and says so** (D36): the presenters describe it as scripted, and anything it does not recognise goes to review rather than being guessed into the pipeline. Only the answer is scripted — every email still goes through `processEmail`.
+- **Refresh outside the presentation demo reloads quietly** (501 from the server): there is no inbox to read, and the button must not pretend there was. A missing or failing demo inbox says how to fix it.
+- **The presenter's backup is a modifier chord, Ctrl+Alt+R** — never a bare key (WCAG 2.1.4) — and feeds the same emails through the same pipeline as a live Refresh.
 - **A route decision that depends on session state is made by a component at the route**, never in `App`'s render: `App` does not re-render on navigation, so a decision made there goes stale. Written that way first, Sign out sent the student straight back to the dashboard; a test caught it.
 
 ## Business Logic
@@ -182,8 +185,8 @@ Keep entries concise. One line per decision when possible.
 - **A stage with `human` provenance is frozen** — the pipeline never changes it again.
 
 ### Provenance and correction
-- **A field with `source = 'human'` is never written by the classification pipeline.** Enforced in the repository write path, inside the transaction.
-- **Provenance never downgrades.** There is no `human → ai` transition.
+- **A field with `source = 'human'` is never written by the classification pipeline from an email received before the edit.** An email received *after* the edit may update the fields it states (D36) — the employer has said something newer than the student knew. Enforced in `isFieldLocked`, which compares the email's received time with the edit's; called without one, a human field is always locked.
+- **Provenance downgrades only through newer mail.** `human → ai` happens only when an email received after the edit writes that field (D36); nothing else turns a student's value back into the model's.
 - **Human-verified company and role become the job-matching key**, so corrections route future emails to the corrected job.
 - **All five extractable fields are editable:** company, role, stage, deadline, next action.
 - **A next action the student set is displayed exactly as set, blank included.** Staleness, a closed application and stage defaults derive only over the model's values. Deriving over the student's made a saved correction look unsaved (C23).
@@ -213,6 +216,7 @@ Keep entries concise. One line per decision when possible.
 
 ### Data and retention
 - **The presentation demo runs on `demo.db`, rebuilt from the seed on every start — never on `dev.db`**, which may hold a real inbox (D35). It is emptied and re-seeded rather than deleted: on Windows a closed SQLite file stays locked for a while.
+- **The demo inbox is read-only and read only from now** (D36): opened with `readOnly`, never marking mail seen, and taking only mail received after `npm run demo` started. Its app password lives in `.env`, is entered by the team, and appears in no message — a failed sign-in names the account and the setting, never the secret.
 - **No raw email content is ever persisted** — no subject, body, snippet, or full sender address, in the database or in any log.
 - **Forbidden columns are enforced by a test** that fails CI if one is added.
 - **The email body exists only inside `classifyOne()`**, which returns a body-free result.

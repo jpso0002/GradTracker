@@ -8,7 +8,8 @@ import { normaliseCompany } from "../matching/match.js";
  * "The correction persists across syncs" is not a promise, a convention, or a
  * comment. It is this function refusing to write. Every field the pipeline
  * wants to change passes through here, and a field the student has corrected
- * is skipped no matter what a later email says.
+ * is skipped — unless the email was received after the correction, when the
+ * employer has said something newer than the student knew (D36).
  *
  * The rule is deliberately in one place. Scattered across the pipeline it
  * would be forgotten exactly once, by someone in a hurry, and the failure
@@ -58,6 +59,9 @@ export async function applyExtraction(
   jobId: string,
   extracted: ExtractedFields,
   confidence: number,
+  /** When the email was received. An email newer than a student's edit may
+   *  update that field again (D36); without it, every edit holds. */
+  receivedAt?: Date,
 ): Promise<ApplyResult> {
   const result: ApplyResult = {
     written: [],
@@ -84,7 +88,7 @@ export async function applyExtraction(
     }
 
     // ── SM-7 is enforced on this line ─────────────────────────────────────
-    if (await repo.isFieldLocked(userId, jobId, field)) {
+    if (await repo.isFieldLocked(userId, jobId, field, receivedAt)) {
       result.skippedHumanLocked.push(field);
       continue;
     }

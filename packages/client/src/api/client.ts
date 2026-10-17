@@ -5,12 +5,14 @@ import {
   ReviewItemSchema,
   SettingsResponseSchema,
   SyncStatusResponseSchema,
+  SyncResultSchema,
   type ListJobsResponse,
   type JobDetailResponse,
   type MeResponse,
   type ReviewItem,
   type SettingsResponse,
   type SyncStatusResponse,
+  type SyncResult,
   type UpdateJobBody,
   type UpdateSettingsBody,
   type ConfirmReviewBody,
@@ -175,6 +177,17 @@ export const api = {
 
   syncStatus(): Promise<SyncStatusResponse> {
     return request("/api/sync/status", SyncStatusResponseSchema);
+  },
+
+  /** Refresh: reads the demo inbox and runs what arrived (D36). 501 outside
+   *  the presentation demo, where there is no inbox to read. */
+  sync(): Promise<SyncResult> {
+    return request("/api/sync", SyncResultSchema, { method: "POST" });
+  },
+
+  /** The presenter's fallback: the same pre-written emails, without Gmail. */
+  syncBackup(): Promise<SyncResult> {
+    return request("/api/sync/backup", SyncResultSchema, { method: "POST" });
   },
 
   getSettings(): Promise<SettingsResponse> {

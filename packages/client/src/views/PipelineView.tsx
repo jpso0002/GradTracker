@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { StageEnum, type Job, type JobStatus, type ListJobsResponse, type Stage } from "@gradtracker/shared";
 import {
@@ -15,7 +15,9 @@ import {
   Icon,
   STAGES,
 } from "../ds";
-import { api } from "../api/client";
+import { api, ApiError } from "../api/client";
+import { useToast } from "../shell/ToastHost";
+import { syncSummary } from "../syncSummary";
 import { useAsync } from "../hooks/useAsync";
 import { isTouch, useBreakpoint } from "../hooks/useBreakpoint";
 import { useElementWidth } from "../hooks/useElementWidth";
@@ -68,7 +70,7 @@ function rowLabel(job: Job): string {
   return parts.join(". ");
 }
 
-export function PipelineView() {
+export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void } = {}) {
   const [status, setStatus] = useState<JobStatus>("active");
   const [stages, setStages] = useState<Stage[]>([]);
   const [query, setQuery] = useState("");
@@ -84,6 +86,8 @@ export function PipelineView() {
 
   const pipeline = useAsync(() => api.listJobs({ status, stages }), [status, stages.join(",")]);
   const review = useAsync(() => api.listReview(), []);
+  const { show } = useToast();
+  const [syncing, setSyncing] = useState(false);
 
   const jobs = pipeline.data?.jobs ?? [];
   const stats = pipeline.data?.stats;
@@ -132,6 +136,43 @@ export function PipelineView() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [shortcuts]);
 
+  // Refresh reads new mail (D36). Outside the presentation demo the server has
+  // no inbox to read and says so with a 501: Refresh then reloads, as before.
+  const { reload: reloadPipeline } = pipeline;
+  const { reload: reloadReview } = review;
+  const refresh = useCallback(
+    async (backup = false) => {
+      setSyncing(true);
+      try {
+        const result = await (backup ? api.syncBackup() : api.sync());
+        show(syncSummary(result), result.emailsRead === 0 ? "info" : "success");
+      } catch (error) {
+        if (!(error instanceof ApiError && error.status === 501)) {
+          show(error instanceof Error ? error.message : "Could not refresh", "error");
+        }
+      } finally {
+        setSyncing(false);
+        reloadPipeline();
+        reloadReview();
+        onReviewChanged?.();
+      }
+    },
+    [show, reloadPipeline, reloadReview, onReviewChanged],
+  );
+
+  // The presenter's fallback when Gmail or the venue's network fails: the same
+  // pre-written emails, through the same pipeline (D36). Ctrl+Alt+R — a chord
+  // no browser claims, never a bare key (WCAG 2.1.4).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey && e.altKey && !e.shiftKey && e.code === "KeyR")) return;
+      e.preventDefault();
+      void refresh(true);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [refresh]);
+
   const toggleStage = (stage: Stage) => {
     setStages((current) =>
       current.includes(stage) ? current.filter((s) => s !== stage) : [...current, stage],
@@ -167,10 +208,11 @@ export function PipelineView() {
         <Button
           variant="ghost"
           iconLeft="refresh-cw"
-          onClick={pipeline.reload}
+          onClick={() => void refresh()}
+          disabled={syncing}
           {...(touch ? { style: { minHeight: "var(--touch-min)" } } : {})}
         >
-          Refresh
+          {syncing ? "Refreshing…" : "Refresh"}
         </Button>
       </TopBar>
 

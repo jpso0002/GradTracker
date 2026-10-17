@@ -564,6 +564,53 @@ trip, a denied consent returning with an explanation — stays unmet. The app op
 Connect screen until the walkthrough is done in that browser tab; Settings → Sign out starts
 it again.
 
+### D36 — A live Refresh from a demo inbox; a correction holds until newer mail *(17 October 2026)*
+
+**Context:** the head tutor marks the presentation's demonstration of the RTM, not the
+finished backend, and the TA ruled out a video: the demo is live. The team wanted one moment
+of real behaviour — a teammate sends an email during the presentation and Refresh brings it
+in — with the presentation on 20 October.
+
+**Chosen:**
+
+1. **Refresh reads one throwaway Gmail account over IMAP**, with an app password the team
+   enters in `.env` (`GMAIL_DEMO_USER`, `GMAIL_DEMO_APP_PASSWORD`). The mailbox is opened
+   read-only, only mail received after `npm run demo` started counts, and the email goes
+   through the real pipeline. Sign-in stays the D35 walkthrough.
+2. **A scripted classifier, not a model.** No API credit is bought. The emails a teammate
+   sends are written in advance (`adapters/classifier/scripted.ts`) and recognised by
+   subject; each returns what prompt v2 asks a model to return. Anything unrecognised goes
+   to review at confidence 0.30 — never guessed into the pipeline. Only the answer is
+   scripted: the confidence gate, matching, stage engine and provenance are the real ones.
+3. **A backup trigger.** Ctrl+Alt+R on the dashboard feeds the same emails through the same
+   pipeline without Gmail, for when the venue's network fails. Fixed ids: a second press
+   changes nothing.
+4. **A correction holds until the employer says something newer.** A field the student
+   edited is locked against any email received *before* the edit; an email received *after*
+   it may update the fields it states, which become AI again with that email's confidence.
+   The stage engine still applies — forward only, withdrawn the student's alone.
+
+**Rejected:**
+
+| Option | Why not |
+|---|---|
+| Gmail API with real OAuth in testing mode | Real sign-in too, but one to two days plus Google Cloud setup three days before the presentation, and an "unverified app" screen to explain |
+| The Claude connector, live | Means running a Claude session mid-presentation |
+| Buying API credit for the live email | The team chose not to spend; the scripted classifier shows the same pipeline |
+| A Refresh that injects from mock data only | Nothing real to show; kept only as the backup |
+| Edits final forever (SM-7 as first written) | The team's reasoning (meeting, 6 October): an interview invitation that arrives after the student marked the assessment done is newer truth |
+
+**Consequences:**
+
+- `POST /api/sync` works in the presentation demo; elsewhere it still answers 501. The
+  production path is still the Gmail adapter (T7.2) and the live classifier (T7.3).
+- **SM-7 and RQ-06 change meaning:** a correction persists across every update *except* a
+  newer email about that application stating that field. The RTM wording needs to match —
+  drafted in [rtm-wording-draft.md](rtm-wording-draft.md). To demonstrate RQ-06, show an
+  edit surviving a Refresh that brings an email about a different application.
+- The demo must be started before the live email is sent. Setup and the two email texts are
+  in [demo-inbox-guide.md](demo-inbox-guide.md).
+
 ---
 
 ## 3. Defects found reviewing the specification *(Revision 2)*

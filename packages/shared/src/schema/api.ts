@@ -152,11 +152,16 @@ export const SyncStatusResponseSchema = z.object({
 
 export type SyncStatusResponse = z.infer<typeof SyncStatusResponseSchema>;
 
+/** What one Refresh did (D36). Counts only — never a subject or a sender. */
 export const SyncResultSchema = z.object({
   emailsRead: z.number().int().nonnegative(),
   newApplications: z.number().int().nonnegative(),
+  /** Existing applications an email changed, whether or not the stage moved. */
+  updatedApplications: z.number().int().nonnegative(),
   stageChanges: z.number().int().nonnegative(),
   needsReview: z.number().int().nonnegative(),
+  /** Read and judged not to be about an application: counted, never stored. */
+  ignored: z.number().int().nonnegative(),
 });
 
 export type SyncResult = z.infer<typeof SyncResultSchema>;

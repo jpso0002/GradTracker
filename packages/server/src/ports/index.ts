@@ -11,6 +11,8 @@ export {
   senderDomain,
 } from "./gmail-client.js";
 
+export type { MailboxReader } from "./mailbox.js";
+
 export type { EmailClassifier, ClassificationResult } from "./email-classifier.js";
 export {
   ClassifierUnavailableError,

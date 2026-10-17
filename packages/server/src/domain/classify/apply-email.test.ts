@@ -142,3 +142,52 @@ describe("applying an email to an application (T3.11)", () => {
     expect((await repo.findJob(userId, job.id))!.stage).toBe("interview");
   });
 });
+
+describe("a student's edit against newer mail (D36)", () => {
+  /** The student corrects the stage and next action now. */
+  async function editedJob() {
+    const job = await interviewJob();
+    await repo.setProvenance(userId, job.id, "stage", "human", null);
+    await repo.setProvenance(userId, job.id, "next_action", "human", null);
+    await repo.updateJob(userId, job.id, { nextAction: "Prepare for interview" });
+    return job;
+  }
+
+  it("holds against an email received before the edit", async () => {
+    const job = await editedJob();
+    await applyEmailToJob(repo, userId, job.id, email({
+      receivedAt: new Date(Date.now() - 60_000),
+      stage: "offer",
+      nextAction: "Respond to offer",
+    }));
+
+    const after = await repo.findJob(userId, job.id);
+    expect(after?.stage).toBe("interview");
+    expect(after?.nextAction).toBe("Prepare for interview");
+  });
+
+  it("gives way to an email received after the edit, for the fields it states", async () => {
+    const job = await editedJob();
+    const result = await applyEmailToJob(repo, userId, job.id, email({
+      receivedAt: new Date(Date.now() + 60_000),
+      stage: "offer",
+      nextAction: null,
+    }));
+
+    const after = await repo.findJob(userId, job.id);
+    expect(result.stageChanged).toBe(true);
+    expect(after?.stage).toBe("offer");
+    // The email said nothing about the next action, so the student's stays.
+    expect(after?.nextAction).toBe("Prepare for interview");
+
+    const provenance = await provenanceOf(job.id);
+    expect(provenance.find((p) => p.field === "stage")).toMatchObject({ source: "ai", confidence: 0.41 });
+    expect(provenance.find((p) => p.field === "next_action")).toMatchObject({ source: "human" });
+  });
+
+  it("still never moves the stage backwards", async () => {
+    const job = await editedJob();
+    await applyEmailToJob(repo, userId, job.id, email({ receivedAt: new Date(Date.now() + 60_000), stage: "applied" }));
+    expect((await repo.findJob(userId, job.id))?.stage).toBe("interview");
+  });
+});

@@ -461,14 +461,14 @@ human-verified, tagged "Edited", and future classifications inherit rather than 
 ```ts
 function applyExtraction(job, field, value, confidence, tx) {
   const prov = getProvenance(job.id, field, tx);
-  if (prov?.source === 'human') return;          // ◄── SM-7 enforced here
+  if (prov?.source === 'human' && email.receivedAt <= prov.updatedAt) return; // ◄── SM-7 (D36)
   writeField(job, field, value, tx);
   upsertProvenance(job.id, field, 'ai', confidence, tx);
 }
 ```
 
 `PATCH /api/jobs/:id` sets `source = 'human'`, clears `confidence`, and is the only path
-that may overwrite a human field. Validation per field: `company`/`role` 1–160 chars
+that may overwrite a human field from older mail. *D36 (17 October): an email received after the edit may update the fields it states — the correction holds until the employer says something newer.* Validation per field: `company`/`role` 1–160 chars
 trimmed, `next_action` ≤ 120, `deadline_at` a valid ISO date within ±2 years, `stage` one of
 six. Rejection returns 400 with the field name.
 

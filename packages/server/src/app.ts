@@ -7,7 +7,7 @@ import { errorHandler } from "./middleware/validate.js";
 import { jobRoutes } from "./routes/jobs.js";
 import { reviewRoutes } from "./routes/review.js";
 import { settingsRoutes } from "./routes/settings.js";
-import { syncRoutes } from "./routes/sync.js";
+import { syncRoutes, type DemoSyncOptions } from "./routes/sync.js";
 
 /**
  * The Express application.
@@ -25,6 +25,8 @@ export interface AppOptions {
   /** Explicit user, so tests do not depend on which row the database returns
    *  first. Demo mode resolves the single local user when this is omitted. */
   userId?: UserId;
+  /** The presentation demo's Refresh (D36). Absent, Refresh answers 501. */
+  demoSync?: DemoSyncOptions;
 }
 
 export function createApp(options: AppOptions): Express {
@@ -66,7 +68,7 @@ export function createApp(options: AppOptions): Express {
   app.use("/api/jobs", jobRoutes(repo, options.clock));
   app.use("/api/review", reviewRoutes(repo));
   app.use("/api/settings", settingsRoutes(repo));
-  app.use("/api/sync", syncRoutes(repo));
+  app.use("/api/sync", syncRoutes(repo, options.demoSync));
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: "Not found." });

@@ -14,7 +14,8 @@ import { applyExtraction } from "../provenance/apply.js";
  * newer mail was processed. So:
  *
  *   - **Stage** goes through the stage engine — forward-only, human locks
- *     respected. An offer or rejection applies from any stage because the
+ *     respected. A lock holds against emails received before the student's
+ *     edit; a newer email may update the field again (D36). An offer or rejection applies from any stage because the
  *     newest email is the truth, so an *older* one does not.
  *   - **Other fields** are written as AI with the email's confidence, skipping
  *     human locks — unless the email is older than the application's latest
@@ -55,7 +56,7 @@ export async function applyEmailToJob(
   const decision = decideStage({
     current: job.stage,
     detected: email.stage,
-    humanLocked: await repo.isFieldLocked(userId, jobId, "stage"),
+    humanLocked: await repo.isFieldLocked(userId, jobId, "stage", email.receivedAt),
   });
   const stageChanged = decision.applies && !(stale && decision.reason === "always-applies");
   const detailsApply = !stale || stageChanged;
@@ -72,6 +73,7 @@ export async function applyEmailToJob(
       nextAction: detailsApply ? email.nextAction : null,
     },
     email.confidence,
+    email.receivedAt,
   );
 
   // `lastEventAt` advances on every newer email, including ones that changed

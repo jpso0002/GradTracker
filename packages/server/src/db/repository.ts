@@ -272,16 +272,24 @@ export function createRepository(db: Database) {
       return db.select().from(jobFieldProvenance).where(eq(jobFieldProvenance.jobId, jobId));
     },
 
-    /** True when the field is human-verified and the pipeline must not touch
-     *  it. The check behind SM-7. */
-    async isFieldLocked(userId: UserId, jobId: string, field: ExtractableField) {
+    /**
+     * True when the field is human-verified and the pipeline must not touch
+     * it. The check behind SM-7.
+     *
+     * A correction is final until the employer says something newer (D36):
+     * given the received time of the email asking, the lock holds only if the
+     * student's edit came after it. Without one, a human field is locked.
+     */
+    async isFieldLocked(userId: UserId, jobId: string, field: ExtractableField, emailReceivedAt?: Date) {
       if (!(await assertOwnsJob(userId, jobId))) return false;
       const [row] = await db
-        .select({ source: jobFieldProvenance.source })
+        .select({ source: jobFieldProvenance.source, updatedAt: jobFieldProvenance.updatedAt })
         .from(jobFieldProvenance)
         .where(and(eq(jobFieldProvenance.jobId, jobId), eq(jobFieldProvenance.field, field)))
         .limit(1);
-      return row?.source === "human";
+      if (row?.source !== "human") return false;
+      if (emailReceivedAt === undefined) return true;
+      return emailReceivedAt.getTime() <= row.updatedAt.getTime();
     },
 
     async setProvenance(

@@ -39,8 +39,8 @@ export function App() {
             </AppShell>
           }
         >
-          <Route path="/pipeline" element={<PipelineView />} />
-          <Route path="/pipeline/:jobId" element={<PipelineView />} />
+          <Route path="/pipeline" element={<PipelineView onReviewChanged={review.reload} />} />
+          <Route path="/pipeline/:jobId" element={<PipelineView onReviewChanged={review.reload} />} />
           {/* The queue tells the shell when it changes, so the sidebar count
               follows what the student has handled. */}
           <Route path="/review" element={<ReviewView onChanged={review.reload} />} />

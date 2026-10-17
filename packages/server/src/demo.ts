@@ -4,6 +4,8 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import type { Database } from "./db/client.js";
 import { users, jobs, emailEvents, jobFieldProvenance, syncState } from "./db/schema.sqlite.js";
 import { seed, type SeedResult } from "./db/seed.js";
+import { DEMO_SCRIPTS } from "./adapters/index.js";
+import type { RawEmail } from "./ports/index.js";
 
 /**
  * The presentation demo's database (D35).
@@ -18,6 +20,23 @@ import { seed, type SeedResult } from "./db/seed.js";
  */
 
 export const DEMO_DATABASE = "demo.db";
+
+/**
+ * The backup trigger's emails (D36): the scripted emails a teammate would have
+ * sent, received "now". Fixed ids, so a second press is recognised as already
+ * processed and changes nothing.
+ */
+export function demoBackupEmails(now: Date): RawEmail[] {
+  return DEMO_SCRIPTS.map((script, i) => ({
+    gmailMessageId: `backup-${script.id}`,
+    gmailThreadId: `backup-${script.id}`,
+    // A second apart, in script order, so the pipeline sees them in sequence.
+    receivedAt: new Date(now.getTime() + i * 1000),
+    fromAddress: script.backupFrom,
+    subject: script.subject,
+    body: script.body,
+  }));
+}
 
 /** One level up from `src/` or `dist/` is the package root, where the
  *  migrations live (see db/migrate.ts). */

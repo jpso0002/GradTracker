@@ -716,7 +716,7 @@ describe("sync routes", () => {
     // A Refresh button that appears to work and does not is worse than one
     // that says it cannot.
     const res = await request(app).post("/api/sync").expect(501);
-    expect(res.body.error).toContain("demo mode");
+    expect(res.body.error).toContain("npm run demo");
   });
 });
 
