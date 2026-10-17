@@ -3,7 +3,9 @@ import { dirname, join } from "node:path";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import type { Database } from "./db/client.js";
 import { users, jobs, emailEvents, jobFieldProvenance, syncState } from "./db/schema.sqlite.js";
-import { seed, type SeedResult } from "./db/seed.js";
+import { ne } from "drizzle-orm";
+import { CONFIDENCE } from "@gradtracker/shared";
+import { seed, SEED_GOOGLE_SUB, type SeedResult } from "./db/seed.js";
 import { DEMO_SCRIPTS } from "./adapters/index.js";
 import type { RawEmail } from "./ports/index.js";
 
@@ -46,12 +48,18 @@ const MIGRATIONS = join(dirname(fileURLToPath(import.meta.url)), "../migrations/
  * Empties the database and seeds it again. The rows go, not the file: on
  * Windows a closed SQLite file stays locked for a while, so deleting and
  * recreating it fails — and emptying it needs no file system at all.
+ *
+ * The sample student's own row is kept, with its settings put back, so the
+ * Reset demo button can run this under a live server: the server remembers
+ * the demo user's id, and a new row would leave it pointing at nobody.
  */
 export async function resetDemoDatabase(db: Database, today: Date = new Date()): Promise<SeedResult> {
   await migrate(db, { migrationsFolder: MIGRATIONS });
   // Children before parents, so no foreign key is left pointing at nothing.
-  for (const table of [jobFieldProvenance, emailEvents, jobs, syncState, users]) {
+  for (const table of [jobFieldProvenance, emailEvents, jobs, syncState]) {
     await db.delete(table);
   }
+  await db.delete(users).where(ne(users.googleSub, SEED_GOOGLE_SUB));
+  await db.update(users).set({ reviewThreshold: CONFIDENCE.DEFAULT_REVIEW_THRESHOLD });
   return seed(db, today);
 }

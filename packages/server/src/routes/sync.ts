@@ -26,8 +26,9 @@ export interface DemoSyncOptions {
   /** Null when GMAIL_DEMO_USER / GMAIL_DEMO_APP_PASSWORD are not set. */
   inbox: MailboxReader | null;
   classifier: EmailClassifier;
-  /** Mail that arrived before the demo started is not the demo's business. */
-  startedAt: Date;
+  /** Mail that arrived before the demo started — or was last reset — is not
+   *  the demo's business. A function, because Reset demo moves it. */
+  startedAt: () => Date;
   /** The demo inbox's own address, so its sent mail is skipped. */
   ownAddress: string | null;
   /** The pre-written emails, stamped with the time of the press. */
@@ -74,7 +75,7 @@ export function syncRoutes(repo: Repository, demo?: DemoSyncOptions): Router {
 
     let emails: RawEmail[];
     try {
-      emails = await demo.inbox.readSince(demo.startedAt);
+      emails = await demo.inbox.readSince(demo.startedAt());
     } catch (error) {
       // The message names the account and the setting, never the password.
       res.status(502).json({ error: error instanceof Error ? error.message : "Could not read the demo inbox." });

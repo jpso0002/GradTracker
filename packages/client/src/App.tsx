@@ -44,7 +44,7 @@ export function App() {
           {/* The queue tells the shell when it changes, so the sidebar count
               follows what the student has handled. */}
           <Route path="/review" element={<ReviewView onChanged={review.reload} />} />
-          <Route path="/settings" element={<SettingsView />} />
+          <Route path="/settings" element={<SettingsView onReset={review.reload} />} />
           <Route path="/docs" element={<Navigate to="/docs/architecture" replace />} />
           <Route path="/docs/:page" element={<DocsView />} />
           <Route

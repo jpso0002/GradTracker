@@ -185,6 +185,12 @@ export const api = {
     return request("/api/sync", SyncResultSchema, { method: "POST" });
   },
 
+  /** Reset demo (D36): the sample mailbox back as it started. 404 outside
+   *  the presentation demo. */
+  resetDemo(): Promise<{ ok: boolean }> {
+    return request("/api/demo/reset", z.object({ ok: z.boolean() }), { method: "POST" });
+  },
+
   /** The presenter's fallback: the same pre-written emails, without Gmail. */
   syncBackup(): Promise<SyncResult> {
     return request("/api/sync/backup", SyncResultSchema, { method: "POST" });

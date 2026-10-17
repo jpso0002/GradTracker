@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, EmptyState, Switch, TopBar } from "../ds";
 import { isSignedIn, signOut } from "../session";
-import { api, NetworkError } from "../api/client";
+import { api, ApiError, NetworkError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
 import { useTheme } from "../theme/theme";
@@ -37,13 +37,35 @@ function consequence(threshold: number): string {
   return `Emails GradTracker is less than ${percent(threshold)}% sure about wait in Needs review for you to confirm.`;
 }
 
-export function SettingsView() {
+export function SettingsView({ onReset }: { onReset?: () => void } = {}) {
   const settings = useAsync(() => api.getSettings(), []);
   const toast = useToast();
   const { theme, toggle } = useTheme();
   const [shortcuts, setShortcuts] = useShortcuts();
   const navigate = useNavigate();
   const signedIn = isSignedIn();
+  const [resetting, setResetting] = useState(false);
+
+  // Back to the start of the presentation (D36): the sample mailbox as seeded,
+  // the threshold at its default, and the sign-in walkthrough. Mail already
+  // shown has to be sent again.
+  const resetDemo = async () => {
+    setResetting(true);
+    try {
+      await api.resetDemo();
+      onReset?.();
+      signOut();
+      navigate("/connect");
+    } catch (error) {
+      setResetting(false);
+      toast.show(
+        error instanceof ApiError && error.status === 404
+          ? "Reset works only in the presentation demo (npm run demo)."
+          : error instanceof Error ? error.message : "Could not reset the demo",
+        "error",
+      );
+    }
+  };
   const sliderId = useId();
   const helpId = useId();
   // The value last saved, once the student has saved one this visit.
@@ -162,11 +184,19 @@ export function SettingsView() {
 
         <Section title="Gmail">
           <p style={{ margin: 0, color: "var(--text-muted)" }}>
-            Demo mode: the sign-in is a walkthrough, not a real Google connection, and mail reaches
-            GradTracker through the local import. Sign out to start the walkthrough again.
+            Demo mode: the sign-in is a walkthrough, not a real Google connection, and Refresh reads
+            the demo inbox. Sign out to start the walkthrough again, or Reset demo to also put the
+            sample mailbox back as it started.
           </p>
           {signedIn ? (
-            <div>
+            <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
+              <Button
+                variant="secondary"
+                disabled={resetting}
+                onClick={() => void resetDemo()}
+              >
+                {resetting ? "Resetting…" : "Reset demo"}
+              </Button>
               <Button
                 variant="quiet"
                 onClick={() => {

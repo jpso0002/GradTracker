@@ -55,8 +55,10 @@ The first one should print `Refresh reads the-demo-address@gmail.com — mail re
 
 Open `http://localhost:5173`.
 
-**Only mail received after `npm run demo` started counts.** Restarting rebuilds the
-database and resets that time, so after a restart, send the emails again.
+**Only mail received after `npm run demo` started counts.** To go back to the start, use
+**Settings → Reset demo**: it puts the sample mailbox back and returns to the sign-in, with no
+restart. Restarting `npm run demo` does the same. Either way the start time moves to now, so
+send the emails again afterwards.
 
 ## 3. The two emails
 
@@ -126,5 +128,5 @@ possible:
 npm.cmd run demo
 ```
 
-Then send Email 1, press Refresh, and check the Deloitte card. Restart `npm run demo` to
-reset everything before the real run.
+Then send Email 1, press Refresh, and check the Deloitte card. Press **Settings → Reset
+demo** to put everything back before the real run.

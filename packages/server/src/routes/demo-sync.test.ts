@@ -56,7 +56,7 @@ function appWith(inbox: MailboxReader | null) {
   const demoSync: DemoSyncOptions = {
     inbox,
     classifier: new ScriptedEmailClassifier(),
-    startedAt: STARTED,
+    startedAt: () => STARTED,
     ownAddress: "gradtracker.demo@gmail.com",
     backupEmails: demoBackupEmails,
   };
@@ -156,5 +156,48 @@ describe("the scripted classifier", () => {
     expect(stored).not.toContain("Book your interview");
     expect(stored).not.toContain(DEMO_SCRIPTS[0]!.subject);
     expect(stored).not.toContain("teammate@gmail.com");
+  });
+});
+
+describe("POST /api/demo/reset", () => {
+  it("puts the sample mailbox back for the same student, and only new mail counts", async () => {
+    let since = STARTED;
+    const inbox = inboxOf([sent("deloitte-interview")]);
+    const app = createApp({
+      db: handle.db,
+      demoSync: {
+        inbox,
+        classifier: new ScriptedEmailClassifier(),
+        startedAt: () => since,
+        ownAddress: null,
+        backupEmails: demoBackupEmails,
+      },
+      demoReset: async () => {
+        await resetDemoDatabase(handle.db, TODAY);
+        since = new Date(SENT.getTime() + 1);
+      },
+    });
+
+    await request(app).post("/api/sync").expect(200);
+    await repo.updateSettings(userId, { reviewThreshold: 0.9 });
+    expect((await deloitte()).stage).toBe("interview");
+
+    await request(app).post("/api/demo/reset").expect(200);
+
+    // The server's remembered student is still the student.
+    const me = await request(app).get("/api/me").expect(200);
+    expect(me.body.reviewThreshold).toBe(0.75);
+    const jobs = await request(app).get("/api/jobs").expect(200);
+    expect(jobs.body.jobs.length).toBeGreaterThan(0);
+    expect((await deloitte()).stage).toBe("assessment");
+    expect(await repo.listPendingReview(userId)).toHaveLength(4);
+
+    // The email shown before the reset is not brought back.
+    const again = await request(app).post("/api/sync").expect(200);
+    expect(again.body).toEqual(NOTHING);
+  });
+
+  it("does not exist outside the demo", async () => {
+    await request(createApp({ db: handle.db, userId })).post("/api/demo/reset").expect(404);
   });
 });

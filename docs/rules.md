@@ -171,6 +171,7 @@ Keep entries concise. One line per decision when possible.
 - **The simulated sign-in says it is simulated, on every step** (D35). It authenticates no one and contacts no one; it decides only where the app opens. A mock sign-in without the label would look like a working one.
 - **The demo's classifier is scripted, and says so** (D36): the presenters describe it as scripted, and anything it does not recognise goes to review rather than being guessed into the pipeline. Only the answer is scripted — every email still goes through `processEmail`.
 - **Refresh outside the presentation demo reloads quietly** (501 from the server): there is no inbox to read, and the button must not pretend there was. A missing or failing demo inbox says how to fix it.
+- **Reset demo is the only way back to the start mid-presentation** (Settings): it re-seeds `demo.db` under the running server and moves the demo's start time to now, so mail already shown is not resurrected. It keeps the sample student's row — the server caches that id.
 - **The presenter's backup is a modifier chord, Ctrl+Alt+R** — never a bare key (WCAG 2.1.4) — and feeds the same emails through the same pipeline as a live Refresh.
 - **A route decision that depends on session state is made by a component at the route**, never in `App`'s render: `App` does not re-render on navigation, so a decision made there goes stale. Written that way first, Sign out sent the student straight back to the dashboard; a test caught it.
 

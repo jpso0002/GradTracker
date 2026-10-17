@@ -95,6 +95,9 @@ export const SEED_REVIEW_ITEMS = [
   { company: null, role: null, stage: "applied" as Stage, senderDomain: "mail.startup.io", confidence: 0.38, daysAgo: 5 },
 ];
 
+/** The sample student's identity. */
+export const SEED_GOOGLE_SUB = "seed-student";
+
 export function normaliseCompany(name: string): string {
   return name
     .toLowerCase()
@@ -115,11 +118,11 @@ export async function seed(db: Database, today: Date = new Date()): Promise<Seed
   const identity = createIdentityRepository(db);
   const repo = createRepository(db);
 
-  const existing = await identity.findByGoogleSub("seed-student");
+  const existing = await identity.findByGoogleSub(SEED_GOOGLE_SUB);
   const user =
     existing ??
     (await identity.createUser({
-      googleSub: "seed-student",
+      googleSub: SEED_GOOGLE_SUB,
       email: "student@student.monash.edu",
       displayName: "Sam Nguyen",
       // Placeholder ciphertext. The seed never touches Gmail, and the columns

@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import type { Job, ListJobsResponse, MeResponse, ReviewItem } from "@gradtracker/shared";
 import { App } from "../App";
 import { ThemeProvider } from "../theme/theme";
-import { api } from "../api/client";
+import { api, ApiError } from "../api/client";
 import { SCAN_MS } from "./ConnectView";
 
 /**
@@ -155,5 +155,28 @@ describe("the simulated sign-in (D35)", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Connect your Gmail" })).toBeDefined();
     expect(window.sessionStorage.getItem("gradtracker.demoSignedIn")).toBeNull();
+  });
+
+  it("Reset demo puts the sample mailbox back and returns to the start (D36)", async () => {
+    window.sessionStorage.setItem("gradtracker.demoSignedIn", "1");
+    const reset = vi.spyOn(api, "resetDemo").mockResolvedValue({ ok: true });
+    renderAt("/settings");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Reset demo" }));
+
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("heading", { level: 1, name: "Connect your Gmail" })).toBeDefined();
+    expect(window.sessionStorage.getItem("gradtracker.demoSignedIn")).toBeNull();
+  });
+
+  it("Reset demo outside the presentation demo says so and stays put", async () => {
+    window.sessionStorage.setItem("gradtracker.demoSignedIn", "1");
+    vi.spyOn(api, "resetDemo").mockRejectedValue(new ApiError(404, "Not found."));
+    renderAt("/settings");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Reset demo" }));
+
+    expect(await screen.findByText(/only in the presentation demo/)).toBeDefined();
+    expect(window.sessionStorage.getItem("gradtracker.demoSignedIn")).toBe("1");
   });
 });

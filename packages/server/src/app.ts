@@ -27,6 +27,9 @@ export interface AppOptions {
   userId?: UserId;
   /** The presentation demo's Refresh (D36). Absent, Refresh answers 501. */
   demoSync?: DemoSyncOptions;
+  /** The presentation demo's Reset (D36): the sample mailbox back as it
+   *  started. Absent, the route does not exist. */
+  demoReset?: () => Promise<void>;
 }
 
 export function createApp(options: AppOptions): Express {
@@ -69,6 +72,14 @@ export function createApp(options: AppOptions): Express {
   app.use("/api/review", reviewRoutes(repo));
   app.use("/api/settings", settingsRoutes(repo));
   app.use("/api/sync", syncRoutes(repo, options.demoSync));
+
+  const demoReset = options.demoReset;
+  if (demoReset) {
+    app.post("/api/demo/reset", async (_req: Request, res: Response) => {
+      await demoReset();
+      res.json({ ok: true });
+    });
+  }
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: "Not found." });

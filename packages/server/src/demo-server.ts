@@ -30,7 +30,7 @@ console.log(
 
 const inbox = createDemoInbox();
 const ownAddress = process.env["GMAIL_DEMO_USER"]?.trim() || null;
-const startedAt = new Date();
+let startedAt = new Date();
 
 const { db } = createDatabase(url);
 createApp({
@@ -38,9 +38,16 @@ createApp({
   demoSync: {
     inbox,
     classifier: new ScriptedEmailClassifier(),
-    startedAt,
+    startedAt: () => startedAt,
     ownAddress,
     backupEmails: demoBackupEmails,
+  },
+  // Reset demo: the sample mailbox as it started, and only mail sent from now
+  // on counts — an email already shown must be sent again, not resurrected.
+  demoReset: async () => {
+    await resetDemoDatabase(db);
+    startedAt = new Date();
+    console.log(`Demo reset at ${startedAt.toLocaleTimeString()} — send the emails again.`);
   },
 }).listen(port, () => {
   console.log(`GradTracker demo API on http://localhost:${port}  (db: ${url})`);
