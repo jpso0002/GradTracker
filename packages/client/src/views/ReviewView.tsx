@@ -9,6 +9,7 @@ import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
 import { tokenDurationMs } from "../motion";
 import { formatDeadline, formatEventDate } from "../format";
+import { gmailLink, useMailboxAccount } from "../gmailLink";
 import {
   EditFields,
   changedFields,
@@ -181,6 +182,7 @@ function ReviewCard({
   const [busy, setBusy] = useState(false);
 
   const suggestion = item.suggestedJob;
+  const link = gmailLink(item.gmailMessageId, useMailboxAccount());
   const original = formValues(item);
   const values: FormValues = { ...original, ...draft };
 
@@ -398,6 +400,23 @@ function ReviewCard({
           <Icon name="mail" size={14} />
           {item.senderDomain ? `Detected from ${item.senderDomain}` : "Sender unknown"} ·{" "}
           {formatEventDate(item.receivedAt)}
+          {link ? (
+            <>
+              {" · "}
+              <a
+                // The student reads the email itself before deciding (D38).
+                // GradTracker keeps none of it, so this goes to their inbox.
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="gt-touch"
+                style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+              >
+                <Icon name="external-link" size={12} />
+                Open in Gmail
+              </a>
+            </>
+          ) : null}
         </span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-sm)" }}>
           How sure the model is about this email

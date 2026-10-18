@@ -195,7 +195,7 @@ describe("DetailPanel — the AI-vs-human contract (design.md §7)", () => {
       timeline: [
         {
           id: "e1",
-          gmailMessageId: "msg-1",
+          gmailMessageId: "msg-1@smartrecruiters.com",
           gmailThreadId: "t1",
           receivedAt: "2026-08-14T00:00:00.000Z",
           senderDomain: "smartrecruiters.com",

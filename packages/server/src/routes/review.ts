@@ -49,6 +49,7 @@ export function reviewRoutes(repo: Repository): Router {
           deadlineAt: row.detectedDeadlineAt?.toISOString() ?? null,
           nextAction: row.detectedNextAction,
           confidence: row.confidence,
+          gmailMessageId: row.gmailMessageId,
           suggestedJob: suggested ? { id: suggested.id, company: suggested.company, role: suggested.role } : null,
         };
       }),

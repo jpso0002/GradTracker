@@ -1,17 +1,23 @@
-# Demo inbox guide — the live Refresh
+# Demo inbox guide — the opening scan and the live Refresh
 
-*For the 20 October 2026 presentation. Decision D36.*
+*For the 20 October 2026 presentation. Decisions D36 and D37.*
 
-During the presentation a teammate sends a pre-written email to a throwaway Gmail account,
-the presenter presses **Refresh**, and the dashboard changes. This page covers setting up
-that account, the two emails, and what to do on the day.
+The demo reads a throwaway Gmail account twice:
 
-**What is real and what is scripted.** The inbox, reading the mail, and everything the
-pipeline does with it are real: the confidence gate, matching to the existing application,
-the stage engine and provenance. **The classification is scripted**: no model is
-called. The two emails below are recognised by their subject and given the answer prompt v2
-asks a model for. Say so if asked. Anything else that arrives goes to review at low
-confidence rather than onto the dashboard.
+1. **At sign-in.** The walkthrough's scan reads the 80 sample emails loaded into the inbox
+   and builds the dashboard from them.
+2. **During the presentation.** A teammate sends a pre-written email, the presenter presses
+   **Refresh**, and the dashboard changes.
+
+This page covers setting up the account, loading the samples, the two live emails, and the day itself.
+
+**What is real and what is scripted.** These parts are real: the inbox, reading the mail
+over IMAP, and everything the pipeline does with each email (the confidence gate, matching
+to an existing application, the stage engine and provenance). **The classification is not
+a model.** The sample emails are classified from their labels, and the two live emails are
+recognised by their subject and given the answer prompt v2 asks a model for. The scan
+screen says so, and you should too if asked. Anything unrecognised that arrives goes to
+review at low confidence rather than onto the dashboard.
 
 ---
 
@@ -21,11 +27,9 @@ confidence rather than onto the dashboard.
    app reads everything that arrives.
 2. **Turn on 2-Step Verification** for it (Google Account → Security). App passwords
    require it.
-3. **Create an app password**: Google Account → Security → 2-Step Verification → App
-   passwords (or go to `myaccount.google.com/apppasswords`). Name it "GradTracker demo".
-   Google shows 16 letters once; copy them.
-4. **Check IMAP is on**: Gmail → Settings → See all settings → Forwarding and POP/IMAP. If
-   there is an IMAP setting, enable it.
+3. **Create an app password** at `myaccount.google.com/apppasswords`. Name it "GradTracker
+   demo". Google shows 16 letters once; copy them.
+4. **IMAP** needs no change. Gmail no longer has a switch for it.
 5. **Add two lines to `.env`** on the presenting laptop (the file is gitignored; type the
    values yourself, and never paste them into chat or a commit):
 
@@ -38,7 +42,21 @@ confidence rather than onto the dashboard.
 
 After the semester, revoke the app password from the same page.
 
-## 2. Start the demo
+## 2. Load the 80 sample emails (once)
+
+```
+npm.cmd run demo:load-inbox
+```
+
+This places the sample emails from `fixtures/emails/` in the inbox, each with its own
+sender (Greenhouse, LinkedIn, Deloitte…) and original date. **Nothing is sent**: they're
+added straight into the inbox, already marked as read. It should print `Placed 80 sample
+emails in …`. Running it again adds only what's missing and never deletes anything.
+
+In Gmail they show their original May–June dates. The app moves them forward when it reads
+them, so the newest one arrived yesterday, whatever day you present.
+
+## 3. Start the demo
 
 Two terminals, in the repository folder:
 
@@ -50,42 +68,48 @@ npm.cmd run demo
 npm.cmd run dev:client
 ```
 
-The first one should print `Refresh reads the-demo-address@gmail.com — mail received after
-<time> only.` If it says *no demo inbox configured*, the `.env` lines are missing.
+The first should print `Demo database emptied … the sign-in scan fills it from …`. If it
+says *no demo inbox configured*, the `.env` lines are missing.
 
-Open `http://localhost:5173`.
+Open `http://localhost:5173` and go through the walkthrough (D39): **Create your account**
+(any name, any email, a password of 8+ characters; it's a mock, so nothing is created or
+kept), **Continue with Google**, then **Allow** on the consent screen, which shows your name
+over the demo inbox's address. The scan takes about 7 seconds to read the inbox.
+- The scan screen names the inbox it's reading, counts the 80 emails, and lands on the
+  dashboard: about 20 applications, plus a review queue that includes two emails the
+  "model" was unsure about (Xero and SEEK).
+- If the inbox can't be read, the scan uses the seeded sample mailbox instead, and a toast
+  says why.
 
-**Only mail received after `npm run demo` started counts.** To go back to the start, use
-**Settings → Reset demo**: it puts the sample mailbox back and returns to the sign-in, with no
-restart. Restarting `npm run demo` does the same. Either way the start time moves to now, so
-send the emails again afterwards.
+**Settings → Reset demo** empties the dashboard and returns to the sign-in, so the next
+scan reads the inbox again. No restart is needed. Only mail sent after the latest scan
+counts for Refresh, so send the live emails again after a reset.
 
-## 3. The two emails
+## 4. The two live emails
 
 Send them **from a teammate's own account** (phone is fine) **to the demo address**. Mail the
-demo inbox sends to itself is skipped. Save both as drafts beforehand so they can be sent
+demo inbox sends to itself is skipped. Save both as drafts beforehand so each can be sent
 with one tap. Copy the subject exactly; the body can be pasted as is.
 
 ### Email 1 — the application update
 
-**Subject:** `Interview invitation — Deloitte Audit Graduate Program`
+**Subject:** `Interview invitation — Accenture Technology Graduate`
 
 ```
-Hi Sam,
+Dear Sam,
 
-Thank you for completing the online assessment for the Audit Graduate Program at Deloitte.
+Thank you for completing the digital assessment for the Technology Graduate role at Accenture.
 
-We'd like to invite you to a first-round interview. Please book a time within 3 days using the link below.
+We'd like to invite you to an interview. Please book a time within 3 days using the link below.
 
-Book your interview: https://example.com/deloitte/interview
+Book your interview: https://example.com/accenture/interview
 
-Regards,
-Deloitte Early Careers
+Accenture Recruitment
 ```
 
-**What the room sees:** the Deloitte · Audit Graduate Program card moves from *Assessment*
-(overdue) to *Interview*, with a new deadline (23:59 on the third day) and the next action
-"Book interview time".
+**What the room sees:** the Accenture · Technology Graduate card moves from *Assessment* to
+*Interview*, with a deadline (23:59 on the third day) and the next action "Book interview
+time".
 
 ### Email 2 — the unclear one
 
@@ -101,32 +125,34 @@ Mia
 Kestrel Partners
 ```
 
-**What the room sees:** nothing new on the dashboard. **Needs review** goes from 4 to 5, and
-the review queue has a Kestrel Partners card with no role, at 47% confidence. The model
-was not sure enough, so the student is asked.
+**What the room sees:** nothing new on the dashboard. **Needs review** goes up by one,
+with a Kestrel Partners card with no role at 47% confidence. The model wasn't sure enough,
+so the student is asked.
 
-## 4. On the day
+## Opening an email in Gmail
 
-1. Start both terminals before the presentation; leave them running.
-2. When it is time, the teammate sends Email 1 (and Email 2), then says "sent".
-3. Wait a few seconds; Gmail can take 5–30 seconds to deliver. Press **Refresh**. The toast
-   says what happened, e.g. *"2 new emails — 1 application updated, 1 to review"*.
-4. *"No new emails"* means it has not arrived yet. Wait ten seconds and press again.
-5. **If anything fails** (the toast says it could not sign in, the Wi-Fi is down, or the
-   email never comes), press **Ctrl+Alt+R** on the dashboard. It feeds the same two emails
+In the application panel's timeline and on each **Needs review** card, **Open in Gmail** opens
+that exact email in the demo inbox, in a new tab. For that, the presenting browser must be
+signed in to the demo account (it can sit alongside your own). The seeded fallback mailbox
+has no real emails, so its items show no link.
+
+## 5. On the day
+
+1. Start both terminals before the presentation and leave them running. Go through the
+   sign-in live: that's the scan.
+2. When it's time, the teammate sends Email 1 (and Email 2), then says "sent".
+3. Wait a few seconds, since Gmail can take 5–30 seconds to deliver. Press **Refresh**. The
+   toast says what happened, e.g. *"2 new emails — 1 application updated, 1 to review"*.
+4. *"No new emails"* means it hasn't arrived yet. Wait ten seconds and press again.
+5. **If anything fails** (the toast says it couldn't sign in, the Wi-Fi is down, or the
+   email never arrives), press **Ctrl+Alt+R** on the dashboard. It feeds the same two emails
    through the same pipeline and looks identical. It works once; pressing it again changes
    nothing.
 
 Press Refresh again afterwards and nothing changes: the same email is never processed twice.
 
-## 5. Rehearse it
+## 6. Rehearse it
 
-Do the full sequence at least once on the presenting laptop, on the venue's network if
-possible:
-
-```
-npm.cmd run demo
-```
-
-Then send Email 1, press Refresh, and check the Deloitte card. Press **Settings → Reset
-demo** to put everything back before the real run.
+Do the full sequence at least once on the presenting laptop, ideally on the venue's network:
+sign in (the scan), send Email 1, press Refresh, and check the Accenture card. Then press
+**Settings → Reset demo** to put everything back before the real run.

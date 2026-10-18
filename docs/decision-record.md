@@ -611,6 +611,85 @@ in — with the presentation on 20 October.
 - The demo must be started before the live email is sent. Setup and the two email texts are
   in [demo-inbox-guide.md](demo-inbox-guide.md).
 
+### D37 — The demo's dashboard is read from the demo inbox *(17 October 2026)*
+
+**Chosen:** the 80 sample emails are placed in the demo inbox once, by a script the team runs
+(`npm run demo:load-inbox`), and the sign-in walkthrough's scan **really reads them**: over
+IMAP, through the pipeline, onto an empty dashboard. Refresh then adds what a teammate sends.
+
+- **Appended, not sent.** IMAP APPEND places each message in the inbox with its own sender
+  and date; nothing is sent, no spam filter sees them. A Message-ID of the form
+  `<fixture-001@gradtracker.demo>` marks a sample, so the reader tells samples from live mail.
+- **Dates brought forward as they are read.** Every sample moves by the same number of
+  calendar days so the newest arrived yesterday, and each deadline moves with its email — in
+  Melbourne wall-clock time, so 23:59 stays 23:59 across daylight saving. Gmail itself shows
+  the original dates.
+- **Classified from the answer key.** Each sample gets its corpus label, as the live emails get
+  their scripts; no model is called, and the scan screen says so. Two samples a model would
+  plausibly be unsure about — the informal Xero chat (0.58) and SEEK the employer (0.66) — are
+  given low confidence, so the review queue holds low-confidence items as well as rule-based
+  ones.
+- **The live update is now Accenture.** The samples end with Deloitte rejected, so an interview
+  invitation could not move it; Accenture ends at assessment.
+- **Fallback.** If the inbox cannot be read, or holds no samples, the scan uses the seeded
+  sample mailbox (D35) and a toast says why. With no inbox configured, the demo is the seeded
+  mailbox as before.
+
+**Rejected:** sending the emails (one sender for all 80, spam filtering); shifting dates at load
+time (the demo would age between loading and presenting); keeping the original dates (every
+deadline overdue); leaving out Deloitte's rejection (the corpus is the evaluated set and stays
+whole).
+
+**Consequence:** the dashboard opens with 80 emails read, 25 ignored, about 20 applications and
+the review items they produce — not the seeded 25 and 612. Reset empties it for the next scan.
+
+### D38 — "Open in Gmail" opens the right email, in the right account *(17 October 2026)*
+
+**Problem:** the panel's link searched Gmail for `rfc822msgid:` plus GradTracker's own id
+for the email (`fixture-001`, `imap-…`), which is no email's Message-ID, and opened the
+first account signed in to the browser — the presenter's own, not the demo inbox. Review
+cards had no link at all, so a student could not read an email before deciding whether it
+was an application.
+
+**Chosen:**
+
+- Emails from the demo inbox are **named by their Message-ID** — the one id Gmail can search
+  by. The samples become `fixture-001@gradtracker.demo`; the answer key still knows them by
+  the part before the `@`.
+- **One link builder for every id** (`client/src/gmailLink.ts`): a Message-ID is searched
+  with `rfc822msgid:`, a Gmail API id opens directly, and an id that names no email (the
+  seeded mailbox, the backup emails) gets **no link** rather than a dead one. This closes
+  C10 for the demo inbox and exports.
+- **The link opens the account the email was read from**: `/api/me` reports the demo
+  inbox, and the link carries `authuser=` for it.
+- **Review cards link to their email too**, next to the date, so the student can read it
+  before confirming or dismissing.
+
+**Consequence:** a dashboard scanned before this change holds the old ids — Reset demo and
+scan again. The demo inbox must be signed in to the browser for the link to open it.
+
+### D39 — The walkthrough opens on a mock "Create your account" *(18 October 2026)*
+
+**Chosen:** the demo starts the way a new student would: **Create your account** (full
+name, email, password), then **Connect your Gmail** greeting them by name, then the Google
+consent stand-in, which shows **the name they entered over the demo inbox's address**.
+Whatever email the account was made with, the Gmail connected is the demo inbox, which
+is the one the scan then reads.
+
+- **A mock, labelled as one.** No account is created and nothing typed leaves the browser:
+  the name and email are kept in the tab's session storage to greet the student, and the
+  password is not kept at all. Sign out and Reset demo clear them.
+- The form still validates like a real one (name, email format, at least 8 characters), so
+  the demo shows the expected behaviour.
+
+**Rejected:** a real account (authentication stays deferred, T4.1–T4.3); skipping the
+password field (a sign-up without one looks unfinished on screen).
+
+**Consequence:** the walkthrough is four steps: create, connect, consent, scan. The scan
+screen now names its source only once the server has answered, and a scan already running
+is reused rather than queued behind, so the counts appear after one read of the inbox
+(about 7 seconds) instead of two.
+
 ---
 
 ## 3. Defects found reviewing the specification *(Revision 2)*

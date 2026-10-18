@@ -1,4 +1,4 @@
-import type { EmailClassifier, GmailClient, MailboxReader } from "../ports/index.js";
+import type { EmailClassifier, GmailClient } from "../ports/index.js";
 import { FakeGmailClient } from "./gmail/fake.js";
 import { ImapMailboxReader } from "./gmail/imap.js";
 import { FakeEmailClassifier } from "./classifier/fake.js";
@@ -41,7 +41,7 @@ export function createEmailClassifier(): EmailClassifier {
  * The presentation's demo inbox (D36), or null when it is not configured.
  * Never under test, for the same reason as above.
  */
-export function createDemoInbox(): MailboxReader | null {
+export function createDemoInbox(): ImapMailboxReader | null {
   if (process.env["NODE_ENV"] === "test") return null;
   const user = process.env["GMAIL_DEMO_USER"]?.trim();
   const password = process.env["GMAIL_DEMO_APP_PASSWORD"]?.replace(/\s+/g, "");
@@ -51,5 +51,7 @@ export function createDemoInbox(): MailboxReader | null {
 
 export { FakeGmailClient } from "./gmail/fake.js";
 export { ScriptedEmailClassifier, DEMO_SCRIPTS, findScript, type DemoScript } from "./classifier/scripted.js";
+export { DemoEmailClassifier, SAMPLE_CONFIDENCE } from "./classifier/demo.js";
+export { ImapMailboxReader, type SampleMessage } from "./gmail/imap.js";
 export { FakeEmailClassifier } from "./classifier/fake.js";
 export { buildSystemPrompt, buildUserMessage, PROMPT_VERSION } from "./classifier/prompt.js";

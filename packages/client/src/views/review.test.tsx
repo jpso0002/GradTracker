@@ -28,6 +28,7 @@ function item(over: Partial<ReviewItem> = {}): ReviewItem {
     deadlineAt: null,
     nextAction: null,
     confidence: 0.62,
+    gmailMessageId: null,
     suggestedJob: null,
     ...over,
   };
@@ -66,6 +67,32 @@ describe("ReviewView (T6.3)", () => {
     expect(within(c).getByText("Complete the video interview")).toBeDefined();
     expect(within(c).getByText(/Detected from boutique-consult\.com\.au/)).toBeDefined();
     expect(within(c).getByTitle("How sure the model is about this email: 62%")).toBeDefined();
+  });
+
+  it("links to the email in the inbox it was read from, so the student can read it first (D38)", async () => {
+    vi.spyOn(api, "me").mockResolvedValue({
+      email: "student@student.monash.edu",
+      displayName: "Sam Nguyen",
+      gmailConnected: false,
+      reviewThreshold: 0.75,
+      timeZone: "Australia/Melbourne",
+      demoMode: true,
+      mailbox: "gradtrackerdemo@gmail.com",
+      sync: { state: "idle", lastSyncAt: null, emailsReadTotal: 80, progress: null, lastError: null },
+    });
+    renderReview([
+      item({ gmailMessageId: "fixture-039@gradtracker.demo" }),
+      item({ eventId: SECOND, company: "Seeded Co", gmailMessageId: "seed-review-1" }),
+    ]);
+
+    const linked = await card(/Boutique Consulting/);
+    const link = within(linked).getByRole("link", { name: /Open in Gmail/ });
+    await waitFor(() => expect(link.getAttribute("href")).toContain("authuser=gradtrackerdemo%40gmail.com"));
+    expect(link.getAttribute("href")).toContain("rfc822msgid%3Afixture-039%40gradtracker.demo");
+    expect(link.getAttribute("target")).toBe("_blank");
+
+    // A seeded item names no email anywhere: no link rather than a dead one.
+    expect(within(await card(/Seeded Co/)).queryByRole("link", { name: /Open in Gmail/ })).toBeNull();
   });
 
   it("confirming adds the application as shown and moves focus to the next item", async () => {

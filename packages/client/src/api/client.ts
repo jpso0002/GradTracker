@@ -6,6 +6,7 @@ import {
   SettingsResponseSchema,
   SyncStatusResponseSchema,
   SyncResultSchema,
+  DemoScanResponseSchema,
   type ListJobsResponse,
   type JobDetailResponse,
   type MeResponse,
@@ -13,6 +14,7 @@ import {
   type SettingsResponse,
   type SyncStatusResponse,
   type SyncResult,
+  type DemoScanResponse,
   type UpdateJobBody,
   type UpdateSettingsBody,
   type ConfirmReviewBody,
@@ -183,6 +185,12 @@ export const api = {
    *  the presentation demo, where there is no inbox to read. */
   sync(): Promise<SyncResult> {
     return request("/api/sync", SyncResultSchema, { method: "POST" });
+  },
+
+  /** The demo's opening scan (D37): the sample emails in the demo inbox
+   *  through the pipeline, or the seeded mailbox. 404 outside the demo. */
+  demoScan(): Promise<DemoScanResponse> {
+    return request("/api/demo/scan", DemoScanResponseSchema, { method: "POST" });
   },
 
   /** Reset demo (D36): the sample mailbox back as it started. 404 outside

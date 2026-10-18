@@ -68,7 +68,7 @@ T3.12, now done; its T7.3 and T2.8 wait on **B3**.
 | **5** ✅ | T3.10 · T3.11 | Ambiguous matches routed to review (**C18**) · confirming onto an existing application applies the email, not a correction (**C16**) — *done 5 Oct* | — |
 | **6** ✅ | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search — *done 5 Oct*, fixing **C23** on the way | — |
 | **7** ✅ | T5.7 · T5.8 · T6.5 · T4.7 · T5.12 · T5.9 | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center — *done 5 Oct*; the audit is [accessibility-audit.md](accessibility-audit.md) | — |
-| **P** ✅ | D36 | **Presentation MVP** — Refresh reads a demo Gmail inbox over IMAP; a scripted classifier for the two live emails; Ctrl+Alt+R backup; a correction holds until newer mail; the inbox guide and RTM wording draft — *done 17 Oct, for the 20 Oct presentation* | Team: create the inbox, enter the app password, agree the RTM wording |
+| **P** ✅ | D36 · D37 | **Presentation MVP** — Refresh reads a demo Gmail inbox over IMAP; a scripted classifier for the two live emails; Ctrl+Alt+R backup; a correction holds until newer mail; the inbox guide and RTM wording draft; the dashboard read from the demo inbox at sign-in (D37) — *done 17 Oct, for the 20 Oct presentation* | Team: create the inbox, enter the app password, agree the RTM wording |
 | **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run. **Exporting and labelling can start now** — the toolkit and guide exist | **B6** · measuring: T7.3 |
 
 ### Demo modes

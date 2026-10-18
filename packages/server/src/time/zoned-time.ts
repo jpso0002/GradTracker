@@ -132,3 +132,28 @@ export function formatWallClock(instant: Date, timeZone: string): string {
   const get = (type: string) => parts.find((p) => p.type === type)!.value;
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
 }
+
+/**
+ * The same wall-clock time `days` calendar days later in `timeZone` — 23:59
+ * stays 23:59 across a daylight-saving change, which adding 24-hour periods
+ * would not. Used to bring the demo's sample emails up to date (D37).
+ */
+export function shiftDays(instant: Date, days: number, timeZone: string = DEFAULT_TIMEZONE): Date {
+  const [date, time] = formatWallClock(instant, timeZone).split(" ");
+  const [y, m, d] = date!.split("-").map(Number);
+  const [hour, minute] = time!.split(":").map(Number);
+  const target = new Date(Date.UTC(y!, m! - 1, d! + days));
+  return wallClockToInstant(
+    { year: target.getUTCFullYear(), month: target.getUTCMonth() + 1, day: target.getUTCDate(), hour: hour!, minute: minute! },
+    timeZone,
+  );
+}
+
+/** Whole calendar days from `from` to `to` in `timeZone`. */
+export function calendarDaysBetween(from: Date, to: Date, timeZone: string = DEFAULT_TIMEZONE): number {
+  const day = (instant: Date) => {
+    const [y, m, d] = formatWallClock(instant, timeZone).split(" ")[0]!.split("-").map(Number);
+    return Date.UTC(y!, m! - 1, d!);
+  };
+  return Math.round((day(to) - day(from)) / 86_400_000);
+}

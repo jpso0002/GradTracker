@@ -7,7 +7,7 @@ import { errorHandler } from "./middleware/validate.js";
 import { jobRoutes } from "./routes/jobs.js";
 import { reviewRoutes } from "./routes/review.js";
 import { settingsRoutes } from "./routes/settings.js";
-import { syncRoutes, type DemoSyncOptions } from "./routes/sync.js";
+import { demoRoutes, syncRoutes, type DemoSession } from "./routes/sync.js";
 
 /**
  * The Express application.
@@ -25,11 +25,9 @@ export interface AppOptions {
   /** Explicit user, so tests do not depend on which row the database returns
    *  first. Demo mode resolves the single local user when this is omitted. */
   userId?: UserId;
-  /** The presentation demo's Refresh (D36). Absent, Refresh answers 501. */
-  demoSync?: DemoSyncOptions;
-  /** The presentation demo's Reset (D36): the sample mailbox back as it
-   *  started. Absent, the route does not exist. */
-  demoReset?: () => Promise<void>;
+  /** The presentation demo (D36, D37): Refresh, the opening scan and Reset.
+   *  Absent, Refresh answers 501 and the demo routes do not exist. */
+  demo?: DemoSession;
 }
 
 export function createApp(options: AppOptions): Express {
@@ -57,6 +55,7 @@ export function createApp(options: AppOptions): Express {
       reviewThreshold: user?.reviewThreshold ?? CONFIDENCE.DEFAULT_REVIEW_THRESHOLD,
       timeZone: req.timeZone,
       demoMode: true,
+      mailbox: options.demo?.inboxAddress ?? null,
       sync: {
         state: sync?.state ?? "idle",
         lastSyncAt: sync?.lastFullScanAt?.toISOString() ?? null,
@@ -71,15 +70,8 @@ export function createApp(options: AppOptions): Express {
   app.use("/api/jobs", jobRoutes(repo, options.clock));
   app.use("/api/review", reviewRoutes(repo));
   app.use("/api/settings", settingsRoutes(repo));
-  app.use("/api/sync", syncRoutes(repo, options.demoSync));
-
-  const demoReset = options.demoReset;
-  if (demoReset) {
-    app.post("/api/demo/reset", async (_req: Request, res: Response) => {
-      await demoReset();
-      res.json({ ok: true });
-    });
-  }
+  app.use("/api/sync", syncRoutes(repo, options.demo));
+  if (options.demo) app.use("/api/demo", demoRoutes(repo, options.demo));
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: "Not found." });

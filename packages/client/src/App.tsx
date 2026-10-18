@@ -30,7 +30,7 @@ export function App() {
     <ToastHost>
       <Routes>
         <Route path="/" element={<Start />} />
-        <Route path="/connect" element={<Connect />} />
+        <Route path="/connect" element={<Connect onScanned={review.reload} />} />
 
         <Route
           element={
@@ -73,6 +73,8 @@ function Start() {
 }
 
 /** The walkthrough, once; after that, the dashboard. */
-function Connect() {
-  return isSignedIn() ? <Navigate to="/pipeline" replace /> : <ConnectView />;
+/** The sidebar count was read when the app opened, before the scan filled
+ *  anything; the scan says when to read it again. */
+function Connect({ onScanned }: { onScanned: () => void }) {
+  return isSignedIn() ? <Navigate to="/pipeline" replace /> : <ConnectView onScanned={onScanned} />;
 }

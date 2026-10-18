@@ -106,6 +106,9 @@ export const ReviewItemSchema = z.object({
   deadlineAt: z.string().datetime().nullable(),
   nextAction: z.string().nullable(),
   confidence: z.number().min(0).max(1),
+  /** The email's id, so the card can open it in Gmail and the student can
+   *  read it before deciding (D38). Never the email itself. */
+  gmailMessageId: z.string().nullable().default(null),
   /** The existing application this email may belong to (D26). When present,
    *  confirming needs an answer: the same application, or a new one. */
   suggestedJob: z
@@ -166,6 +169,21 @@ export const SyncResultSchema = z.object({
 
 export type SyncResult = z.infer<typeof SyncResultSchema>;
 
+/**
+ * The demo's opening scan (D37): what reading the demo inbox found, and where
+ * the dashboard came from — the inbox, or the seeded sample mailbox when the
+ * inbox could not be read.
+ */
+export const DemoScanResponseSchema = SyncResultSchema.extend({
+  source: z.enum(["inbox", "sample"]),
+  /** The demo inbox read, when it was. */
+  inbox: z.string().nullable(),
+  /** Why the sample mailbox was used instead, in words for a toast. */
+  notice: z.string().nullable(),
+});
+
+export type DemoScanResponse = z.infer<typeof DemoScanResponseSchema>;
+
 // ── Settings ────────────────────────────────────────────────────────────────
 
 /**
@@ -204,6 +222,9 @@ export const MeResponseSchema = z.object({
   /** True while T4.1–T4.3 are deferred. The client must be able to say so out
    *  loud; a demo that looks like a logged-in product is a demo that misleads. */
   demoMode: z.boolean(),
+  /** The Gmail account the emails were read from, so a link to one opens in
+   *  that account rather than whichever is first in the browser (D38). */
+  mailbox: z.string().email().nullable().default(null),
   sync: SyncStatusResponseSchema,
 });
 

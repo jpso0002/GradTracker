@@ -18,4 +18,11 @@ export interface MailboxReader {
    * drops them.
    */
   readSince(since: Date): Promise<RawEmail[]>;
+
+  /**
+   * The sample emails loaded into the inbox for the demo's opening scan (D37),
+   * with their original dates and the ids the answer key knows them by
+   * (`fixture-001`). Never mail a person sent.
+   */
+  readSamples(): Promise<RawEmail[]>;
 }

@@ -16,6 +16,7 @@ import { api, ApiError, NetworkError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
 import { deadlineWording, formatDeadline, formatEventDate } from "../format";
+import { gmailLink, useMailboxAccount } from "../gmailLink";
 import {
   EditFields,
   FIELD_LABELS,
@@ -44,8 +45,6 @@ import {
  * warns rather than silently replacing a value an ingest changed while the
  * panel was open.
  */
-
-const GMAIL_SEARCH = "https://mail.google.com/mail/u/0/#search/";
 
 /**
  * How the panel sits (design.md §11, T5.8): beside the list from 1280px; over
@@ -606,6 +605,7 @@ function Blank({ children }: { children: React.ReactNode }) {
 }
 
 function Timeline({ events }: { events: EmailEvent[] }) {
+  const account = useMailboxAccount();
   if (events.length === 0) {
     return (
       <section>
@@ -647,12 +647,10 @@ function Timeline({ events }: { events: EmailEvent[] }) {
               {event.detectedRole ? ` · ${event.detectedRole}` : ""}
             </span>
 
-            {event.senderDomain ? (
+            {gmailLink(event.gmailMessageId, account) ? (
               <a
-                // A deep link, not the email itself. GradTracker stores no
-                // subject or body, so the only honest way to show a student
-                // the source is to send them to their own inbox (SM-6).
-                href={`${GMAIL_SEARCH}${encodeURIComponent(`rfc822msgid:${event.gmailMessageId}`)}`}
+                // A deep link, not the email itself (SM-6, D38).
+                href={gmailLink(event.gmailMessageId, account)!}
                 target="_blank"
                 rel="noreferrer"
                 className="gt-touch"
@@ -664,7 +662,7 @@ function Timeline({ events }: { events: EmailEvent[] }) {
                 }}
               >
                 <Icon name="external-link" size={12} />
-                Open in Gmail · {event.senderDomain}
+                Open in Gmail{event.senderDomain ? ` · ${event.senderDomain}` : ""}
               </a>
             ) : null}
           </li>

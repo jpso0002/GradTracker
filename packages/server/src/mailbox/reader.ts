@@ -240,3 +240,21 @@ export function dedupeById(emails: MailboxEmail[]): {
   }
   return { unique, duplicates };
 }
+
+/**
+ * One raw RFC 822 message reduced to what the classifier reads — the same
+ * parsing and body rules as an export. Used by the demo inbox reader (D37),
+ * which fetches whole messages over IMAP.
+ */
+export async function parseRawMessage(
+  source: string | Buffer,
+): Promise<{ fromAddress: string; subject: string; body: string; messageId: string | null; date: Date | null }> {
+  const mail = await simpleParser(source, { skipImageLinks: true, skipTextToHtml: true, skipTextLinks: true });
+  return {
+    fromAddress: (mail.from?.value[0]?.address ?? "").toLowerCase(),
+    subject: mail.subject ?? "",
+    body: bodyText(mail),
+    messageId: mail.messageId ?? null,
+    date: mail.date && !Number.isNaN(mail.date.getTime()) ? mail.date : null,
+  };
+}

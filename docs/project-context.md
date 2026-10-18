@@ -91,7 +91,7 @@ team chose classifies live (D23, §4).
 
 | | |
 |---|---|
-| Tests | **659 passing**, 40 files, plus 5 recorded as todo (the security clauses deferred with sign-in) |
+| Tests | **681 passing**, 40 files, plus 5 recorded as todo (the security clauses deferred with sign-in) |
 | Source | ~18,300 lines of TypeScript/TSX in the three packages' `src/` — ~10,700 application, ~7,600 tests (excludes the vendored design system and build output; counted 5 October) |
 | Accessibility | WCAG 2.1 AA audit: 36 of 50 criteria pass, 4 partly — the rest is mostly the design system's tokens ([accessibility-audit.md](accessibility-audit.md)) |
 | Performance | Seeded 25-application pipeline: API p95 8 ms (budget 200), edit round-trip p95 11 ms (budget 300); browser largest paint 148 ms |
@@ -449,7 +449,7 @@ colours drain to red.
 by `npm.cmd run demo` every time it starts, so it never ages and never touches `dev.db`. The
 app opens on a **simulated** Google sign-in — the Connect screen, a stand-in for the read-only
 consent screen, a scan counting through the sample mailbox — that lands on the dashboard.
-Every step says it is simulated; hosted sign-in (RQ-01) stays deferred. *17 October (D36):* **Refresh reads a demo Gmail inbox live** over IMAP — a teammate sends a pre-written email mid-presentation and the Deloitte card moves to interview, or an unclear email lands in review — classified by a **scripted** classifier, with **Ctrl+Alt+R** as the no-network backup. Setup: [demo-inbox-guide.md](demo-inbox-guide.md).
+Every step says it is simulated; hosted sign-in (RQ-01) stays deferred. *17 October (D36):* **Refresh reads a demo Gmail inbox live** over IMAP — a teammate sends a pre-written email mid-presentation and the Accenture card moves to interview, or an unclear email lands in review — classified by a **scripted** classifier, with **Ctrl+Alt+R** as the no-network backup. Since D37 the sign-in scan **reads the 80 sample emails from the demo inbox** (loaded once with `npm.cmd run demo:load-inbox`) and builds the dashboard from them. Setup: [demo-inbox-guide.md](demo-inbox-guide.md).
 
 **Real-inbox demo** — 32 emails from Jordan's Gmail → 8 applications (3 active, 5 archived),
 4 hard negatives correctly rejected. NAB Graduate Program 2027 is reconstructed from 5 events
@@ -464,7 +464,7 @@ Windows, **PowerShell 5.1**: `&&` is a parser error and `npm.ps1` is blocked by 
 policy. Use `npm.cmd`, one command per line.
 
 ```
-npm.cmd test              # 659 tests, 5 todo
+npm.cmd test              # 681 tests, 5 todo
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run accuracy      # the CI gate; --demo shows the report shape, --invert proves it fails

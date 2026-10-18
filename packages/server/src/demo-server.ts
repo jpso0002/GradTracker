@@ -1,60 +1,61 @@
 import { createDatabase } from "./db/client.js";
 import { createApp } from "./app.js";
-import { DEMO_DATABASE, demoBackupEmails, resetDemoDatabase } from "./demo.js";
-import { createDemoInbox, ScriptedEmailClassifier } from "./adapters/index.js";
+import type { DemoSession } from "./routes/sync.js";
+import { DEMO_DATABASE, clearDemoDatabase, demoBackupEmails, rebaseSamples, resetDemoDatabase } from "./demo.js";
+import { createDemoInbox, DemoEmailClassifier } from "./adapters/index.js";
 
 /**
- * The presentation demo's API (D35, D36).
+ * The presentation demo's API (D35, D36, D37).
  *
  *   npm run demo
  *
- * Rebuilds `demo.db` from the seed, then serves it. Pair it with the client and
- * open the app: it starts at the simulated sign-in, "scans" this sample
- * mailbox, and lands on the dashboard. Never reads or writes `dev.db`.
+ * With the demo inbox configured (GMAIL_DEMO_USER / GMAIL_DEMO_APP_PASSWORD),
+ * the dashboard starts empty: the sign-in walkthrough's scan reads the sample
+ * emails loaded into the inbox (`npm run demo:load-inbox`) and builds it, and
+ * Refresh later reads what a teammate sends. Without one — or if the inbox
+ * cannot be read — it is the seeded sample mailbox, as before.
  *
- * Refresh reads the demo inbox (GMAIL_DEMO_USER / GMAIL_DEMO_APP_PASSWORD) for
- * mail that arrived after this process started, and classifies it with the
- * scripted classifier. Start the demo before the email is sent.
+ * Never reads or writes `dev.db`.
  */
 
 const url = `file:./${DEMO_DATABASE}`;
 const port = Number(process.env["PORT"] ?? 3000);
 
-const reset = createDatabase(url);
-const result = await resetDemoDatabase(reset.db);
-reset.close();
-console.log(
-  `Demo database rebuilt: ${DEMO_DATABASE} — ${result.jobsCreated} sample applications, ` +
-    `${result.reviewItemsCreated} awaiting review, deadlines relative to today.`,
-);
-
 const inbox = createDemoInbox();
-const ownAddress = process.env["GMAIL_DEMO_USER"]?.trim() || null;
-let startedAt = new Date();
-
 const { db } = createDatabase(url);
-createApp({
-  db,
-  demoSync: {
-    inbox,
-    classifier: new ScriptedEmailClassifier(),
-    startedAt: () => startedAt,
-    ownAddress,
-    backupEmails: demoBackupEmails,
+
+const session: DemoSession = {
+  inbox,
+  inboxAddress: process.env["GMAIL_DEMO_USER"]?.trim() || null,
+  classifier: new DemoEmailClassifier(),
+  startedAt: new Date(),
+  backupEmails: demoBackupEmails,
+  rebaseSamples: (emails, now) => rebaseSamples(emails, now),
+  clear: async () => {
+    await clearDemoDatabase(db);
   },
-  // Reset demo: the sample mailbox as it started, and only mail sent from now
-  // on counts — an email already shown must be sent again, not resurrected.
-  demoReset: async () => {
+  seed: async () => {
     await resetDemoDatabase(db);
-    startedAt = new Date();
-    console.log(`Demo reset at ${startedAt.toLocaleTimeString()} — send the emails again.`);
   },
-}).listen(port, () => {
+};
+
+if (inbox) {
+  await session.clear();
+  console.log(`Demo database emptied: ${DEMO_DATABASE} — the sign-in scan fills it from ${session.inboxAddress}.`);
+} else {
+  const result = await resetDemoDatabase(db);
+  console.log(
+    `Demo database rebuilt: ${DEMO_DATABASE} — ${result.jobsCreated} sample applications, ` +
+      `${result.reviewItemsCreated} awaiting review, deadlines relative to today.`,
+  );
+}
+
+createApp({ db, demo: session }).listen(port, () => {
   console.log(`GradTracker demo API on http://localhost:${port}  (db: ${url})`);
   console.log(
     inbox
-      ? `Refresh reads ${ownAddress} — mail received after ${startedAt.toLocaleTimeString()} only.`
-      : "Refresh: no demo inbox configured (GMAIL_DEMO_USER / GMAIL_DEMO_APP_PASSWORD). The backup shortcut still works.",
+      ? `Refresh reads ${session.inboxAddress} — mail sent after the sign-in scan only.`
+      : "No demo inbox configured (GMAIL_DEMO_USER / GMAIL_DEMO_APP_PASSWORD): the seeded sample mailbox. The backup shortcut still works.",
   );
   console.log("Demo mode: no authentication. Not for deployment.");
 });
