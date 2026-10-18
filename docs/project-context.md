@@ -91,7 +91,7 @@ team chose classifies live (D23, §4).
 
 | | |
 |---|---|
-| Tests | **681 passing**, 40 files, plus 5 recorded as todo (the security clauses deferred with sign-in) |
+| Tests | **690 passing**, 40 files, plus 5 recorded as todo (the security clauses deferred with sign-in) |
 | Source | ~18,300 lines of TypeScript/TSX in the three packages' `src/` — ~10,700 application, ~7,600 tests (excludes the vendored design system and build output; counted 5 October) |
 | Accessibility | WCAG 2.1 AA audit: 36 of 50 criteria pass, 4 partly — the rest is mostly the design system's tokens ([accessibility-audit.md](accessibility-audit.md)) |
 | Performance | Seeded 25-application pipeline: API p95 8 ms (budget 200), edit round-trip p95 11 ms (budget 300); browser largest paint 148 ms |
@@ -464,7 +464,7 @@ Windows, **PowerShell 5.1**: `&&` is a parser error and `npm.ps1` is blocked by 
 policy. Use `npm.cmd`, one command per line.
 
 ```
-npm.cmd test              # 681 tests, 5 todo
+npm.cmd test              # 690 tests, 5 todo
 npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd run accuracy      # the CI gate; --demo shows the report shape, --invert proves it fails

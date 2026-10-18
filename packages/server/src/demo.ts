@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import type { Database } from "./db/client.js";
 import { users, jobs, emailEvents, jobFieldProvenance, syncState } from "./db/schema.sqlite.js";
-import { ne } from "drizzle-orm";
+import { eq, inArray, ne } from "drizzle-orm";
 import { CONFIDENCE, asUserId, type Fixture, type UserId } from "@gradtracker/shared";
 import { seed, SEED_GOOGLE_SUB, SEED_STUDENT, type SeedResult } from "./db/seed.js";
 import { createIdentityRepository } from "./db/repository.js";
@@ -137,4 +137,42 @@ export function buildSampleMessage(fixture: Fixture, to: string): SampleMessage 
     "",
   ].join("\r\n");
   return { raw, receivedAt };
+}
+
+// ── Demo accounts (D40) ─────────────────────────────────────────────────────
+
+/** Brings `demo.db` up to date without emptying it: accounts, and what each
+ *  has scanned, survive a restart. */
+export async function migrateDemoDatabase(db: Database): Promise<void> {
+  await migrate(db, { migrationsFolder: MIGRATIONS });
+}
+
+/** Empties one student's dashboard — their applications, review items and
+ *  scan — and puts their settings back. Every other account is untouched. */
+export async function clearUserData(db: Database, userId: UserId): Promise<void> {
+  const owned = db.select({ id: jobs.id }).from(jobs).where(eq(jobs.userId, userId));
+  await db.delete(jobFieldProvenance).where(inArray(jobFieldProvenance.jobId, owned));
+  await db.delete(emailEvents).where(eq(emailEvents.userId, userId));
+  await db.delete(jobs).where(eq(jobs.userId, userId));
+  await db.delete(syncState).where(eq(syncState.userId, userId));
+  await db.update(users).set({ reviewThreshold: CONFIDENCE.DEFAULT_REVIEW_THRESHOLD }).where(eq(users.id, userId));
+}
+
+/** The `users` row a demo account signs in as, made on first use. */
+export async function demoAccountUser(db: Database, account: { email: string; name: string }): Promise<UserId> {
+  const identity = createIdentityRepository(db);
+  const googleSub = `demo-account:${account.email}`;
+  const user =
+    (await identity.findByGoogleSub(googleSub)) ??
+    (await identity.createUser({
+      googleSub,
+      email: account.email,
+      displayName: account.name,
+      // NOT NULL in the product schema, because a real student always has an
+      // encrypted Google token. A demo account has none.
+      refreshTokenCiphertext: "demo-account-no-token",
+      refreshTokenIv: "demo-account",
+      refreshTokenTag: "demo-account",
+    }));
+  return asUserId(user!.id);
 }

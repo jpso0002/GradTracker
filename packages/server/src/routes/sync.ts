@@ -3,6 +3,7 @@ import type { DemoScanResponse, SyncResult, SyncStatusResponse, UserId } from "@
 import type { Repository } from "../db/repository.js";
 import type { EmailClassifier, MailboxReader, RawEmail } from "../ports/index.js";
 import { ingestEmails } from "../domain/classify/ingest.js";
+import { mayConnectInbox } from "./auth.js";
 
 /**
  * Sync routes (T4.6, D36, D37).
@@ -40,10 +41,18 @@ export interface DemoSession {
   backupEmails: (now: Date) => RawEmail[];
   /** The loaded samples, brought up to date (D37). */
   rebaseSamples: (emails: RawEmail[], now: Date) => RawEmail[];
-  /** Empties the dashboard, keeping the sample student. */
-  clear: () => Promise<void>;
+  /** Empties this student's dashboard; every other account is untouched. */
+  clear: (userId: UserId) => Promise<void>;
   /** Fills it with the seeded sample mailbox instead (D35). */
-  seed: () => Promise<void>;
+  seed: (userId: UserId) => Promise<void>;
+}
+
+/** Only the demo inbox's own account may read it (D40). Answers for the
+ *  request and says so when it may not; true when it may. */
+function ownsInbox(req: Request, res: Response, demo: DemoSession): boolean {
+  if (mayConnectInbox(req.accountEmail, demo.inboxAddress)) return true;
+  res.status(403).json({ error: `Only ${demo.inboxAddress} can connect the demo inbox. This account's Gmail isn't connected in the demo.` });
+  return false;
 }
 
 const NO_INBOX =
@@ -79,6 +88,7 @@ export function syncRoutes(repo: Repository, demo?: DemoSession): Router {
   const deps = { repo, classifier: demo.classifier, ownAddress: demo.inboxAddress };
 
   router.post("/", async (req: Request, res: Response): Promise<void> => {
+    if (!ownsInbox(req, res, demo)) return;
     if (!demo.inbox) {
       res.status(503).json({ error: NO_INBOX });
       return;
@@ -98,6 +108,7 @@ export function syncRoutes(repo: Repository, demo?: DemoSession): Router {
   });
 
   router.post("/backup", async (req: Request, res: Response): Promise<void> => {
+    if (!ownsInbox(req, res, demo)) return;
     const result: SyncResult = await ingestEmails(deps, req.userId, demo.backupEmails(new Date()));
     res.json(result);
   });
@@ -120,7 +131,7 @@ export function demoRoutes(repo: Repository, demo: DemoSession): Router {
 
   /** The seeded sample mailbox, counted as a scan would report it. */
   const fromSample = async (userId: UserId, notice: string | null): Promise<DemoScanResponse> => {
-    await demo.seed();
+    await demo.seed(userId);
     const [active, archived, review, sync] = await Promise.all([
       repo.listJobs(userId, { status: "active" }),
       repo.listJobs(userId, { status: "archived" }),
@@ -146,9 +157,10 @@ export function demoRoutes(repo: Repository, demo: DemoSession): Router {
    * seeded sample mailbox instead — and the response says so.
    */
   router.post("/scan", async (req: Request, res: Response): Promise<void> => {
+    if (!ownsInbox(req, res, demo)) return;
     const body = await serially(async (): Promise<DemoScanResponse> => {
       const now = new Date();
-      await demo.clear();
+      await demo.clear(req.userId);
       demo.startedAt = now;
 
       if (!demo.inbox) return fromSample(req.userId, null);
@@ -175,10 +187,12 @@ export function demoRoutes(repo: Repository, demo: DemoSession): Router {
 
   /** Back to the start of the presentation: an empty dashboard for the scan to
    *  fill, or the seeded sample mailbox when there is no inbox to scan. */
-  router.post("/reset", async (_req: Request, res: Response): Promise<void> => {
+  /** Empties the signed-in account's dashboard. For the demo inbox's account
+   *  that re-arms the opening scan; without an inbox, the sample mailbox. */
+  router.post("/reset", async (req: Request, res: Response): Promise<void> => {
     await serially(async () => {
-      if (demo.inbox) await demo.clear();
-      else await demo.seed();
+      if (demo.inbox || !mayConnectInbox(req.accountEmail, demo.inboxAddress)) await demo.clear(req.userId);
+      else await demo.seed(req.userId);
       demo.startedAt = new Date();
     });
     res.json({ ok: true });

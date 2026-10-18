@@ -1,4 +1,5 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { AppShell } from "./shell/AppShell";
 import { ToastHost } from "./shell/ToastHost";
 import { PipelineView } from "./views/PipelineView";
@@ -6,10 +7,10 @@ import { ReviewView } from "./views/ReviewView";
 import { SettingsView } from "./views/SettingsView";
 import { DocsView } from "./views/DocsView";
 import { ConnectView } from "./views/ConnectView";
+import { SignInView, SignUpView, nextPath } from "./views/AccountViews";
 import { BlankView } from "./views/BlankView";
-import { api } from "./api/client";
+import { api, onUnauthorized } from "./api/client";
 import { useAsync } from "./hooks/useAsync";
-import { isSignedIn } from "./session";
 
 /**
  * Routes per app-flow.md §1.1.
@@ -18,33 +19,41 @@ import { isSignedIn } from "./session";
  * bookmark one application, and so browser-back closes the panel instead of
  * leaving the pipeline.
  *
- * `/connect` is the **simulated** sign-in for the presentation (D35): the app
- * opens there until the walkthrough is done in this tab, then on the
- * dashboard. It sits outside the shell, as a signed-out screen would. Real
- * sign-in (T4.1–T4.3) stays deferred — nothing here authenticates anyone.
+ * The presentation demo has its own accounts (D40): `/signup` and `/signin`
+ * sit outside the shell, as signed-out screens do, and `/connect` is the demo
+ * inbox's account's first sign-in. The server answers nothing without a
+ * session; when it says so, the app goes to Sign in.
  */
 export function App() {
-  const review = useAsync(() => api.listReview(), []);
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const where = useRef(pathname);
+  where.current = pathname;
+
+  // Signed out mid-use — the session ended, or another tab signed out. Not
+  // from the signed-out screens themselves, which expect to be signed out.
+  useEffect(() => {
+    onUnauthorized(() => {
+      if (!/^\/(signin|signup)$/.test(where.current)) navigate("/signin", { replace: true });
+    });
+    return () => onUnauthorized(null);
+  }, [navigate]);
 
   return (
     <ToastHost>
       <Routes>
         <Route path="/" element={<Start />} />
-        <Route path="/connect" element={<Connect onScanned={review.reload} />} />
+        <Route path="/signup" element={<SignUpView />} />
+        <Route path="/signin" element={<SignInView />} />
+        <Route path="/connect" element={<Connect />} />
 
-        <Route
-          element={
-            <AppShell reviewCount={review.data?.items.length}>
-              <Outlet />
-            </AppShell>
-          }
-        >
-          <Route path="/pipeline" element={<PipelineView onReviewChanged={review.reload} />} />
-          <Route path="/pipeline/:jobId" element={<PipelineView onReviewChanged={review.reload} />} />
+        <Route element={<Shell />}>
+          <Route path="/pipeline" element={<PipelineRoute />} />
+          <Route path="/pipeline/:jobId" element={<PipelineRoute />} />
           {/* The queue tells the shell when it changes, so the sidebar count
               follows what the student has handled. */}
-          <Route path="/review" element={<ReviewView onChanged={review.reload} />} />
-          <Route path="/settings" element={<SettingsView onReset={review.reload} />} />
+          <Route path="/review" element={<ReviewRoute />} />
+          <Route path="/settings" element={<SettingsRoute />} />
           <Route path="/docs" element={<Navigate to="/docs/architecture" replace />} />
           <Route path="/docs/:page" element={<DocsView />} />
           <Route
@@ -63,18 +72,63 @@ export function App() {
   );
 }
 
-// Each reads the session when its route renders, not when App last rendered:
-// App does not re-render on navigation, so a decision made there goes stale —
-// after Sign out, /connect would still send the student to the dashboard.
+// ── The shell, and the sidebar's review count ───────────────────────────────
 
-/** Where the app opens: the walkthrough until it is done in this tab. */
-function Start() {
-  return <Navigate to={isSignedIn() ? "/pipeline" : "/connect"} replace />;
+interface ShellContext {
+  reloadReviewCount: () => void;
 }
 
-/** The walkthrough, once; after that, the dashboard. */
-/** The sidebar count was read when the app opened, before the scan filled
- *  anything; the scan says when to read it again. */
-function Connect({ onScanned }: { onScanned: () => void }) {
-  return isSignedIn() ? <Navigate to="/pipeline" replace /> : <ConnectView onScanned={onScanned} />;
+/**
+ * The signed-in layout. It owns the sidebar's Needs review count, read when
+ * the student enters the app — after signing in, or after the scan has filled
+ * the dashboard — rather than once when the page first loaded, which was on
+ * the sign-in screen, before there was anything to count.
+ */
+function Shell() {
+  const review = useAsync(() => api.listReview(), []);
+  const context: ShellContext = { reloadReviewCount: review.reload };
+  return (
+    <AppShell reviewCount={review.data?.items.length}>
+      <Outlet context={context} />
+    </AppShell>
+  );
+}
+
+const useShell = () => useOutletContext<ShellContext>();
+
+function PipelineRoute() {
+  return <PipelineView onReviewChanged={useShell().reloadReviewCount} />;
+}
+
+function ReviewRoute() {
+  return <ReviewView onChanged={useShell().reloadReviewCount} />;
+}
+
+function SettingsRoute() {
+  return <SettingsView onReset={useShell().reloadReviewCount} />;
+}
+
+// ── Signed-out routes ───────────────────────────────────────────────────────
+
+function Loading() {
+  return <main aria-busy="true" style={{ minHeight: "100vh", background: "var(--surface-page)" }} />;
+}
+
+/** Where the app opens: Create your account for a newcomer; otherwise where
+ *  the signed-in account belongs. */
+function Start() {
+  const session = useAsync(() => api.session(), []);
+  if (session.error) return <Navigate to="/signin" replace />;
+  if (!session.data) return <Loading />;
+  return <Navigate to={session.data.user ? nextPath(session.data) : "/signup"} replace />;
+}
+
+/** The demo inbox's first scan — only for its own account, and only once. */
+function Connect() {
+  const session = useAsync(() => api.session(), []);
+  if (session.error) return <Navigate to="/signin" replace />;
+  if (!session.data) return <Loading />;
+  if (!session.data.user) return <Navigate to="/signin" replace />;
+  if (!session.data.canConnectInbox) return <Navigate to="/pipeline" replace />;
+  return <ConnectView session={session.data} />;
 }

@@ -1,19 +1,31 @@
+import { randomBytes } from "node:crypto";
 import { createDatabase } from "./db/client.js";
 import { createApp } from "./app.js";
 import type { DemoSession } from "./routes/sync.js";
-import { DEMO_DATABASE, clearDemoDatabase, demoBackupEmails, rebaseSamples, resetDemoDatabase } from "./demo.js";
+import {
+  DEMO_DATABASE,
+  clearUserData,
+  demoBackupEmails,
+  migrateDemoDatabase,
+  rebaseSamples,
+} from "./demo.js";
+import { DEMO_ACCOUNTS_FILE, DemoAccounts } from "./demo-accounts.js";
+import { seed } from "./db/seed.js";
 import { createDemoInbox, DemoEmailClassifier } from "./adapters/index.js";
 
 /**
- * The presentation demo's API (D35, D36, D37).
+ * The presentation demo's API (D35–D40).
  *
  *   npm run demo
  *
- * With the demo inbox configured (GMAIL_DEMO_USER / GMAIL_DEMO_APP_PASSWORD),
- * the dashboard starts empty: the sign-in walkthrough's scan reads the sample
- * emails loaded into the inbox (`npm run demo:load-inbox`) and builds it, and
- * Refresh later reads what a teammate sends. Without one — or if the inbox
- * cannot be read — it is the seeded sample mailbox, as before.
+ * Demo accounts (D40): sign up, sign in, sign out — kept in
+ * `demo-accounts.json`, outside the product database. Each account has its own
+ * dashboard, and accounts and dashboards survive a restart.
+ *
+ * Only the demo inbox's own account (GMAIL_DEMO_USER) may connect it: its
+ * first sign-in scans the sample emails loaded into the inbox
+ * (`npm run demo:load-inbox`), and Refresh later reads what a teammate sends.
+ * Any other account has an empty dashboard.
  *
  * Never reads or writes `dev.db`.
  */
@@ -22,40 +34,38 @@ const url = `file:./${DEMO_DATABASE}`;
 const port = Number(process.env["PORT"] ?? 3000);
 
 const inbox = createDemoInbox();
+const inboxAddress = process.env["GMAIL_DEMO_USER"]?.trim().toLowerCase() || null;
 const { db } = createDatabase(url);
+await migrateDemoDatabase(db);
+
+// Signs session cookies. A fixed secret keeps people signed in across a
+// restart; without one, a random secret means signing in again after it.
+const secret = process.env["SESSION_SECRET"]?.trim() || randomBytes(32).toString("base64");
 
 const session: DemoSession = {
   inbox,
-  inboxAddress: process.env["GMAIL_DEMO_USER"]?.trim() || null,
+  inboxAddress,
   classifier: new DemoEmailClassifier(),
   startedAt: new Date(),
   backupEmails: demoBackupEmails,
   rebaseSamples: (emails, now) => rebaseSamples(emails, now),
-  clear: async () => {
-    await clearDemoDatabase(db);
-  },
-  seed: async () => {
-    await resetDemoDatabase(db);
+  clear: (userId) => clearUserData(db, userId),
+  seed: async (userId) => {
+    await clearUserData(db, userId);
+    await seed(db, new Date(), userId);
   },
 };
 
-if (inbox) {
-  await session.clear();
-  console.log(`Demo database emptied: ${DEMO_DATABASE} — the sign-in scan fills it from ${session.inboxAddress}.`);
-} else {
-  const result = await resetDemoDatabase(db);
-  console.log(
-    `Demo database rebuilt: ${DEMO_DATABASE} — ${result.jobsCreated} sample applications, ` +
-      `${result.reviewItemsCreated} awaiting review, deadlines relative to today.`,
-  );
-}
-
-createApp({ db, demo: session }).listen(port, () => {
-  console.log(`GradTracker demo API on http://localhost:${port}  (db: ${url})`);
+createApp({
+  db,
+  demo: session,
+  accounts: { accounts: new DemoAccounts(DEMO_ACCOUNTS_FILE), secret, inboxAddress },
+}).listen(port, () => {
+  console.log(`GradTracker demo API on http://localhost:${port}  (db: ${url}, accounts: ${DEMO_ACCOUNTS_FILE})`);
   console.log(
     inbox
-      ? `Refresh reads ${session.inboxAddress} — mail sent after the sign-in scan only.`
-      : "No demo inbox configured (GMAIL_DEMO_USER / GMAIL_DEMO_APP_PASSWORD): the seeded sample mailbox. The backup shortcut still works.",
+      ? `Only ${inboxAddress} can connect the demo inbox; its first sign-in scans it.`
+      : "No demo inbox configured (GMAIL_DEMO_USER / GMAIL_DEMO_APP_PASSWORD): an account's first scan uses the seeded sample mailbox.",
   );
-  console.log("Demo mode: no authentication. Not for deployment.");
+  console.log("Demo accounts: for the presentation only. Not for deployment.");
 });

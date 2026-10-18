@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, EmptyState, Switch, TopBar } from "../ds";
-import { isSignedIn, signOut } from "../session";
+import { nextPath } from "./AccountViews";
 import { api, ApiError, NetworkError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
@@ -43,19 +43,30 @@ export function SettingsView({ onReset }: { onReset?: () => void } = {}) {
   const { theme, toggle } = useTheme();
   const [shortcuts, setShortcuts] = useShortcuts();
   const navigate = useNavigate();
-  const signedIn = isSignedIn();
+  // Who is signed in (D40). A 404 means there are no demo accounts here — the
+  // dev server's single local user — and the Account section is left out.
+  const session = useAsync(() => api.session(), []);
+  const account = session.data?.user ?? null;
   const [resetting, setResetting] = useState(false);
 
-  // Back to the start of the presentation (D36): the sample mailbox as seeded,
-  // the threshold at its default, and the sign-in walkthrough. Mail already
-  // shown has to be sent again.
+  const signOut = async () => {
+    try {
+      await api.signOut();
+    } finally {
+      navigate("/signin", { replace: true });
+    }
+  };
+
+  // Back to the start of the presentation (D36, D40): this account's dashboard
+  // emptied and its threshold at the default. The demo inbox's account then
+  // scans again; mail already shown has to be sent again.
   const resetDemo = async () => {
     setResetting(true);
     try {
       await api.resetDemo();
       onReset?.();
-      signOut();
-      navigate("/connect");
+      navigate(nextPath(await api.session()), { replace: true });
+      setResetting(false);
     } catch (error) {
       setResetting(false);
       toast.show(
@@ -182,29 +193,29 @@ export function SettingsView({ onReset }: { onReset?: () => void } = {}) {
           </span>
         </Section>
 
+        {account ? (
+          <Section title="Account">
+            <p style={{ margin: 0 }}>
+              Signed in as <strong>{account.name}</strong> · {account.email}
+            </p>
+            <div>
+              <Button variant="quiet" onClick={() => void signOut()}>
+                Sign out
+              </Button>
+            </div>
+          </Section>
+        ) : null}
+
         <Section title="Gmail">
           <p style={{ margin: 0, color: "var(--text-muted)" }}>
-            Demo mode: the sign-in is a walkthrough, not a real Google connection, and Refresh reads
-            the demo inbox. Sign out to start the walkthrough again, or Reset demo to also put the
-            sample mailbox back as it started.
+            {session.data && !session.data.canConnectInbox
+              ? `Demo mode: only ${session.data.inbox ?? "the demo inbox's own account"} can connect Gmail, so this account's dashboard stays empty.`
+              : "Demo mode: the Google step is a walkthrough, and Refresh reads the demo inbox. Reset demo empties this dashboard and scans the inbox again."}
           </p>
-          {signedIn ? (
-            <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
-              <Button
-                variant="secondary"
-                disabled={resetting}
-                onClick={() => void resetDemo()}
-              >
+          {account ? (
+            <div>
+              <Button variant="secondary" disabled={resetting} onClick={() => void resetDemo()}>
                 {resetting ? "Resetting…" : "Reset demo"}
-              </Button>
-              <Button
-                variant="quiet"
-                onClick={() => {
-                  signOut();
-                  navigate("/connect");
-                }}
-              >
-                Sign out
               </Button>
             </div>
           ) : null}

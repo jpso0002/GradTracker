@@ -116,12 +116,14 @@ export interface SeedResult {
   reviewItemsCreated: number;
 }
 
-/** `today` is injectable so tests get deterministic offsets. */
-export async function seed(db: Database, today: Date = new Date()): Promise<SeedResult> {
+/** `today` is injectable so tests get deterministic offsets. `into` seeds an
+ *  existing student instead of the sample one — a demo account whose inbox
+ *  could not be read (D40). */
+export async function seed(db: Database, today: Date = new Date(), into?: UserId): Promise<SeedResult> {
   const identity = createIdentityRepository(db);
   const repo = createRepository(db);
 
-  const existing = await identity.findByGoogleSub(SEED_GOOGLE_SUB);
+  const existing = into ? { id: into } : await identity.findByGoogleSub(SEED_GOOGLE_SUB);
   const user =
     existing ??
     (await identity.createUser({

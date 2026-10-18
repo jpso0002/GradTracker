@@ -7,6 +7,7 @@ import {
   SyncStatusResponseSchema,
   SyncResultSchema,
   DemoScanResponseSchema,
+  AuthSessionResponseSchema,
   type ListJobsResponse,
   type JobDetailResponse,
   type MeResponse,
@@ -15,6 +16,9 @@ import {
   type SyncStatusResponse,
   type SyncResult,
   type DemoScanResponse,
+  type AuthSessionResponse,
+  type SignInBody,
+  type SignUpBody,
   type UpdateJobBody,
   type UpdateSettingsBody,
   type ConfirmReviewBody,
@@ -71,6 +75,12 @@ export class NetworkError extends Error {
   }
 }
 
+/** Called when the server says nobody is signed in (D40). One listener: the app. */
+let unauthorized: (() => void) | null = null;
+export function onUnauthorized(listener: (() => void) | null): void {
+  unauthorized = listener;
+}
+
 const ErrorBodySchema = z.object({
   error: z.string(),
   field: z.string().optional(),
@@ -103,6 +113,10 @@ async function request<S extends z.ZodTypeAny>(
 
   const text = await response.text();
   const body: unknown = text ? JSON.parse(text) : null;
+
+  // Signed out — the session ended, or never began (D40). Whoever is listening
+  // takes the student to Sign in; the request still fails here.
+  if (response.status === 401 && !path.startsWith("/api/auth/")) unauthorized?.();
 
   if (!response.ok) {
     const parsed = ErrorBodySchema.safeParse(body);
@@ -185,6 +199,24 @@ export const api = {
    *  the presentation demo, where there is no inbox to read. */
   sync(): Promise<SyncResult> {
     return request("/api/sync", SyncResultSchema, { method: "POST" });
+  },
+
+  // ── Demo accounts (D40) ──
+
+  session(): Promise<AuthSessionResponse> {
+    return request("/api/auth/session", AuthSessionResponseSchema);
+  },
+
+  signUp(body: SignUpBody): Promise<AuthSessionResponse> {
+    return request("/api/auth/signup", AuthSessionResponseSchema, { method: "POST", body: JSON.stringify(body) });
+  },
+
+  signIn(body: SignInBody): Promise<AuthSessionResponse> {
+    return request("/api/auth/signin", AuthSessionResponseSchema, { method: "POST", body: JSON.stringify(body) });
+  },
+
+  signOut(): Promise<{ ok: boolean }> {
+    return request("/api/auth/signout", z.object({ ok: z.boolean() }), { method: "POST" });
   },
 
   /** The demo's opening scan (D37): the sample emails in the demo inbox

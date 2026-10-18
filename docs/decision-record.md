@@ -690,6 +690,43 @@ screen now names its source only once the server has answered, and a scan alread
 is reused rather than queued behind, so the counts appear after one read of the inbox
 (about 7 seconds) instead of two.
 
+### D40 — Real demo accounts: sign up, sign in, sign out *(18 October 2026)*
+
+**Supersedes D39's mock** and D35's tab-only "signed in" flag.
+
+**Context:** the presenters want to create a fresh account in front of the room, show that it
+starts empty, sign out, and sign in to the demo inbox's account for the rest of the demo. That
+needs accounts that really exist, really separate their data, and really check a password.
+
+**Chosen:**
+
+- **Accounts outside the product database.** The product signs in with Google and stores no
+  credential (SM-5); two tests fail if any table gains a password column. So demo accounts live
+  in `demo-accounts.json` next to `demo.db` (gitignored): name, email, a 16-byte salt and a
+  **scrypt hash**, never the password. Each account maps to an ordinary `users` row
+  (`google_sub` = `demo-account:<email>`), and the product schema does not change.
+- **A signed cookie for the session** (HMAC-SHA256 over the email and an expiry, HttpOnly,
+  SameSite=Lax, 7 days), signed with `SESSION_SECRET`: no server-side store, so a restart signs
+  no one out. Without a session the API answers 401 and the client goes to Sign in.
+- **Each account sees only its own dashboard.** The repository was already scoped by student; the
+  demo's clear and seed are now scoped to the signed-in account too.
+- **Only the demo inbox's own account may connect it** (`GMAIL_DEMO_USER`). Its first sign-in
+  goes to Connect your Gmail → consent → scan; later sign-ins go straight to its dashboard.
+  Any other account has an empty dashboard, and Refresh, the scan and the backup answer 403.
+- **Reset demo empties only the signed-in account's dashboard**, which re-arms the demo inbox's
+  scan. Accounts and dashboards survive a restart; `demo.db` is no longer wiped on start.
+- Sign-in answers the same words for an unknown email and a wrong password, and compares
+  hashes in constant time.
+
+**Rejected:** a password column in `users` (breaks SM-5 and its tests, and would ship with the
+product schema); server-side sessions (lost on restart); real Google sign-in (deferred,
+T4.1–T4.3).
+
+**Consequence:** the demo inbox's account is created once, before the presentation, by the
+team, with a password of their choosing. `security.test.ts`'s todo "OAuth is the only way in —
+no password route exists" describes the product, not `npm run demo`, which mounts these routes
+and refuses to run in production.
+
 ---
 
 ## 3. Defects found reviewing the specification *(Revision 2)*

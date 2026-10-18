@@ -240,3 +240,35 @@ export const ApiErrorSchema = z.object({
 });
 
 export type ApiError = z.infer<typeof ApiErrorSchema>;
+
+// ── Demo accounts (D40) ─────────────────────────────────────────────────────
+
+/** Sign-up for the presentation demo's own accounts — not the product's
+ *  Google sign-in, which stores no credential (SM-5). */
+export const SignUpBodySchema = z.object({
+  name: z.string().trim().min(1, "Enter your name").max(80),
+  email: z.string().trim().email("Enter an email address").max(254),
+  password: z.string().min(8, "Use at least 8 characters").max(200),
+});
+
+export type SignUpBody = z.infer<typeof SignUpBodySchema>;
+
+export const SignInBodySchema = z.object({
+  email: z.string().trim().min(1).max(254),
+  password: z.string().min(1).max(200),
+});
+
+export type SignInBody = z.infer<typeof SignInBodySchema>;
+
+/** Who is signed in, and where the app should take them. */
+export const AuthSessionResponseSchema = z.object({
+  user: z.object({ email: z.string(), name: z.string() }).nullable(),
+  /** Only the demo inbox's own account may connect it (D40). */
+  canConnectInbox: z.boolean(),
+  /** Whether this account's dashboard has been filled by a scan yet. */
+  scanned: z.boolean(),
+  /** The demo inbox, for the consent screen. */
+  inbox: z.string().nullable(),
+});
+
+export type AuthSessionResponse = z.infer<typeof AuthSessionResponseSchema>;

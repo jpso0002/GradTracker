@@ -1,173 +1,68 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { DemoScanResponse, Job } from "@gradtracker/shared";
-import { Button, Card, Icon, Input, Wordmark } from "../ds";
+import type { AuthSessionResponse, DemoScanResponse, Job } from "@gradtracker/shared";
+import { Button, Card, Icon } from "../ds";
 import { api, ApiError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
-import { readProfile, saveProfile, signIn } from "../session";
+import { CenteredPage } from "./AccountViews";
 
 /**
- * The Connect screen, and a **simulated** Google sign-in, for the presentation
- * (D35). Hosted OAuth is deferred (T4.1–T4.3): `gmail.readonly` is a restricted
+ * Connect your Gmail — the demo inbox's account's first sign-in (D35, D40).
+ * Hosted OAuth is deferred (T4.1–T4.3): `gmail.readonly` is a restricted
  * scope, and opening it beyond 100 test users needs a paid security assessment.
- * This shows how sign-in would work, end to end, without contacting Google:
+ * This shows how connecting would work, without Google's own screens:
  *
  *   1. Connect — what GradTracker does and does not access (app-flow.md §5.1).
  *   2. A stand-in for Google's consent screen: read-only Gmail access only.
- *   3. A scan of the mailbox the API is serving — the sample mailbox under
- *      `npm run demo` — counting that database's own numbers, then the
- *      dashboard.
+ *   3. The scan: the demo inbox read over IMAP (D37), or the sample mailbox,
+ *      then the dashboard.
  *
- * Each step says it is simulated. A demo that looks like a working sign-in is
- * a demo that misleads (P5).
+ * Each step says what is simulated. A demo that looks like a working Google
+ * sign-in is a demo that misleads (P5).
  */
 
-/** How long the simulated scan takes to "read" the sample mailbox. */
+/** The least time the scan screen shows, so the room can read it. */
 export const SCAN_MS = 4000;
 
-type Step = "create" | "connect" | "consent" | "scanning";
+type Step = "connect" | "consent" | "scanning";
 
 const TITLES: Record<Step, string> = {
-  create: "Create your account",
   connect: "Connect your Gmail",
   consent: "Connect your Gmail",
   scanning: "Scanning your inbox",
 };
 
-export function ConnectView({ onScanned }: { onScanned?: () => void } = {}) {
-  // A profile from earlier in this tab means the account step is done (D39).
-  const [step, setStep] = useState<Step>(() => (readProfile() ? "connect" : "create"));
-
-  useEffect(() => {
-    document.title = `${TITLES[step]} · GradTracker`;
-  }, [step]);
+export function ConnectView({ session, onScanned }: { session: AuthSessionResponse; onScanned?: () => void }) {
+  const [step, setStep] = useState<Step>("connect");
+  const name = session.user?.name ?? "Student";
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        boxSizing: "border-box",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "var(--space-xl) var(--space-lg)",
-        background: "var(--surface-page)",
-      }}
-    >
-      <div style={{ width: "100%", maxWidth: "calc(var(--container-max) / 2.6)", display: "flex", flexDirection: "column", gap: "var(--space-xl)" }}>
-        <Wordmark size={24} />
-        {step === "create" ? <CreateAccount onCreated={() => setStep("connect")} /> : null}
-        {step === "connect" ? <Connect onContinue={() => setStep("consent")} /> : null}
-        {step === "consent" ? <Consent onCancel={() => setStep("connect")} onAllow={() => setStep("scanning")} /> : null}
-        {step === "scanning" ? <Scan onScanned={onScanned} /> : null}
-      </div>
-    </main>
-  );
-}
-
-// ── 0. Create an account — a mock (D39) ─────────────────────────────────────
-
-/**
- * A mock sign-up: name, email and password, as a real product would ask. No
- * account is created and nothing leaves the browser — the name and email are
- * kept for this tab to greet the student, the password not at all. Whatever
- * email is typed, the Gmail connected next is the demo inbox.
- */
-function CreateAccount({ onCreated }: { onCreated: () => void }) {
-  const nameId = useId();
-  const emailId = useId();
-  const passwordId = useId();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [tried, setTried] = useState(false);
-
-  const errors = {
-    name: name.trim() === "" ? "Enter your name" : undefined,
-    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? undefined : "Enter an email address, like sam@student.monash.edu",
-    password: password.length >= 8 ? undefined : "Use at least 8 characters",
-  };
-  const shown = (message: string | undefined) =>
-    tried && message ? { error: message, "aria-invalid": true as const } : {};
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    setTried(true);
-    if (errors.name || errors.email || errors.password) return;
-    saveProfile({ name: name.trim(), email: email.trim() });
-    setPassword("");
-    onCreated();
-  };
-
-  return (
-    <>
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-        <h1 style={{ margin: 0, fontSize: "var(--heading-lg-size)", lineHeight: "var(--heading-lg-lh)" }}>
-          Create your account
-        </h1>
-        <p style={{ margin: 0, color: "var(--text-secondary)" }}>
-          Every graduate application, one ranked list of what’s due next.
-        </p>
-      </div>
-
-      <form noValidate onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
-        <Input
-          id={nameId}
-          label="Full name"
-          autoComplete="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          {...shown(errors.name)}
+    <CenteredPage title={TITLES[step]}>
+      {step === "connect" ? <Connect name={name} onContinue={() => setStep("consent")} /> : null}
+      {step === "consent" ? (
+        <Consent
+          name={name}
+          // The Gmail connected is the demo inbox — the one the scan reads.
+          email={session.inbox ?? session.user?.email ?? ""}
+          onCancel={() => setStep("connect")}
+          onAllow={() => setStep("scanning")}
         />
-        <Input
-          id={emailId}
-          type="email"
-          label="Email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          {...shown(errors.email)}
-        />
-        <Input
-          id={passwordId}
-          type="password"
-          label="Password"
-          autoComplete="new-password"
-          // A placeholder, not a hint: this design system puts the hint inside
-          // the label, which would make it part of the field's name.
-          placeholder="At least 8 characters"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          {...shown(errors.password)}
-        />
-        <Button type="submit" size="lg" fullWidth>
-          Create account
-        </Button>
-      </form>
-
-      <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "var(--caption-size)", textAlign: "center" }}>
-        Demo walkthrough: no account is created, and nothing you type leaves this browser.
-      </p>
-    </>
+      ) : null}
+      {step === "scanning" ? <Scan onScanned={onScanned} /> : null}
+    </CenteredPage>
   );
 }
 
 // ── 1. Connect ──────────────────────────────────────────────────────────────
 
-function Connect({ onContinue }: { onContinue: () => void }) {
-  const profile = readProfile();
+function Connect({ name, onContinue }: { name: string; onContinue: () => void }) {
+  const first = name.trim().split(/\s+/)[0] || name;
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-        {profile ? (
-          <p style={{ margin: 0, display: "flex", alignItems: "center", gap: "var(--space-xs)", color: "var(--text-secondary)" }}>
-            <Icon name="check" size={16} />
-            Account created for {profile.email}
-          </p>
-        ) : null}
         <h1 style={{ margin: 0, fontSize: "var(--heading-lg-size)", lineHeight: "var(--heading-lg-lh)" }}>
-          {profile ? `Welcome, ${profile.name.split(/\s+/)[0]}. Connect your Gmail` : "Connect your Gmail"}
+          {`Welcome, ${first}. Connect your Gmail`}
         </h1>
         <p style={{ margin: 0, color: "var(--text-secondary)" }}>
           GradTracker finds your applications in your inbox, so you never type one in.
@@ -193,8 +88,7 @@ function Connect({ onContinue }: { onContinue: () => void }) {
       </Button>
 
       <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "var(--caption-size)", textAlign: "center" }}>
-        Demo walkthrough: this Google sign-in is simulated, and the inbox connected is the team’s demo
-        mailbox, not your own.
+        Demo walkthrough: the Google step is simulated, and the inbox connected is the team’s demo mailbox.
       </p>
     </>
   );
@@ -216,14 +110,18 @@ function Assurance({ title, detail }: { title: string; detail: string }) {
 
 // ── 2. Consent — a stand-in for Google's own screen ─────────────────────────
 
-function Consent({ onCancel, onAllow }: { onCancel: () => void; onAllow: () => void }) {
+function Consent({
+  name,
+  email,
+  onCancel,
+  onAllow,
+}: {
+  name: string;
+  email: string;
+  onCancel: () => void;
+  onAllow: () => void;
+}) {
   const headingId = useId();
-  const me = useAsync(() => api.me(), []);
-  const profile = readProfile();
-  // The Gmail account connected is the demo inbox whatever email the account
-  // was made with (D39) — the one the scan then reads.
-  const name = profile?.name ?? me.data?.displayName ?? "Sample student";
-  const email = me.data?.mailbox ?? me.data?.email ?? "student@student.monash.edu";
 
   return (
     <section
@@ -364,7 +262,6 @@ function Scan({ onScanned }: { onScanned?: (() => void) | undefined }) {
       setProgress(done);
       if (done < 1) return;
       window.clearInterval(timer);
-      signIn();
       show(`Inbox scanned — ${data.applications.length} applications found, ${data.toReview} to review`);
       if (data.notice) show(data.notice, "info");
       onScanned?.();
@@ -382,7 +279,7 @@ function Scan({ onScanned }: { onScanned?: (() => void) | undefined }) {
   if (mailbox.error) {
     return (
       <Card padding="compact">
-        <p style={{ marginTop: 0 }}>GradTracker could not reach the sample mailbox. Is the demo server running?</p>
+        <p style={{ marginTop: 0 }}>{mailbox.error.message || "GradTracker could not read the mailbox."}</p>
         <Button onClick={mailbox.reload}>Try again</Button>
       </Card>
     );

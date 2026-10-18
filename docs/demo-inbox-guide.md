@@ -68,22 +68,41 @@ npm.cmd run demo
 npm.cmd run dev:client
 ```
 
-The first should print `Demo database emptied … the sign-in scan fills it from …`. If it
+The first should print `Only gradtrackerdemo@gmail.com can connect the demo inbox …`. If it
 says *no demo inbox configured*, the `.env` lines are missing.
 
-Open `http://localhost:5173` and go through the walkthrough (D39): **Create your account**
-(any name, any email, a password of 8+ characters; it's a mock, so nothing is created or
-kept), **Continue with Google**, then **Allow** on the consent screen, which shows your name
-over the demo inbox's address. The scan takes about 7 seconds to read the inbox.
-- The scan screen names the inbox it's reading, counts the 80 emails, and lands on the
-  dashboard: about 20 applications, plus a review queue that includes two emails the
-  "model" was unsure about (Xero and SEEK).
-- If the inbox can't be read, the scan uses the seeded sample mailbox instead, and a toast
-  says why.
+### Accounts (D40), set up once, before the presentation
 
-**Settings → Reset demo** empties the dashboard and returns to the sign-in, so the next
-scan reads the inbox again. No restart is needed. Only mail sent after the latest scan
-counts for Refresh, so send the live emails again after a reset.
+The demo has real accounts: **Create your account**, **Sign in**, and **Sign out** (Settings →
+Account). They're kept in `demo-accounts.json` next to `demo.db`, never committed. Each one
+stores a salted hash, never the password, and each account has its own dashboard.
+
+1. Open `http://localhost:5173`. You start on **Create your account**.
+2. Create the demo inbox's account: any name, **email `gradtrackerdemo@gmail.com`**, and a
+   password you choose (8+ characters). Remember it, since you'll type it during the demo.
+3. That account's first sign-in goes to **Connect your Gmail → Continue with Google →
+   Allow**, then the scan: about 7 seconds, 80 emails read, about 20 applications, and a
+   review queue including two emails the "model" was unsure about (Xero and SEEK). If the
+   inbox can't be read, the scan uses the seeded sample mailbox, and a toast says why.
+4. After that, signing in as this account goes straight to its dashboard.
+
+Accounts and dashboards survive restarts. **Settings → Reset demo** empties the signed-in
+account's dashboard; for the demo inbox's account that means its next visit scans again. Only
+mail sent after the latest scan counts for Refresh, so send the live emails again after a reset.
+
+**To rehearse the start of the demo again**, sign in as the demo account and press Reset demo.
+The random accounts you create while rehearsing can stay, since they don't affect anything; to
+remove them all, stop the server and delete `demo-accounts.json`. That also deletes the demo
+account, so create it again.
+
+### The demo, in order
+
+1. **Create your account** with a made-up name and email: it lands on an **empty dashboard**
+   ("only the demo inbox's own account can connect Gmail").
+2. **Settings → Sign out**.
+3. **Sign in** as `gradtrackerdemo@gmail.com`: its dashboard, read from the inbox (or, the
+   first time, Connect → Allow → scan).
+4. Carry on: Refresh with the live emails, Needs review, and so on.
 
 ## 4. The two live emails
 

@@ -447,7 +447,7 @@ function PipelineBody(props: BodyProps) {
       <EmptyState
         icon="mail-search"
         title="No applications yet"
-        description="No mail has been read yet. In this demo, applications arrive through the local import."
+        description="No mail has been read for this account yet. In the demo, only the demo inbox's own account can connect Gmail."
         compact
       />
     );

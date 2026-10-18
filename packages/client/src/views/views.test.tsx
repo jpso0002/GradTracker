@@ -246,7 +246,7 @@ describe("empty and error states (T5.7)", () => {
     renderWithDestinations();
 
     expect(await screen.findByText("No applications yet")).toBeDefined();
-    expect(screen.getByText(/No mail has been read yet/)).toBeDefined();
+    expect(screen.getByText(/No mail has been read for this account yet/)).toBeDefined();
     // "Scan inbox" is the hosted product's action; in the demo nothing can scan.
     expect(screen.queryByRole("button", { name: /Scan inbox/ })).toBeNull();
   });

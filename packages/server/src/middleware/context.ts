@@ -26,6 +26,8 @@ declare global {
   namespace Express {
     interface Request {
       userId: UserId;
+      /** The demo account signed in, when demo accounts are on (D40). */
+      accountEmail?: string;
       /** IANA timezone from the client, for ranking (defect C2). */
       timeZone: string;
     }
@@ -89,6 +91,12 @@ export function demoContext(db: Database, explicitUserId?: UserId) {
       next(error);
     }
   };
+}
+
+/** The timezone the client sent, or Melbourne. */
+export function requestTimeZone(req: Request): string {
+  const header = req.header("x-timezone");
+  return isValidTimeZone(header) ? header : DEFAULT_TIME_ZONE;
 }
 
 /** A bad timezone from a client must not crash ranking — fall back instead. */

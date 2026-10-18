@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **2026-10-18** — **Real demo accounts: Create your account, Sign in, Sign out (D40).** Accounts are kept in `demo-accounts.json` beside `demo.db` (gitignored) as a salted scrypt hash — never the password, and never in the product database, whose schema is unchanged (SM-5). Signing in sets a signed HttpOnly cookie that survives a restart; without one the API answers 401 and the app goes to Sign in. Each account has its own dashboard: a new one starts empty; only the demo inbox's own account can connect it, its first sign-in running Connect your Gmail → consent → scan, later ones going straight to its dashboard. Settings shows who is signed in, with Sign out; Reset demo empties only that account's dashboard. Tests: eleven on the server, fourteen on the screens. · `packages/server/src/{demo-accounts,demo,demo-server,app}.ts`, `routes/{auth,auth.test,sync}.ts`, `middleware/context.ts`, `db/seed.ts`, `packages/shared/src/schema/api.ts`, `packages/client/src/{App,api/client}.tsx`, `views/{AccountViews,ConnectView,SettingsView,PipelineView,accounts.test}.tsx`, `.gitignore`
+
 - **2026-10-18** — **The walkthrough opens on a mock "Create your account" (D39).** Full name, email and password, validated like a real sign-up; then "Welcome, Jordan. Connect your Gmail"; then the consent stand-in showing the entered name over **gradtrackerdemo@gmail.com** — the demo inbox, whatever email the account was made with. No account is created; the name and email stay in the tab, the password nowhere. Five tests. · `packages/client/src/views/ConnectView.tsx`, `src/session.ts`, `views/connect.test.tsx`
 
 - **2026-10-17** — **"Open in Gmail" on every review card (D38)**, beside the date, so the student can read the email itself before deciding whether it is an application. GradTracker still keeps none of it — the link goes to their inbox. · `packages/client/src/views/ReviewView.tsx`, `packages/shared/src/schema/api.ts`, `packages/server/src/routes/review.ts`
@@ -200,6 +202,8 @@ All notable changes to this project will be documented in this file.
   - **C5** — D10 was recorded as open in all four documents after being resolved.
 
 ### Removed
+
+- **2026-10-18** — The tab-only "signed in" flag (D35) and the mock account profile (D39), superseded by real demo accounts (D40). `demo.db` is no longer emptied when the demo starts — accounts and their dashboards persist. · `packages/client/src/session.ts`, `views/connect.test.tsx` (replaced by `accounts.test.tsx`)
 
 - **2026-09-28** — **T5.10 — Calendar and Archive removed from the sidebar**, with their placeholder routes (decision D29). The deadline pill on every row already shows what is due and overdue, which is what a calendar was for; Archive only duplicated the Archived tab. Four tests written first; in the browser the sidebar reads Applications · Needs review · Settings · Documentation, and both old routes resolve to Not found. · `packages/client/src/{App.tsx,shell/AppShell.tsx,shell/shell.test.tsx}`
 

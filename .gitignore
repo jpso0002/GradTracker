@@ -27,3 +27,7 @@ Thumbs.db
 spikes/
 harvest.db
 harvest*.db
+
+# Presentation demo accounts (D40): hashed passwords, never committed
+demo-accounts.json
+demo-accounts.json.tmp

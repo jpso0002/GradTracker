@@ -8,6 +8,7 @@ import { jobRoutes } from "./routes/jobs.js";
 import { reviewRoutes } from "./routes/review.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { demoRoutes, syncRoutes, type DemoSession } from "./routes/sync.js";
+import { accountContext, authRoutes, type DemoAuthOptions } from "./routes/auth.js";
 
 /**
  * The Express application.
@@ -28,6 +29,10 @@ export interface AppOptions {
   /** The presentation demo (D36, D37): Refresh, the opening scan and Reset.
    *  Absent, Refresh answers 501 and the demo routes do not exist. */
   demo?: DemoSession;
+  /** The presentation demo's own accounts (D40). With them, every request is
+   *  answered for the signed-in account and none without one; without them,
+   *  the single local user (demoContext). */
+  accounts?: DemoAuthOptions;
 }
 
 export function createApp(options: AppOptions): Express {
@@ -35,7 +40,12 @@ export function createApp(options: AppOptions): Express {
   const repo = createRepository(options.db);
 
   app.use(express.json({ limit: "100kb" }));
-  app.use(demoContext(options.db, options.userId));
+  if (options.accounts) {
+    app.use("/api/auth", authRoutes(options.db, repo, options.accounts));
+    app.use("/api", accountContext(options.db, options.accounts));
+  } else {
+    app.use(demoContext(options.db, options.userId));
+  }
 
   app.get("/api/health", (_req: Request, res: Response) => {
     res.json({ ok: true });
