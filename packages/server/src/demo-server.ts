@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { join } from "node:path";
 import { createDatabase } from "./db/client.js";
 import { createApp } from "./app.js";
 import type { DemoSession } from "./routes/sync.js";
@@ -30,11 +31,20 @@ import { createDemoInbox, DemoEmailClassifier } from "./adapters/index.js";
  * Never reads or writes `dev.db`.
  */
 
-const url = `file:./${DEMO_DATABASE}`;
+// A rehearsal sandbox (D41): `--data-dir=<folder>` keeps demo.db and the
+// accounts there instead of the repository, and `--no-inbox` ignores the demo
+// inbox, so the scan uses the seeded sample mailbox. Neither touches the real
+// demo data.
+const arg = (name: string) => process.argv.find((a) => a === name || a.startsWith(`${name}=`));
+const dataDir = arg("--data-dir")?.split("=").slice(1).join("=");
+const noInbox = arg("--no-inbox") !== undefined;
+const inFolder = (file: string) => (dataDir ? join(dataDir, file) : file);
+
+const url = dataDir ? `file:${inFolder(DEMO_DATABASE).split("\\").join("/")}` : `file:./${DEMO_DATABASE}`;
 const port = Number(process.env["PORT"] ?? 3000);
 
-const inbox = createDemoInbox();
-const inboxAddress = process.env["GMAIL_DEMO_USER"]?.trim().toLowerCase() || null;
+const inbox = noInbox ? null : createDemoInbox();
+const inboxAddress = noInbox ? null : process.env["GMAIL_DEMO_USER"]?.trim().toLowerCase() || null;
 const { db } = createDatabase(url);
 await migrateDemoDatabase(db);
 
@@ -59,9 +69,9 @@ const session: DemoSession = {
 createApp({
   db,
   demo: session,
-  accounts: { accounts: new DemoAccounts(DEMO_ACCOUNTS_FILE), secret, inboxAddress },
+  accounts: { accounts: new DemoAccounts(inFolder(DEMO_ACCOUNTS_FILE)), secret, inboxAddress },
 }).listen(port, () => {
-  console.log(`GradTracker demo API on http://localhost:${port}  (db: ${url}, accounts: ${DEMO_ACCOUNTS_FILE})`);
+  console.log(`GradTracker demo API on http://localhost:${port}  (db: ${url}, accounts: ${inFolder(DEMO_ACCOUNTS_FILE)})`);
   console.log(
     inbox
       ? `Only ${inboxAddress} can connect the demo inbox; its first sign-in scans it.`

@@ -16,17 +16,18 @@ const STORAGE_KEY = "gradtracker.theme";
 interface ThemeContextValue {
   theme: Theme;
   toggle: () => void;
+  set: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-/** Stored choice wins; otherwise follow the OS. A student who has chosen dark
- *  should not be flipped back by a system setting they did not change. */
+/** Stored choice wins; otherwise light, as Will's design opens (D41). The
+ *  sidebar's Light/Dark switch is how a student changes it. */
 export function initialTheme(): Theme {
   if (typeof window === "undefined") return "light";
   const stored = window.localStorage.getItem(STORAGE_KEY);
   if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "light";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -41,7 +42,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme((current) => (current === "dark" ? "light" : "dark"));
   }, []);
 
-  return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ theme, toggle, set: setTheme }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme(): ThemeContextValue {

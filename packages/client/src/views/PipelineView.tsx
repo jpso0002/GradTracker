@@ -1,26 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { StageEnum, type Job, type JobStatus, type ListJobsResponse, type Stage } from "@gradtracker/shared";
-import {
-  ApplicationRow,
-  DeadlinePill,
-  EmptyState,
-  SearchField,
-  StageBadge,
-  StatCard,
-  Tabs,
-  Tag,
-  TopBar,
-  Button,
-  Icon,
-  STAGES,
-} from "../ds";
+import type { Job, JobStatus, ListJobsResponse, Stage } from "@gradtracker/shared";
+import { Button, CompanyLogo, EmptyState, Icon, SearchField, StageBadge, STAGES, Tabs } from "../ui";
 import { api, ApiError } from "../api/client";
 import { useToast } from "../shell/ToastHost";
 import { syncSummary } from "../syncSummary";
 import { useAsync } from "../hooks/useAsync";
-import { isTouch, useBreakpoint } from "../hooks/useBreakpoint";
-import { useElementWidth } from "../hooks/useElementWidth";
+import { useBreakpoint } from "../hooks/useBreakpoint";
 import { useShortcuts } from "../preferences";
 import { VisuallyHidden } from "../shell/VisuallyHidden";
 import { ViewTitle } from "../shell/ViewTitle";
@@ -28,7 +14,8 @@ import { DetailPanel, type PanelLayout } from "./DetailPanel";
 import { deadlineWording, formatDeadline } from "../format";
 
 /**
- * The pipeline — the one screen the product is judged on (SM-4).
+ * The pipeline — the one screen the product is judged on (SM-4), in Will's
+ * design (D41).
  *
  * The list arrives already ranked by the server. **Nothing here re-sorts it.**
  * Stage chips filter and the tabs switch corpus; neither touches order, and
@@ -37,13 +24,13 @@ import { deadlineWording, formatDeadline } from "../format";
  * D30): it removes rows and never moves one.
  */
 
-/** The six stages, from the shared enum — never a second hand-written list. */
-const STAGE_VALUES: readonly Stage[] = StageEnum.options;
+/** The stages each tab can hold: live applications, then closed ones. */
+const TAB_STAGES: Record<JobStatus, Stage[]> = {
+  active: ["applied", "assessment", "interview", "offer"],
+  archived: ["rejected", "withdrawn"],
+};
 
 type PipelineStats = ListJobsResponse["stats"];
-
-/** The design system's row overflows below this — measured: 788px of content. */
-const ROW_MIN_WIDTH = 800;
 
 /** Company or role, any case. A filter, so the survivors keep the server's order. */
 export function matchesSearch(job: Job, query: string): boolean {
@@ -70,6 +57,25 @@ function rowLabel(job: Job): string {
   return parts.join(". ");
 }
 
+/** "Good morning" by the clock where the student is. */
+function greeting(now: Date): string {
+  const hour = now.getHours();
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+
+const TODAY = new Intl.DateTimeFormat("en-AU", { weekday: "long", day: "numeric", month: "long" });
+const SYNCED_TIME = new Intl.DateTimeFormat("en-AU", { hour: "numeric", minute: "2-digit" });
+const SYNCED_DATE = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short" });
+
+/** "Today, 9:41 am" — or a date, when it was not today. */
+function syncedWording(iso: string | null | undefined, now: Date): string {
+  if (!iso) return "Not yet";
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "Not yet";
+  const sameDay = at.toDateString() === now.toDateString();
+  return sameDay ? `Today, ${SYNCED_TIME.format(at)}` : `${SYNCED_DATE.format(at)}, ${SYNCED_TIME.format(at)}`;
+}
+
 export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void } = {}) {
   const [status, setStatus] = useState<JobStatus>("active");
   const [stages, setStages] = useState<Stage[]>([]);
@@ -79,34 +85,29 @@ export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void
   const location = useLocation();
   const searchLabel = useRef<HTMLLabelElement>(null);
   const breakpoint = useBreakpoint();
-  const touch = isTouch(breakpoint);
   const phone = breakpoint === "mobile";
   const [shortcuts] = useShortcuts();
-  const [listArea, listWidth] = useElementWidth<HTMLDivElement>();
 
   const pipeline = useAsync(() => api.listJobs({ status, stages }), [status, stages.join(",")]);
   const review = useAsync(() => api.listReview(), []);
+  const syncState = useAsync(() => api.syncStatus(), []);
+  const session = useAsync(() => api.session(), []);
   const { show } = useToast();
   const [syncing, setSyncing] = useState(false);
 
   const jobs = pipeline.data?.jobs ?? [];
   const stats = pipeline.data?.stats;
-
-  // The design system's row needs about 790px. Narrower than that — a phone, a
-  // tablet, or a laptop with the panel open — it overflows, so the list becomes
-  // stacked cards. Measured on the list itself; the viewport where it cannot be.
-  const cards = listWidth !== null ? listWidth < ROW_MIN_WIDTH : phone;
   const panelLayout: PanelLayout = breakpoint === "desktop" ? "inline" : phone ? "sheet" : "overlay";
 
-  // The design system's search field takes no label of its own, and the
-  // wrapping label would read its "/" hint aloud. Named directly, with the
-  // shortcut declared to assistive technology. Again when it moves on a phone.
+  // The search field takes no label of its own, and the wrapping label would
+  // read its "/" hint aloud. Named directly, with the shortcut declared to
+  // assistive technology.
   useEffect(() => {
     const input = searchLabel.current?.querySelector("input");
     input?.setAttribute("aria-label", "Search applications");
     if (shortcuts) input?.setAttribute("aria-keyshortcuts", "/");
     else input?.removeAttribute("aria-keyshortcuts");
-  }, [phone, shortcuts]);
+  }, [shortcuts]);
 
   // Closing the panel returns focus to the row that opened it. Carried in the
   // navigation, so it holds even if the list re-renders on the way back.
@@ -136,10 +137,11 @@ export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [shortcuts]);
 
-  // Refresh reads new mail (D36). Outside the presentation demo the server has
-  // no inbox to read and says so with a 501: Refresh then reloads, as before.
+  // Sync inbox reads new mail (D36). Outside the presentation demo the server
+  // has no inbox to read and says so with a 501: it then reloads, as before.
   const { reload: reloadPipeline } = pipeline;
   const { reload: reloadReview } = review;
+  const { reload: reloadSync } = syncState;
   const refresh = useCallback(
     async (backup = false) => {
       setSyncing(true);
@@ -154,10 +156,11 @@ export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void
         setSyncing(false);
         reloadPipeline();
         reloadReview();
+        reloadSync();
         onReviewChanged?.();
       }
     },
-    [show, reloadPipeline, reloadReview, onReviewChanged],
+    [show, reloadPipeline, reloadReview, reloadSync, onReviewChanged],
   );
 
   // The presenter's fallback when Gmail or the venue's network fails: the same
@@ -174,85 +177,103 @@ export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void
   }, [refresh]);
 
   const toggleStage = (stage: Stage) => {
-    setStages((current) =>
-      current.includes(stage) ? current.filter((s) => s !== stage) : [...current, stage],
-    );
+    setStages((current) => (current.includes(stage) ? current.filter((s) => s !== stage) : [...current, stage]));
   };
 
-  const subtitle = useMemo(() => {
-    if (!stats) return undefined;
-    return `${stats.emailsRead} emails read · ${stats.liveApplications} live`;
-  }, [stats]);
+  const switchTab = (next: JobStatus) => {
+    setStatus(next);
+    // A stage chip from the other tab would silently empty this one.
+    setStages([]);
+  };
 
-  const search = (
-    <label ref={searchLabel} style={{ display: "flex", ...(phone ? { marginBottom: "var(--space-lg)" } : {}) }}>
-      <VisuallyHidden>Search applications</VisuallyHidden>
-      <SearchField
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Company or role"
-        shortcut={shortcuts ? "/" : ""}
-        width={phone ? "100%" : 240}
-        {...(touch ? { style: { minHeight: "var(--touch-min)" } } : {})}
-      />
-    </label>
-  );
+  const now = new Date();
+  const firstName = session.data?.user?.name.trim().split(/\s+/)[0];
+  const demoTarget = jobs.find((job) => job.company === "Accenture" && job.status === "active");
 
   return (
     <>
-      <ViewTitle title="Applications" />
-      <TopBar title="Applications" {...(subtitle ? { subtitle } : {})}>
-        {/* On a phone the top bar has room for the title and one button; the
-            search gets a row of its own below. */}
-        {phone ? null : search}
-        <Button
-          variant="ghost"
-          iconLeft="refresh-cw"
-          onClick={() => void refresh()}
-          disabled={syncing}
-          {...(touch ? { style: { minHeight: "var(--touch-min)" } } : {})}
-        >
-          {syncing ? "Refreshing…" : "Refresh"}
-        </Button>
-      </TopBar>
-
-      <div style={{ display: "flex", minHeight: 0, flex: 1 }}>
-        <div
-          ref={listArea}
-          style={{ flex: 1, minWidth: 0, padding: phone ? "var(--space-lg)" : "var(--space-xl)" }}
-        >
-          {phone ? search : null}
-          <StatRow stats={stats} needsReview={review.data?.items.length} />
-
-          <div style={{ marginTop: "var(--space-xl)" }}>
-            <Tabs
-              tabs={[
-                { id: "active", label: "Active" },
-                { id: "archived", label: "Archived" },
-              ]}
-              activeId={status}
-              onSelect={(id) => setStatus(id as JobStatus)}
+      <ViewTitle title="Pipeline" />
+      <header className="gt-topbar">
+        <span style={{ font: "700 18px var(--font-display)" }}>Pipeline</span>
+        <div className="gt-topbar-actions">
+          <label ref={searchLabel} style={{ display: "flex" }}>
+            <VisuallyHidden>Search applications</VisuallyHidden>
+            <SearchField
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search applications…"
+              shortcut={shortcuts ? "/" : ""}
             />
-          </div>
+          </label>
+          <span className="gt-sync-meta">
+            <span>Last synced</span>
+            <strong>{syncing ? "Updating now" : syncedWording(syncState.data?.lastSyncAt, now)}</strong>
+          </span>
+          <Button
+            variant="ink"
+            iconLeft="refresh-cw"
+            onClick={() => void refresh()}
+            disabled={syncing}
+            className={syncing ? "syncing" : undefined}
+          >
+            {syncing ? "Syncing…" : "Sync inbox"}
+          </Button>
+        </div>
+      </header>
 
-          <StageFilter selected={stages} onToggle={toggleStage} touch={touch} />
+      <div style={{ display: "flex", minHeight: 0, flex: 1, alignItems: "flex-start" }}>
+        <div className="gt-page" style={{ flex: 1, minWidth: 0 }}>
+          <section className="gt-page-head" aria-label="Today">
+            <div>
+              <p className="gt-eyebrow">{TODAY.format(now)}</p>
+              <h2>{firstName ? `${greeting(now)}, ${firstName}.` : `${greeting(now)}.`}</h2>
+              <span className="lede">Here’s what needs your attention today.</span>
+            </div>
+            {demoTarget ? (
+              <div className="gt-flow-hint">
+                <span>DEMO FLOW</span>
+                <strong>Click Accenture to inspect &amp; edit</strong>
+                <Icon name="arrow-right" size={16} />
+              </div>
+            ) : null}
+          </section>
 
-          <PipelineBody
-            cards={cards}
-            loading={pipeline.loading}
-            error={pipeline.error}
-            offline={pipeline.offline}
-            jobs={jobs}
-            stats={stats}
-            query={query}
-            status={status}
-            filtered={stages.length > 0}
-            selectedId={jobId}
-            onSelect={(id) => navigate(`/pipeline/${id}`)}
-            onClearFilters={() => setStages([])}
-            onClearSearch={() => setQuery("")}
-            onRetry={pipeline.reload}
-          />
+          <StatStrip stats={stats} needsReview={review.data?.items.length} />
+
+          <section className="gt-section" aria-labelledby="pipeline-heading">
+            <div className="gt-section-heading">
+              <div>
+                <h2 id="pipeline-heading">Your pipeline</h2>
+                <p>Ranked by what needs attention first</p>
+              </div>
+              <Tabs
+                tabs={[
+                  { id: "active", label: "Active", ...(stats ? { count: stats.liveApplications } : {}) },
+                  { id: "archived", label: "Archived" },
+                ]}
+                activeId={status}
+                onSelect={(id) => switchTab(id as JobStatus)}
+              />
+            </div>
+
+            <StageFilter stages={TAB_STAGES[status]} selected={stages} onToggle={toggleStage} onAll={() => setStages([])} />
+
+            <PipelineBody
+              loading={pipeline.loading}
+              error={pipeline.error}
+              offline={pipeline.offline}
+              jobs={jobs}
+              stats={stats}
+              query={query}
+              status={status}
+              filtered={stages.length > 0}
+              selectedId={jobId}
+              onSelect={(id) => navigate(`/pipeline/${id}`)}
+              onClearFilters={() => setStages([])}
+              onClearSearch={() => setQuery("")}
+              onRetry={pipeline.reload}
+            />
+          </section>
         </div>
 
         {jobId ? (
@@ -271,104 +292,71 @@ export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void
   );
 }
 
-function StatRow({
-  stats,
-  needsReview,
-}: {
-  stats: { liveApplications: number; dueThisWeek: number; emailsRead: number } | undefined;
-  needsReview: number | undefined;
-}) {
+function StatStrip({ stats, needsReview }: { stats: PipelineStats | undefined; needsReview: number | undefined }) {
   // A dash, not a zero, while the number is unknown. "0 due this week" is a
   // claim; "not loaded yet" is not.
-  const value = (n: number | undefined) => (n === undefined ? "—" : n);
+  const value = (n: number | undefined) => (n === undefined ? "—" : n.toLocaleString("en-AU"));
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
   /** Read as one phrase — "23 live applications" (design.md §10.3) — rather
    *  than an upper-case label and a bare number. */
-  const stat = (label: string, n: number | undefined, spoken: (n: number) => string, icon: string) => (
-    <div style={{ minWidth: 0 }}>
+  const stat = (
+    label: string,
+    n: number | undefined,
+    spoken: (n: number) => string,
+    icon: string,
+    tone: string,
+  ) => (
+    <div className="gt-stat">
       <VisuallyHidden>{n === undefined ? `${label}: not loaded yet` : spoken(n)}</VisuallyHidden>
       <div aria-hidden="true">
-        <StatCard label={label} value={value(n)} icon={icon} />
+        <span className={`gt-stat-icon ${tone}`}>
+          <Icon name={icon} size={18} />
+        </span>
+        <p className="gt-eyebrow" style={{ fontSize: 11, margin: "1px 0 6px" }}>
+          {label}
+        </p>
+        <span className="value">{value(n)}</span>
       </div>
     </div>
   );
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-        gap: "var(--space-md)",
-      }}
-    >
-      {stat("Live applications", stats?.liveApplications, (n) => plural(n, "live application", "live applications"), "layers")}
-      {stat("Due this week", stats?.dueThisWeek, (n) => `${n} due this week`, "calendar-clock")}
-      {/* Not clickable: StatCard takes no onClick, and a card with a pointer
-          cursor that does nothing is worse than a plain one. The sidebar
-          carries the link to the review queue. */}
-      {stat("Needs review", needsReview, (n) => plural(n, "email needs review", "emails need review"), "sparkles")}
-      {stat("Emails read", stats?.emailsRead, (n) => plural(n, "email read", "emails read"), "mail-search")}
+    <div className="gt-stats">
+      {stat("Live applications", stats?.liveApplications, (n) => plural(n, "live application", "live applications"), "briefcase", "lilac")}
+      {stat("Due this week", stats?.dueThisWeek, (n) => `${n} due this week`, "calendar", "peach")}
+      {stat("Needs review", needsReview, (n) => plural(n, "email needs review", "emails need review"), "inbox", "yellow")}
+      {stat("Emails read", stats?.emailsRead, (n) => plural(n, "email read", "emails read"), "mail", "mint")}
     </div>
   );
 }
 
 function StageFilter({
+  stages,
   selected,
   onToggle,
-  touch,
+  onAll,
 }: {
+  stages: Stage[];
   selected: Stage[];
   onToggle: (stage: Stage) => void;
-  /** Below 1024px each chip is a 44px touch target (design.md §11). */
-  touch: boolean;
+  onAll: () => void;
 }) {
   return (
-    <div
-      role="group"
-      aria-label="Filter by stage"
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "var(--space-xs)",
-        margin: "var(--space-md) 0",
-      }}
-    >
-      {STAGE_VALUES.map((stage: Stage) => {
-        const on = selected.includes(stage);
-        return (
-          <button
-            key={stage}
-            type="button"
-            aria-pressed={on}
-            onClick={() => onToggle(stage)}
-            style={{
-              all: "unset",
-              cursor: "pointer",
-              padding: "4px 12px",
-              borderRadius: "var(--radius-pill)",
-              fontFamily: "var(--font-core)",
-              fontSize: "var(--caption-size)",
-              transition: "var(--transition-control)",
-              background: on ? `var(--stage-${stage}-bg)` : "transparent",
-              color: on ? `var(--stage-${stage}-fg)` : "var(--text-muted)",
-              boxShadow: on ? "none" : "inset 0 0 0 1px var(--border-hairline)",
-              ...(touch
-                ? { minHeight: "var(--touch-min)", boxSizing: "border-box", display: "inline-flex", alignItems: "center" }
-                : {}),
-            }}
-          >
-            {STAGES[stage].label}
-          </button>
-        );
-      })}
+    <div role="group" aria-label="Filter by stage" className="gt-filters">
+      <button type="button" aria-pressed={selected.length === 0} onClick={onAll}>
+        All
+      </button>
+      {stages.map((stage) => (
+        <button key={stage} type="button" aria-pressed={selected.includes(stage)} onClick={() => onToggle(stage)}>
+          {STAGES[stage].label}
+        </button>
+      ))}
     </div>
   );
 }
 
 interface BodyProps {
-  /** Stacked cards rather than the design system's table row (T5.8). */
-  cards: boolean;
   loading: boolean;
   error: Error | null;
   offline: boolean;
@@ -430,14 +418,7 @@ function PipelineBody(props: BodyProps) {
   }
 
   if (jobs.length === 0 && status === "archived") {
-    return (
-      <EmptyState
-        icon="archive"
-        title="Nothing archived"
-        description="Rejected and withdrawn applications move here."
-        compact
-      />
-    );
+    return <EmptyState icon="archive" title="Nothing archived" description="Rejected and withdrawn applications move here." compact />;
   }
 
   if (jobs.length === 0 && (stats?.emailsRead ?? 0) === 0) {
@@ -496,159 +477,95 @@ function PipelineBody(props: BodyProps) {
   }
 
   return (
-    <>
-      {error && !offline ? (
-        // The server answered, but not with the pipeline. What is on screen is
-        // what was loaded before, and the student should know that.
-        <p role="status" style={{ margin: "0 0 var(--space-sm)", color: "var(--text-secondary)", fontSize: "var(--caption-size)" }}>
-          Could not refresh — showing what was loaded before. {error.message}
-        </p>
-      ) : null}
-      <div role="list">
-        {shown.map((job) => (
-          <PipelineRow
-            key={job.id}
-            job={job}
-            card={props.cards}
-            selected={job.id === props.selectedId}
-            onSelect={() => props.onSelect(job.id)}
-          />
-        ))}
+    <div style={{ overflowX: "auto" }}>
+      <div style={{ minWidth: 640 }}>
+        {error && !offline ? (
+          // The server answered, but not with the pipeline. What is on screen is
+          // what was loaded before, and the student should know that.
+          <p role="status" style={{ margin: "10px 20px", color: "var(--text-secondary)", fontSize: 13 }}>
+            Could not refresh — showing what was loaded before. {error.message}
+          </p>
+        ) : null}
+        <div className="gt-table-header" aria-hidden="true">
+          <span>Company &amp; role</span>
+          <span>Stage</span>
+          <span>Next action</span>
+          <span>Deadline</span>
+          <span />
+        </div>
+        <ul className="gt-job-list">
+          {shown.map((job) => (
+            <PipelineRow key={job.id} job={job} selected={job.id === props.selectedId} onSelect={() => props.onSelect(job.id)} />
+          ))}
+        </ul>
       </div>
-    </>
+    </div>
   );
+}
+
+/** "2 days" / "Overdue" / "Today" — Will's short form; the date beneath. */
+function shortDeadline(daysLeft: number): string {
+  if (daysLeft < 0) return "Overdue";
+  if (daysLeft === 0) return "Today";
+  if (daysLeft === 1) return "Tomorrow";
+  return `${daysLeft} days`;
 }
 
 /**
  * One row, plus — while an email may belong to this application (T3.10) — a
  * marker linking to that question in the review queue (T6.6).
- *
- * The wrapper owns the hairline and the hover and selected tints, so the
- * marker's line reads as part of its row rather than as a row of its own.
  */
-function PipelineRow({
-  job,
-  card,
-  selected,
-  onSelect,
-}: {
-  job: Job;
-  card: boolean;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  const [hover, setHover] = useState(false);
+function PipelineRow({ job, selected, onSelect }: { job: Job; selected: boolean; onSelect: () => void }) {
+  const urgency = job.daysLeft === null ? "" : job.daysLeft <= 2 ? " urgent" : job.daysLeft <= 7 ? " soon" : "";
   return (
-    <div
-      role="listitem"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        borderBottom: "1px solid var(--border-hairline)",
-        background: selected ? "var(--surface-selected)" : hover ? "var(--surface-hover)" : "transparent",
-        transition: "background-color var(--dur-fast) var(--ease-standard)",
-      }}
-    >
-      {/* A real button (design.md §10.2): the design system's row is a `div`
-          with a click handler, which no keyboard can reach. Enter or Space
-          opens the panel; the name says everything the row shows. */}
-      <div
+    <li>
+      {/* A real button (design.md §10.2): Enter or Space opens the panel, and
+          the name says everything the row shows. */}
+      <button
+        type="button"
         id={rowId(job.id)}
-        role="button"
-        tabIndex={0}
+        className="gt-job-row"
         aria-label={rowLabel(job)}
         aria-current={selected ? "true" : undefined}
         onClick={onSelect}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onSelect();
-          }
-        }}
-        style={card ? { minHeight: "var(--touch-min)", cursor: "pointer" } : undefined}
       >
-        {card ? (
-          <PipelineCard job={job} />
-        ) : (
-          <ApplicationRow
-            company={job.company}
-            role={job.role}
-            stage={job.stage}
-            selected={selected}
-            style={{ borderBottom: "none", background: "transparent" }}
-            {...(job.nextAction ? { nextAction: job.nextAction } : {})}
-            {...(job.deadlineAt ? { deadline: formatDeadline(job.deadlineAt) } : {})}
-            {...(job.daysLeft !== null ? { daysLeft: job.daysLeft } : {})}
-            // The row adds "Detected from" itself; passing it too doubled it.
-            {...(job.senderDomain ? { source: job.senderDomain } : {})}
-          />
-        )}
-      </div>
-      {job.pendingReviewId ? <ReviewMarker job={job} questionId={job.pendingReviewId} /> : null}
-    </div>
-  );
-}
-
-/**
- * The narrow form of a row (design.md §11): company and role on line one, stage
- * and deadline on line two, next action on line three. Built from the design
- * system's badge and pill, so stage and urgency look as they do in the table.
- * The role is secondary text, not muted — muted text falls short of 4.5:1 on a
- * hovered or selected row (T6.5).
- */
-function PipelineCard({ job }: { job: Job }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-xs)",
-        padding: "var(--cell-pad-y) var(--cell-pad-x)",
-      }}
-    >
-      <div data-line="identity" style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "0 var(--space-sm)" }}>
-        <span style={{ fontSize: "var(--body-md-size)", color: "var(--text-heading)" }}>{job.company}</span>
-        <span style={{ fontSize: "var(--caption-size)", color: "var(--text-secondary)" }}>{job.role}</span>
-      </div>
-      <div data-line="status" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--space-sm)" }}>
-        <StageBadge stage={job.stage} />
-        {job.deadlineAt ? (
-          <DeadlinePill {...(job.daysLeft !== null ? { daysLeft: job.daysLeft } : {})}>
-            {formatDeadline(job.deadlineAt)}
-          </DeadlinePill>
-        ) : (
-          <span style={{ fontSize: "var(--caption-size)", color: "var(--text-secondary)" }}>No deadline</span>
-        )}
-      </div>
-      {job.nextAction ? (
-        <div data-line="action" style={{ fontSize: "var(--body-tabular-size)", color: "var(--text-secondary)" }}>
-          {job.nextAction}
-        </div>
+        <CompanyLogo company={job.company} />
+        <span className="gt-cell">
+          <strong>{job.company}</strong>
+          <small>{job.role}</small>
+        </span>
+        <span>
+          <StageBadge stage={job.stage} />
+        </span>
+        <span className="gt-cell action">
+          <strong>{job.nextAction ?? "No action needed"}</strong>
+          <small>{job.senderDomain ? `From ${job.senderDomain}` : "From your latest email"}</small>
+        </span>
+        <span className={`gt-cell gt-deadline${urgency}`}>
+          {job.deadlineAt && job.daysLeft !== null ? (
+            <>
+              <strong>{shortDeadline(job.daysLeft)}</strong>
+              <small>{formatDeadline(job.deadlineAt)}</small>
+            </>
+          ) : (
+            <small style={{ marginTop: 0 }}>No deadline</small>
+          )}
+        </span>
+        <span className="gt-row-arrow">
+          <Icon name="chevron-right" size={17} />
+        </span>
+      </button>
+      {job.pendingReviewId ? (
+        <Link
+          to={`/review#review-${job.pendingReviewId}`}
+          className="gt-row-marker"
+          aria-label={`Review required: an email may belong to ${job.company} — ${job.role}`}
+        >
+          <Icon name="sparkles" size={13} />
+          Review required
+        </Link>
       ) : null}
-    </div>
-  );
-}
-
-/**
- * "Review required" — in words, not a coloured dot, and named in full for
- * assistive technology. It exists exactly while a pending review item suggests
- * this application; the server clears `pendingReviewId` once it is answered.
- *
- * A `Tag`, not the `Badge` "ai" tone it was built with: that tone is 1.07:1 in
- * the dark theme — unreadable (contrast.test.ts, T6.5).
- */
-function ReviewMarker({ job, questionId }: { job: Job; questionId: string }) {
-  return (
-    <div style={{ padding: "0 var(--cell-pad-x) var(--cell-pad-y)" }}>
-      <Link
-        to={`/review#review-${questionId}`}
-        className="gt-touch"
-        aria-label={`Review required: an email may belong to ${job.company} — ${job.role}`}
-        style={{ display: "inline-flex", borderRadius: "var(--radius-pill)", textDecoration: "none" }}
-      >
-        <Tag icon="sparkles">Review required</Tag>
-      </Link>
-    </div>
+    </li>
   );
 }
 
@@ -660,15 +577,17 @@ function Skeleton() {
         <div
           key={i}
           style={{
-            height: 56,
-            borderBottom: "1px solid var(--border-hairline)",
+            height: 72,
+            borderBottom: "1px solid var(--line)",
             display: "flex",
             alignItems: "center",
-            gap: "var(--space-sm)",
-            opacity: 0.45,
-            color: "var(--text-muted)",
+            gap: 12,
+            padding: "0 20px",
+            opacity: 0.5,
+            color: "var(--muted)",
           }}
         >
+          <span className="gt-company-logo tone-purple" style={{ opacity: 0.4 }} />
           <Icon name="loader" size={14} />
         </div>
       ))}

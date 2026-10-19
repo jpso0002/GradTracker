@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type { ConfirmReviewBody, ReviewItem } from "@gradtracker/shared";
-import { Button, EmptyState, Icon, StageBadge, TopBar } from "../ds";
+import { Button, CompanyLogo, EmptyState, Icon, StageBadge, TopBar } from "../ui";
 import { ViewTitle } from "../shell/ViewTitle";
 import { Meter } from "./Meter";
 import { api, ApiError, NetworkError } from "../api/client";
@@ -22,9 +22,10 @@ import {
 } from "./fields";
 
 /**
- * The review queue (T6.3).
+ * The review queue (T6.3), in Will's layout (D41): the queue on the left, one
+ * email at a time on the right.
  *
- * Every card is an email GradTracker would not assert on its own: the model
+ * Every item is an email GradTracker would not assert on its own: the model
  * was too unsure, it found a stage only the student may set, or the email may
  * belong to an application already tracked (D26). Nothing on a card is a fact
  * until the student confirms it.
@@ -33,8 +34,8 @@ import {
  * fields changed — the same rule as the panel (D27). A card with a suggested
  * application asks "the same application, or a new one?" first.
  *
- * Handled cards fade out on the motion tokens, so `prefers-reduced-motion`
- * removes them at once, and focus moves to the next card.
+ * A handled card fades out on the motion tokens, so `prefers-reduced-motion`
+ * removes it at once, and the next email takes its place and focus.
  */
 
 export interface ReviewViewProps {
@@ -44,36 +45,57 @@ export interface ReviewViewProps {
 
 const cardId = (eventId: string) => `review-${eventId}`;
 
+/** Why GradTracker asked, in the queue's few words. */
+function reason(item: ReviewItem): string {
+  if (item.suggestedJob) return "May be one you track";
+  if (item.stage === "withdrawn") return "Withdrawal to confirm";
+  if (item.company === null) return "Company not found";
+  return `${Math.round(item.confidence * 100)}% confident`;
+}
+
 export function ReviewView({ onChanged }: ReviewViewProps) {
   const queue = useAsync(() => api.listReview(), []);
   const { hash } = useLocation();
   // Handled here, so gone from the list without a re-read.
   const [handled, setHandled] = useState<ReadonlySet<string>>(() => new Set());
-  // Fading out: still in the list for one animation.
+  // Fading out: still shown for one animation.
   const [leaving, setLeaving] = useState<ReadonlySet<string>>(() => new Set());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const emptyRef = useRef<HTMLDivElement>(null);
-  // Where focus goes once a handled card has left: the next card's id, or the
-  // empty queue ("").
-  const focusNext = useRef<string | null>(null);
+  // Where focus goes next: a card's id, or the empty queue (""). State, not a
+  // ref, so it is applied after the render that shows that card — a ref was
+  // read by effects left over from the render before, when the next card was
+  // not there yet, and focus fell to the page.
+  const [focusTarget, setFocusTarget] = useState<string | null>(null);
 
   const items = (queue.data?.items ?? []).filter((item) => !handled.has(item.eventId));
+  const selected = items.find((item) => item.eventId === selectedId) ?? items[0];
 
   useEffect(() => {
-    if (focusNext.current === null) return;
-    const target = focusNext.current === "" ? emptyRef.current : document.getElementById(focusNext.current);
-    focusNext.current = null;
-    target?.focus();
-  });
+    if (focusTarget === null) return;
+    const target = focusTarget === "" ? emptyRef.current : document.getElementById(focusTarget);
+    if (!target) return;
+    target.focus();
+    setFocusTarget(null);
+  }, [focusTarget, selected?.eventId, items.length]);
 
-  // A row's "Review required" marker links to /review#review-<id>. The card
-  // does not exist until the queue loads, so the browser cannot scroll to it.
-  const linked = hash.startsWith("#review-") ? hash.slice(1) : null;
+  // A row's "Review required" marker links to /review#review-<id>: open that
+  // email, and put focus on it.
+  const linked = hash.startsWith("#review-") ? hash.slice("#review-".length) : null;
   const landed = useRef(false);
   useEffect(() => {
     if (landed.current || linked === null || !queue.data) return;
     landed.current = true;
-    document.getElementById(linked)?.focus();
+    if (queue.data.items.some((item) => item.eventId === linked)) {
+      setSelectedId(linked);
+      setFocusTarget(cardId(linked));
+    }
   }, [linked, queue.data]);
+
+  const choose = (eventId: string) => {
+    setSelectedId(eventId);
+    setFocusTarget(cardId(eventId));
+  };
 
   const handle = (eventId: string) => {
     const index = items.findIndex((item) => item.eventId === eventId);
@@ -82,7 +104,8 @@ export function ReviewView({ onChanged }: ReviewViewProps) {
 
     setLeaving((current) => new Set(current).add(eventId));
     window.setTimeout(() => {
-      focusNext.current = next ? cardId(next.eventId) : "";
+      setFocusTarget(next ? cardId(next.eventId) : "");
+      setSelectedId(next?.eventId ?? null);
       setHandled((current) => new Set(current).add(eventId));
     }, tokenDurationMs("--dur-base"));
     onChanged?.();
@@ -92,19 +115,8 @@ export function ReviewView({ onChanged }: ReviewViewProps) {
   return (
     <>
       <ViewTitle title="Needs review" />
-      <TopBar
-        title="Needs review"
-        {...(queue.data && count > 0 ? { subtitle: `${count} ${count === 1 ? "email" : "emails"} to check` } : {})}
-      />
-      <div
-        style={{
-          padding: "var(--space-xl)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-lg)",
-          maxWidth: "calc(var(--container-max) / 2)",
-        }}
-      >
+      <TopBar title="Needs review" />
+      <div className="gt-page" style={{ maxWidth: 1100 }}>
         {queue.loading && !queue.data ? (
           <CardSkeleton />
         ) : queue.offline ? (
@@ -122,29 +134,58 @@ export function ReviewView({ onChanged }: ReviewViewProps) {
             action={<Button onClick={queue.reload}>Try again</Button>}
           />
         ) : count === 0 ? (
-          <div ref={emptyRef} tabIndex={-1} style={{ borderRadius: "var(--radius-lg)" }}>
-            <EmptyState
-              icon="mail-check"
-              title="Nothing to review"
-              description="GradTracker was confident about everything it found."
-            />
+          <div ref={emptyRef} tabIndex={-1} style={{ borderRadius: 12 }}>
+            <EmptyState icon="mail-check" title="Nothing to review" description="GradTracker was confident about everything it found." />
           </div>
         ) : (
           <>
-            <p style={{ margin: 0, color: "var(--text-muted)" }}>
-              These emails look like applications. Confirm what GradTracker read, or dismiss the ones
-              that aren’t.
-            </p>
-            <section aria-label="Emails to review" style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
-              {items.map((item) => (
+            <section className="gt-page-head" aria-label="About this queue" style={{ paddingBottom: 24, borderBottom: "1px solid var(--line)", marginBottom: 0 }}>
+              <div>
+                <p className="gt-eyebrow">Inbox check</p>
+                <h2>A few things need your eye.</h2>
+                <span className="lede">
+                  These emails look like applications. Confirm what GradTracker read, or dismiss the ones that aren’t.
+                </span>
+              </div>
+              <div className="gt-review-progress">
+                <strong>{count}</strong>
+                <span>left to review</span>
+              </div>
+            </section>
+
+            <div className="gt-review-layout">
+              <nav className="gt-review-queue" aria-label="Review queue">
+                <p className="gt-eyebrow">Review queue</p>
+                <ul>
+                  {items.map((item) => (
+                    <li key={item.eventId}>
+                      <button
+                        type="button"
+                        aria-current={item.eventId === selected?.eventId ? "true" : undefined}
+                        onClick={() => choose(item.eventId)}
+                      >
+                        <CompanyLogo company={item.company ?? "?"} />
+                        <span className="text">
+                          <strong>{item.company ?? "Company not found"}</strong>
+                          <small>{reason(item)}</small>
+                        </span>
+                        <Icon name="chevron-right" size={16} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+
+              {selected ? (
                 <ReviewCard
-                  key={item.eventId}
-                  item={item}
-                  leaving={leaving.has(item.eventId)}
+                  // A fresh card per email: an open edit belonged to the last.
+                  key={selected.eventId}
+                  item={selected}
+                  leaving={leaving.has(selected.eventId)}
                   onHandled={handle}
                 />
-              ))}
-            </section>
+              ) : null}
+            </div>
           </>
         )}
       </div>
@@ -185,6 +226,7 @@ function ReviewCard({
   const link = gmailLink(item.gmailMessageId, useMailboxAccount());
   const original = formValues(item);
   const values: FormValues = { ...original, ...draft };
+  const percent = Math.round(item.confidence * 100);
 
   // A refused field, or the unanswered question, takes focus.
   const focusNext = useRef<string | null>(null);
@@ -260,40 +302,64 @@ function ReviewCard({
     }
   };
 
+  const sameOrNew = suggestion ? (
+    <SameOrNew
+      item={item}
+      answer={answer}
+      onAnswer={(next) => {
+        setAnswer(next);
+        if (error?.field === "application") setError(null);
+      }}
+      error={error?.field === "application" ? error.message : null}
+      sameId={sameId}
+      newId={newId}
+    />
+  ) : null;
+
   return (
     <article
       id={cardId(item.eventId)}
       tabIndex={-1}
       aria-labelledby={headingId}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-md)",
-        padding: "var(--card-pad-compact)",
-        background: "var(--surface-card)",
-        border: "1px solid var(--border-hairline)",
-        borderRadius: "var(--radius-lg)",
-        opacity: leaving ? 0 : 1,
-        transition: "opacity var(--dur-base) var(--ease-exit)",
-      }}
+      className="gt-review-card"
+      style={{ opacity: leaving ? 0 : 1, transition: "opacity var(--dur-base) var(--ease-exit)" }}
     >
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--space-md)" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xxs)", minWidth: 0 }}>
-          <h2
-            id={headingId}
-            style={{ margin: 0, fontSize: "var(--heading-sm-size)", lineHeight: "var(--heading-sm-lh)", color: "var(--text-heading)" }}
-          >
+      <header className="gt-source-line">
+        <CompanyLogo company={item.company ?? "?"} large />
+        <div className="text">
+          <p className="gt-eyebrow">Detected from {item.senderDomain ?? "an unknown sender"}</p>
+          <h2 id={headingId} style={{ fontSize: 18, margin: 0 }}>
             {item.company ?? "Company not found"}
           </h2>
-          <p style={{ margin: 0, color: "var(--text-muted)" }}>{item.role ?? "Role not found"}</p>
+          <small>
+            {item.role ?? "Role not found"} · {formatEventDate(item.receivedAt)}
+          </small>
         </div>
-        {item.stage ? <StageBadge stage={item.stage} /> : null}
+        {link ? (
+          <a
+            // The student reads the email itself before deciding (D38).
+            // GradTracker keeps none of it, so this goes to their inbox.
+            href={link}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open in Gmail ↗
+          </a>
+        ) : null}
       </header>
+
+      <div className={`gt-confidence-note${percent >= 75 ? " sure" : ""}`}>
+        <Icon name="sparkles" size={17} />
+        <span style={{ flex: 1 }}>
+          We’re <strong>{percent}% confident</strong> this is an application update. Please check the details below.
+        </span>
+        <Meter value={item.confidence} label="How sure the model is about this email" />
+      </div>
 
       {editing ? (
         <form
           aria-label="Correct what GradTracker read"
-          className="gt-fields"
+          className="gt-fields gt-detected"
           onSubmit={(e) => {
             e.preventDefault();
             void confirm();
@@ -304,7 +370,7 @@ function ReviewCard({
               stopEditing();
             }
           }}
-          style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}
+          style={{ display: "flex", flexDirection: "column", gap: 14 }}
         >
           <EditFields
             values={values}
@@ -313,116 +379,47 @@ function ReviewCard({
             error={error && error.field !== "application" ? { field: error.field, message: error.message } : null}
             allowNoStage={item.stage === null}
           />
-          {suggestion ? (
-            <SameOrNew
-              item={item}
-              answer={answer}
-              onAnswer={(next) => {
-                setAnswer(next);
-                if (error?.field === "application") setError(null);
-              }}
-              error={error?.field === "application" ? error.message : null}
-              sameId={sameId}
-              newId={newId}
-            />
-          ) : null}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-sm)" }}>
-            <Button type="submit" iconLeft="check" aria-busy={busy || undefined}>
-              Confirm
-            </Button>
+          {sameOrNew}
+          <div className="gt-review-actions" style={{ margin: "0 -22px", paddingBottom: 0 }}>
             <Button type="button" variant="quiet" onClick={stopEditing}>
               Cancel
+            </Button>
+            <Button type="submit" iconLeft="check" aria-busy={busy || undefined}>
+              Confirm
             </Button>
           </div>
         </form>
       ) : (
         <>
-          <dl
-            style={{
-              margin: 0,
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: "var(--space-md)",
-            }}
-          >
-            <Detail label="Deadline">
-              {item.deadlineAt ? (
-                <span className="gt-num">{formatDeadline(item.deadlineAt)}</span>
-              ) : (
-                <Blank>No deadline found</Blank>
-              )}
-            </Detail>
-            <Detail label="Next action">{item.nextAction ?? <Blank>None found</Blank>}</Detail>
-          </dl>
+          <div className="gt-detected">
+            <p className="gt-eyebrow" style={{ fontSize: 11 }}>
+              Detected details
+            </p>
+            <dl style={{ margin: 0 }}>
+              <Detail label="Company">{item.company ?? <Blank>Not found</Blank>}</Detail>
+              <Detail label="Role">{item.role ?? <Blank>Not found</Blank>}</Detail>
+              <Detail label="Stage">{item.stage ? <StageBadge stage={item.stage} /> : <Blank>Not stated</Blank>}</Detail>
+              <Detail label="Deadline">
+                {item.deadlineAt ? <span className="gt-num">{formatDeadline(item.deadlineAt)}</span> : <Blank>No deadline found</Blank>}
+              </Detail>
+              <Detail label="Next action">{item.nextAction ?? <Blank>None found</Blank>}</Detail>
+            </dl>
+            {sameOrNew}
+          </div>
 
-          {suggestion ? (
-            <SameOrNew
-              item={item}
-              answer={answer}
-              onAnswer={(next) => {
-                setAnswer(next);
-                if (error?.field === "application") setError(null);
-              }}
-              error={error?.field === "application" ? error.message : null}
-              sameId={sameId}
-              newId={newId}
-            />
-          ) : null}
-
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-sm)" }}>
-            <Button iconLeft="check" aria-busy={busy || undefined} onClick={() => void confirm()}>
-              Confirm
+          <div className="gt-review-actions">
+            <Button variant="quiet" iconLeft="x" onClick={() => void dismiss()}>
+              Not an application
             </Button>
             <Button variant="quiet" iconLeft="pencil" onClick={() => setEditing(true)}>
               Edit
             </Button>
-            <Button variant="ghost" iconLeft="x" onClick={() => void dismiss()}>
-              Not an application
+            <Button iconLeft="check" aria-busy={busy || undefined} onClick={() => void confirm()}>
+              Confirm
             </Button>
           </div>
         </>
       )}
-
-      <footer
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "var(--space-sm)",
-          paddingTop: "var(--space-sm)",
-          borderTop: "1px solid var(--border-hairline)",
-          fontSize: "var(--caption-size)",
-          color: "var(--text-muted)",
-        }}
-      >
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-xs)" }}>
-          <Icon name="mail" size={14} />
-          {item.senderDomain ? `Detected from ${item.senderDomain}` : "Sender unknown"} ·{" "}
-          {formatEventDate(item.receivedAt)}
-          {link ? (
-            <>
-              {" · "}
-              <a
-                // The student reads the email itself before deciding (D38).
-                // GradTracker keeps none of it, so this goes to their inbox.
-                href={link}
-                target="_blank"
-                rel="noreferrer"
-                className="gt-touch"
-                style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-              >
-                <Icon name="external-link" size={12} />
-                Open in Gmail
-              </a>
-            </>
-          ) : null}
-        </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-sm)" }}>
-          How sure the model is about this email
-          <Meter value={item.confidence} label="How sure the model is about this email" />
-        </span>
-      </footer>
     </article>
   );
 }
@@ -445,7 +442,7 @@ function SameOrNew({
 }) {
   const suggestion = item.suggestedJob!;
   const option = (value: Answer, id: string, label: string) => (
-    <label htmlFor={id} className="gt-touch" style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-sm)", cursor: "pointer" }}>
+    <label htmlFor={id} className="gt-touch" style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
       <input
         id={id}
         type="radio"
@@ -453,7 +450,7 @@ function SameOrNew({
         value={value}
         checked={answer === value}
         onChange={() => onAnswer(value)}
-        style={{ margin: 0, accentColor: "var(--accent-primary)" }}
+        style={{ margin: 0, accentColor: "var(--lavender)" }}
       />
       {label}
     </label>
@@ -462,35 +459,24 @@ function SameOrNew({
   return (
     <fieldset
       style={{
-        margin: 0,
-        padding: "var(--space-md)",
-        border: "1px solid var(--border-hairline)",
-        borderRadius: "var(--radius-md)",
+        margin: "4px 0 14px",
+        padding: 14,
+        border: "1px solid var(--lavender-line)",
+        background: "color-mix(in srgb, var(--lavender-soft) 45%, var(--surface))",
+        borderRadius: 9,
         display: "flex",
         flexWrap: "wrap",
-        gap: "var(--space-lg)",
+        gap: 18,
       }}
     >
-      <legend style={{ padding: "0 var(--space-xs)", color: "var(--text-heading)" }}>
+      <legend style={{ padding: "0 6px", color: "var(--ink)", fontWeight: 600, fontSize: 14 }}>
         Is this the same application as {suggestion.company} — {suggestion.role}?
       </legend>
       {option("same", sameId, "Same application")}
       {option("new", newId, "New application")}
       {error ? (
-        // Body text with an icon, not `--ruby-deep`: that red is 2.23:1 on a
-        // dark card (contrast.test.ts). The words carry the error.
-        <p
-          role="alert"
-          style={{
-            margin: 0,
-            flexBasis: "100%",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-xs)",
-            color: "var(--text-body)",
-            fontSize: "var(--caption-size)",
-          }}
-        >
+        // Body text with an icon: the words carry the error, not the colour.
+        <p role="alert" style={{ margin: 0, flexBasis: "100%", display: "flex", alignItems: "center", gap: 6, color: "var(--ink)", fontSize: 13 }}>
           <Icon name="alert-circle" size={14} />
           {error}
         </p>
@@ -501,44 +487,35 @@ function SameOrNew({
 
 function Detail({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <dt
-        style={{
-          fontSize: "var(--micro-cap-size)",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "var(--text-muted)",
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </dt>
-      <dd style={{ margin: 0, color: "var(--text-body)" }}>{children}</dd>
+    <div className="gt-detected-row">
+      <dt>{label}</dt>
+      <dd>{children}</dd>
     </div>
   );
 }
 
 /** Blank means blank — no placeholder content (design.md §9). */
 function Blank({ children }: { children: React.ReactNode }) {
-  return <span style={{ color: "var(--text-muted)" }}>{children}</span>;
+  return <span style={{ color: "var(--muted)" }}>{children}</span>;
 }
 
-/** Cards, not a spinner: the queue has a known shape. */
+/** A card's shape, not a spinner: the queue has a known shape. */
 function CardSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading the review queue" style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
+    <div aria-busy="true" aria-label="Loading the review queue" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       {[0, 1].map((i) => (
         <div
           key={i}
           style={{
             height: 160,
-            borderRadius: "var(--radius-lg)",
-            border: "1px solid var(--border-hairline)",
+            borderRadius: 13,
+            border: "1px solid var(--line)",
+            background: "var(--surface)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            opacity: 0.45,
-            color: "var(--text-muted)",
+            opacity: 0.5,
+            color: "var(--muted)",
           }}
         >
           <Icon name="loader" size={14} />

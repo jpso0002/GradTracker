@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { Tabs, TopBar } from "../ds";
+import { Tabs, TopBar } from "../ui";
 import { ViewTitle } from "../shell/ViewTitle";
 import { DOC_PAGES, installedPackages, pageMarkdown, renderMarkdown } from "../documentation/pages";
 

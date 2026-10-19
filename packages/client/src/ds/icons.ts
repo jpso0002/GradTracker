@@ -1,5 +1,9 @@
 import {
   AlertCircle,
+  User,
+  LogOut,
+  Calendar,
+  ArrowRight,
   AlertTriangle,
   Archive,
   BookOpen,
@@ -53,6 +57,10 @@ import {
  */
 export const ICONS = {
   AlertCircle,
+  ArrowRight,
+  Calendar,
+  LogOut,
+  User,
   AlertTriangle,
   Archive,
   BookOpen,

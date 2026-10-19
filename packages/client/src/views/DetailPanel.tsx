@@ -1,17 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { EmailEvent, FieldProvenance, Job } from "@gradtracker/shared";
 import { Meter } from "./Meter";
-import {
-  Button,
-  Card,
-  DeadlinePill,
-  EmptyState,
-  Icon,
-  IconButton,
-  StageBadge,
-  STAGES,
-  Tag,
-} from "../ds";
+import { Button, CompanyLogo, EmptyState, Icon, IconButton, StageBadge, STAGES } from "../ui";
 import { api, ApiError, NetworkError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
@@ -127,23 +117,6 @@ export function DetailPanel({ jobId, onClose, onChanged, layout = "inline" }: De
     }
   };
 
-  const place: React.CSSProperties =
-    layout === "sheet"
-      ? { position: "fixed", inset: 0, zIndex: 31 }
-      : layout === "overlay"
-        ? {
-            position: "fixed",
-            top: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 31,
-            width: "var(--panel-w, 380px)",
-            maxWidth: "100%",
-            boxShadow: "var(--shadow-3)",
-            borderLeft: "1px solid var(--border-hairline)",
-          }
-        : { width: "var(--panel-w, 380px)", flex: "0 0 auto", borderLeft: "1px solid var(--border-hairline)" };
-
   const panel = (
     <Element
       // `div` or `aside`: both are plain HTMLElements, which is all the ref needs.
@@ -161,39 +134,28 @@ export function DetailPanel({ jobId, onClose, onChanged, layout = "inline" }: De
         }
         if (modal) holdFocus(e);
       }}
-      style={{
-        ...place,
-        background: "var(--surface-card)",
-        padding: "var(--space-lg)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-lg)",
-        overflowY: "auto",
-      }}
+      className={`gt-panel ${layout}`}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: layout === "sheet" ? "space-between" : "flex-end",
-          alignItems: "center",
-          gap: "var(--space-xs)",
-        }}
-      >
+      <div className="gt-panel-top">
         {layout === "sheet" ? (
           <Button variant="ghost" iconLeft="chevron-left" onClick={onClose}>
             Back to applications
           </Button>
-        ) : null}
-        {detail.data && !editing ? (
-          <Button id={editButtonId} variant="quiet" size="sm" iconLeft="pencil" onClick={() => setEditing(true)}>
-            Edit
-          </Button>
-        ) : null}
-        {layout === "sheet" ? null : <IconButton icon="x" label="Close detail panel" onClick={onClose} />}
+        ) : (
+          <span>Application details</span>
+        )}
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {detail.data && !editing ? (
+            <Button id={editButtonId} variant="quiet" size="sm" iconLeft="pencil" onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+          ) : null}
+          {layout === "sheet" ? null : <IconButton icon="x" label="Close detail panel" onClick={onClose} />}
+        </span>
       </div>
 
       {detail.loading && !detail.data ? (
-        <p style={{ color: "var(--text-muted)" }}>Loading…</p>
+        <p style={{ color: "var(--muted)", padding: "24px 0" }}>Loading…</p>
       ) : detail.error instanceof ApiError && detail.error.status === 404 ? (
         // A bookmarked or shared link to an application that has gone — not
         // yours, or never was (app-flow.md §7). Say so, and lead back.
@@ -204,12 +166,13 @@ export function DetailPanel({ jobId, onClose, onChanged, layout = "inline" }: De
           compact
         />
       ) : detail.error ? (
-        <p style={{ color: "var(--text-muted)" }}>
+        <p style={{ color: "var(--muted)", padding: "24px 0" }}>
           {detail.offline ? "You are offline." : detail.error.message}
         </p>
       ) : detail.data ? (
         <>
           {editing ? (
+            <div style={{ paddingTop: 22 }}>
             <EditForm
               job={detail.data.job}
               onCancel={closeEditor}
@@ -220,6 +183,7 @@ export function DetailPanel({ jobId, onClose, onChanged, layout = "inline" }: De
                 onChanged();
               }}
             />
+            </div>
           ) : (
             <>
               <Header job={detail.data.job} />
@@ -227,14 +191,15 @@ export function DetailPanel({ jobId, onClose, onChanged, layout = "inline" }: De
             </>
           )}
           <Timeline events={detail.data.timeline} />
+          <div className="gt-ai-note">
+            <Icon name="sparkles" size={17} />
+            <p>
+              <strong>Why am I seeing this?</strong>
+              <span>These details were read from your emails. GradTracker never stores the content of an email.</span>
+            </p>
+          </div>
           {editing ? null : (
-            <Button
-              variant="quiet"
-              iconLeft="archive"
-              disabled={busy}
-              fullWidth
-              onClick={() => void withdraw()}
-            >
+            <Button variant="danger" disabled={busy} fullWidth onClick={() => void withdraw()}>
               Withdraw application
             </Button>
           )}
@@ -250,12 +215,7 @@ export function DetailPanel({ jobId, onClose, onChanged, layout = "inline" }: De
       {/* The scrim: the list behind is still there, dimmed, and a click on it
           closes the panel. Hidden from assistive technology — Escape and the
           close button are the named ways out. */}
-      <div
-        data-scrim
-        aria-hidden="true"
-        onClick={onClose}
-        style={{ position: "fixed", inset: 0, zIndex: 30, background: "var(--scrim)" }}
-      />
+      <div data-scrim aria-hidden="true" onClick={onClose} className="gt-overlay" />
       {panel}
     </>
   );
@@ -428,12 +388,12 @@ function StaleWarning({
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-sm)",
-        padding: "var(--space-md)",
-        borderRadius: "var(--radius-md)",
-        border: "1px solid var(--border-strong)",
-        background: "var(--surface-sunken)",
-        fontSize: "var(--body-tabular-size)",
+        gap: 10,
+        padding: 14,
+        borderRadius: 9,
+        border: "1px solid color-mix(in srgb, var(--amber) 30%, var(--line))",
+        background: "var(--amber-soft)",
+        fontSize: 14,
       }}
     >
       <p style={{ margin: 0, display: "flex", gap: "var(--space-sm)", color: "var(--text-heading)" }}>
@@ -465,24 +425,21 @@ function StaleWarning({
 // ── Reading ─────────────────────────────────────────────────────────────────
 
 function Header({ job }: { job: Job }) {
+  const company = job.provenance.find((p) => p.field === "company");
   return (
-    <header style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
-      <h2
-        style={{
-          margin: 0,
-          fontSize: "var(--heading-md-size)",
-          fontWeight: "var(--weight-thin)",
-          letterSpacing: "var(--heading-md-ls)",
-          color: "var(--text-heading)",
-        }}
-      >
-        {job.company}
-      </h2>
-      <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "var(--body-size)" }}>
-        {job.role}
-      </p>
-      <div style={{ marginTop: "var(--space-xs)" }}>
-        <StageBadge stage={job.stage} />
+    <header className="gt-detail-head">
+      <CompanyLogo company={job.company} large />
+      <div style={{ minWidth: 0 }}>
+        <h2>
+          {job.company}
+          {company?.source === "human" ? (
+            <span className="gt-edited-tag" style={{ marginLeft: 8, verticalAlign: "middle" }}>
+              <Icon name="check" size={11} />
+              Edited
+            </span>
+          ) : null}
+        </h2>
+        <p>{job.role}</p>
       </div>
     </header>
   );
@@ -506,8 +463,9 @@ function Provenance({ entry, id }: { entry: FieldProvenance; id: string }) {
   // The id is what the field's value points at with `aria-describedby`, so a
   // screen reader hears "Edited" or the confidence with it (design.md §10.3).
   return entry.source === "human" ? (
-    <span id={id}>
-      <Tag>Edited</Tag>
+    <span id={id} className="gt-edited-tag">
+      <Icon name="check" size={11} />
+      Edited
     </span>
   ) : (
     <Meter id={id} value={entry.confidence ?? 0} />
@@ -516,45 +474,49 @@ function Provenance({ entry, id }: { entry: FieldProvenance; id: string }) {
 
 function Fields({ job }: { job: Job }) {
   const provenance = (field: string) => job.provenance.find((p) => p.field === field);
+  const next = provenance("next_action");
+  const nextShown = provenanceShown(next, job.nextAction !== null);
+  const nextId = useId();
 
-  // The card surface, not the sunken one: the field labels are muted text,
-  // which falls just short of 4.5:1 on the sunken surface (T6.5).
   return (
-    <Card padding="compact" surface="card" elevation={0}>
-      <dl style={{ margin: 0, display: "grid", gap: "var(--space-md)" }}>
-        <Field label="Deadline" provenance={provenance("deadline_at")} hasValue={job.deadlineAt !== null}>
-          {job.deadlineAt ? (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-xs)" }}>
-              <DeadlinePill {...(job.daysLeft !== null ? { daysLeft: job.daysLeft } : {})}>
-                {formatDeadline(job.deadlineAt)}
-              </DeadlinePill>
-              {job.daysLeft !== null ? (
-                <span style={{ color: "var(--text-muted)", fontSize: "var(--caption-size)" }}>
-                  {deadlineWording(job.daysLeft)}
-                </span>
-              ) : null}
+    <>
+      <dl className="gt-next-card" style={{ margin: 0 }}>
+        <div>
+          <dt className="label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+            Next action
+            {nextShown && next ? <Provenance entry={next} id={nextId} /> : null}
+          </dt>
+          <dd style={{ margin: 0 }} aria-describedby={nextShown ? nextId : undefined}>
+            <strong>{job.nextAction ?? "Nothing outstanding"}</strong>
+            <span>
+              <Icon name="calendar" size={15} />
+              {job.deadlineAt && job.daysLeft !== null ? deadlineWording(job.daysLeft) : "No deadline"}
             </span>
-          ) : (
-            <Blank>No deadline found</Blank>
-          )}
-        </Field>
-
-        <Field label="Next action" provenance={provenance("next_action")} hasValue={job.nextAction !== null}>
-          {job.nextAction ?? <Blank>Nothing outstanding</Blank>}
-        </Field>
-
-        <Field label="Detected from" provenance={undefined} hasValue={job.senderDomain !== null}>
-          {job.senderDomain ? (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <Icon name="mail" size={14} />
-              {job.senderDomain}
-            </span>
-          ) : (
-            <Blank>Unknown sender</Blank>
-          )}
-        </Field>
+          </dd>
+        </div>
       </dl>
-    </Card>
+
+      <section className="gt-panel-section">
+        <h3>Application details</h3>
+        <dl style={{ margin: 0 }}>
+          <Field label="Stage" provenance={undefined} hasValue>
+            <StageBadge stage={job.stage} />
+          </Field>
+          <Field label="Deadline" provenance={provenance("deadline_at")} hasValue={job.deadlineAt !== null}>
+            {job.deadlineAt ? (
+              <strong style={job.daysLeft !== null && job.daysLeft <= 2 ? { color: "var(--ruby-deep)" } : undefined}>
+                {formatDeadline(job.deadlineAt)}
+              </strong>
+            ) : (
+              <Blank>No deadline found</Blank>
+            )}
+          </Field>
+          <Field label="Source" provenance={undefined} hasValue={job.senderDomain !== null}>
+            {job.senderDomain ? job.senderDomain : <Blank>Unknown sender</Blank>}
+          </Field>
+        </dl>
+      </section>
+    </>
   );
 }
 
@@ -572,119 +534,58 @@ function Field({
   const provenanceId = useId();
   const shown = provenanceShown(provenance, hasValue);
   return (
-    <div>
-      <dt
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "var(--space-sm)",
-          fontSize: "var(--micro-cap-size)",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "var(--text-muted)",
-          marginBottom: 4,
-        }}
-      >
+    <div className="gt-field-row">
+      <dt style={{ display: "flex", alignItems: "center", gap: 8 }}>
         {label}
         {shown && provenance ? <Provenance entry={provenance} id={provenanceId} /> : null}
       </dt>
-      <dd
-        aria-describedby={shown ? provenanceId : undefined}
-        style={{ margin: 0, color: "var(--text-body)", fontSize: "var(--body-size)" }}
-      >
-        {children}
-      </dd>
+      <dd aria-describedby={shown ? provenanceId : undefined}>{children}</dd>
     </div>
   );
 }
 
 /** Blank means blank — no placeholder content (design.md §9). */
 function Blank({ children }: { children: React.ReactNode }) {
-  return <span style={{ color: "var(--text-muted)" }}>{children}</span>;
+  return <span style={{ color: "var(--muted)", fontWeight: 400 }}>{children}</span>;
 }
 
 function Timeline({ events }: { events: EmailEvent[] }) {
   const account = useMailboxAccount();
-  if (events.length === 0) {
-    return (
-      <section>
-        <SectionTitle>Timeline</SectionTitle>
+  return (
+    <section className="gt-panel-section">
+      <h3>Activity</h3>
+      {events.length === 0 ? (
         <Blank>No emails recorded against this application.</Blank>
-      </section>
-    );
-  }
-
-  return (
-    <section>
-      <SectionTitle>Timeline</SectionTitle>
-      <ol style={{ margin: 0, padding: 0, listStyle: "none" }}>
-        {events.map((event) => (
-          <li
-            key={event.id}
-            style={{
-              padding: "var(--space-sm) 0",
-              borderBottom: "1px solid var(--border-hairline)",
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-            }}
-          >
-            <div
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
-            >
-              {event.detectedStage ? <StageBadge stage={event.detectedStage} size="sm" /> : <span />}
-              <span
-                className="gt-num"
-                style={{ color: "var(--text-muted)", fontSize: "var(--caption-size)" }}
-              >
-                {formatEventDate(event.receivedAt)}
-              </span>
-            </div>
-
-            <span style={{ color: "var(--text-muted)", fontSize: "var(--caption-size)" }}>
-              {event.detectedCompany ?? "Unknown company"}
-              {event.detectedRole ? ` · ${event.detectedRole}` : ""}
-            </span>
-
-            {gmailLink(event.gmailMessageId, account) ? (
-              <a
-                // A deep link, not the email itself (SM-6, D38).
-                href={gmailLink(event.gmailMessageId, account)!}
-                target="_blank"
-                rel="noreferrer"
-                className="gt-touch"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: "var(--caption-size)",
-                }}
-              >
-                <Icon name="external-link" size={12} />
-                Open in Gmail{event.senderDomain ? ` · ${event.senderDomain}` : ""}
-              </a>
-            ) : null}
-          </li>
-        ))}
-      </ol>
+      ) : (
+        <ol style={{ margin: 0, padding: 0, listStyle: "none" }}>
+          {events.map((event) => {
+            const link = gmailLink(event.gmailMessageId, account);
+            return (
+              <li key={event.id} className="gt-event">
+                <i aria-hidden="true" />
+                <div className="gt-event-body">
+                  <strong>{event.detectedStage ? STAGES[event.detectedStage].label : "Email received"}</strong>
+                  <small>
+                    {event.senderDomain ? `From ${event.senderDomain}` : "Sender unknown"}
+                    {event.detectedRole ? ` · ${event.detectedRole}` : ""}
+                  </small>
+                  <small className="gt-num">{formatEventDate(event.receivedAt)}</small>
+                </div>
+                {link ? (
+                  <a
+                    // A deep link, not the email itself (SM-6, D38).
+                    href={link}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open in Gmail ↗
+                  </a>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </section>
-  );
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h3
-      style={{
-        margin: "0 0 var(--space-sm)",
-        fontSize: "var(--micro-cap-size)",
-        letterSpacing: "0.08em",
-        textTransform: "uppercase",
-        color: "var(--text-muted)",
-        fontWeight: "var(--weight-medium)",
-      }}
-    >
-      {children}
-    </h3>
   );
 }

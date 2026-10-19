@@ -1,4 +1,4 @@
-import { EmptyState, TopBar } from "../ds";
+import { EmptyState, TopBar } from "../ui";
 import { ViewTitle } from "../shell/ViewTitle";
 
 /**

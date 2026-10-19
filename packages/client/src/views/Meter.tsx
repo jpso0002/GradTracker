@@ -1,4 +1,4 @@
-import { ConfidenceMeter } from "../ds";
+import { ConfidenceMeter } from "../ui";
 
 /**
  * The design system's `ConfidenceMeter`, given the meter role and a text

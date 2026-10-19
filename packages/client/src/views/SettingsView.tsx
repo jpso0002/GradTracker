@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, EmptyState, Switch, TopBar } from "../ds";
+import { Button, EmptyState, Icon, Switch, TopBar } from "../ui";
 import { nextPath } from "./AccountViews";
 import { api, ApiError, NetworkError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
@@ -114,134 +114,206 @@ export function SettingsView({ onReset }: { onReset?: () => void } = {}) {
     }, SAVE_AFTER_MS);
   };
 
+  const user = account;
+  const inbox = session.data?.canConnectInbox ? session.data.inbox ?? user?.email ?? null : null;
+  const connected = Boolean(inbox && session.data?.scanned);
+
   return (
     <>
       <ViewTitle title="Settings" />
       <TopBar title="Settings" />
-      <div
-        style={{
-          padding: "var(--space-xl)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-xxl)",
-          maxWidth: "calc(var(--container-max) / 2)",
-        }}
-      >
-        <Section title="Review">
-          {settings.loading && !settings.data ? (
-            <p style={{ margin: 0, color: "var(--text-muted)" }}>Loading…</p>
-          ) : settings.error || threshold === null ? (
-            <EmptyState
-              icon={settings.offline ? "wifi-off" : "triangle-alert"}
-              title={settings.offline ? "You are offline" : "Could not load your settings"}
-              description={settings.error?.message ?? "No settings were returned."}
-              action={<Button onClick={settings.reload}>Try again</Button>}
-              compact
-            />
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-              <label htmlFor={sliderId} style={{ color: "var(--text-body)" }}>
-                How sure GradTracker must be before adding an application automatically
-              </label>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
-                <input
-                  id={sliderId}
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={threshold}
-                  aria-valuetext={`${percent(threshold)}%`}
-                  aria-describedby={helpId}
-                  onChange={(e) => move(toHundredths(Number(e.target.value)))}
-                  style={{ flex: 1, margin: 0, accentColor: "var(--accent-primary)" }}
-                />
-                {/* The slider announces its own value; this is the sighted copy. */}
-                <span aria-hidden="true" className="gt-num" style={{ minWidth: "4ch", textAlign: "right" }}>
-                  {percent(threshold)}%
+      <div className="gt-page" style={{ maxWidth: 1000 }}>
+        <section className="gt-page-head" aria-label="About settings" style={{ paddingBottom: 24, borderBottom: "1px solid var(--line)", marginBottom: 0 }}>
+          <div>
+            <p className="gt-eyebrow">Account &amp; preferences</p>
+            <h2>Settings</h2>
+            <span className="lede">Manage how GradTracker connects, detects, and looks.</span>
+          </div>
+        </section>
+
+        <div className="gt-settings-grid">
+          <nav className="gt-settings-nav" aria-label="Settings sections">
+            <a href="#settings-gmail">Gmail connection</a>
+            <a href="#settings-detection">Detection</a>
+            {user ? <a href="#settings-profile">Profile</a> : null}
+            <a href="#settings-appearance">Appearance</a>
+          </nav>
+
+          <div className="gt-settings-main">
+            <Section
+              id="settings-gmail"
+              title="Gmail connection"
+              description="Your application pipeline updates from this inbox."
+              badge={
+                <span className={`gt-connected${connected ? "" : " off"}`}>
+                  <i aria-hidden="true" />
+                  {connected ? "Connected" : "Not connected"}
                 </span>
+              }
+            >
+              {inbox ? (
+                <div className="gt-account-card">
+                  <span className="gt-avatar large" aria-hidden="true">
+                    {(inbox[0] ?? "?").toUpperCase()}
+                  </span>
+                  <span className="text">
+                    <strong>{inbox}</strong>
+                    <span>{connected ? "Read by GradTracker in this demo" : "Connect it from the sign-in walkthrough"}</span>
+                  </span>
+                  {user ? (
+                    <Button variant="danger" size="sm" disabled={resetting} onClick={() => void resetDemo()}>
+                      {resetting ? "Resetting…" : "Reset demo"}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="gt-account-card">
+                  <span className="text">
+                    <strong>No Gmail connected</strong>
+                    <span>
+                      {session.data?.inbox
+                        ? `In the demo, only ${session.data.inbox} can connect Gmail, so this account's dashboard stays empty.`
+                        : "In the demo, the inbox is the demo mailbox."}
+                    </span>
+                  </span>
+                  {user ? (
+                    <Button variant="quiet" size="sm" disabled={resetting} onClick={() => void resetDemo()}>
+                      {resetting ? "Resetting…" : "Reset demo"}
+                    </Button>
+                  ) : null}
+                </div>
+              )}
+              <div className="gt-note-row">
+                <Icon name="lock" size={18} />
+                <p>
+                  <strong>Read-only access</strong>
+                  <span>
+                    GradTracker can read your email but can’t send, delete, or change it. Demo mode: the Google step is a
+                    walkthrough, and Sync inbox reads the demo inbox. Reset demo empties this dashboard.
+                  </span>
+                </p>
               </div>
-              <p id={helpId} style={{ margin: 0, color: "var(--text-muted)", fontSize: "var(--caption-size)" }}>
-                {consequence(threshold)} Applies to new mail only — applications already in your pipeline stay
-                where they are.
-              </p>
-            </div>
-          )}
-        </Section>
+            </Section>
 
-        <Section title="Appearance">
-          {/* `gt-switch`: the design system hides the checkbox at zero size,
-              so app.css draws the focus ring on the track instead (T6.5). */}
-          <span className="gt-switch">
-            <Switch
-              checked={theme === "dark"}
-              onChange={() => toggle()}
-              label="Dark theme"
-              description="GradTracker follows your system setting until you choose."
-            />
-          </span>
-        </Section>
+            <Section
+              id="settings-detection"
+              title="Detection confidence"
+              description={
+                <label htmlFor={sliderId}>How sure GradTracker must be before adding an application automatically</label>
+              }
+            >
+              {settings.loading && !settings.data ? (
+                <p style={{ margin: 0, color: "var(--muted)" }}>Loading…</p>
+              ) : settings.error || threshold === null ? (
+                <EmptyState
+                  icon={settings.offline ? "wifi-off" : "triangle-alert"}
+                  title={settings.offline ? "You are offline" : "Could not load your settings"}
+                  description={settings.error?.message ?? "No settings were returned."}
+                  action={<Button onClick={settings.reload}>Try again</Button>}
+                  compact
+                />
+              ) : (
+                <>
+                  <div className="gt-slider-head">
+                    <span aria-hidden="true">Review threshold</span>
+                    {/* The slider announces its own value; this is the sighted copy. */}
+                    <strong aria-hidden="true">{percent(threshold)}%</strong>
+                  </div>
+                  <input
+                    id={sliderId}
+                    className="gt-range"
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={threshold}
+                    aria-valuetext={`${percent(threshold)}%`}
+                    aria-describedby={helpId}
+                    onChange={(e) => move(toHundredths(Number(e.target.value)))}
+                  />
+                  <div className="gt-range-labels" aria-hidden="true">
+                    <span>More automatic</span>
+                    <span>More review</span>
+                  </div>
+                  <div className="gt-note-row" style={{ marginTop: 16, alignItems: "center" }}>
+                    <Icon name="sparkles" size={16} />
+                    <p id={helpId}>
+                      {consequence(threshold)} Applies to new mail only — applications already in your pipeline stay where
+                      they are.
+                    </p>
+                  </div>
+                </>
+              )}
+            </Section>
 
-        <Section title="Keyboard">
-          <span className="gt-switch">
-            <Switch
-              checked={shortcuts}
-              onChange={(on) => setShortcuts(on)}
-              label="Press / to search"
-              description="Turn this off if you use speech input or switch control — a stray slash would jump to the search box."
-            />
-          </span>
-        </Section>
+            {user ? (
+              <Section id="settings-profile" title="Profile" description="The account you're signed in with.">
+                <div className="gt-account-card" style={{ marginBottom: 0 }}>
+                  <span className="gt-avatar large" aria-hidden="true">
+                    {user.name
+                      .trim()
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((w) => w[0]?.toUpperCase() ?? "")
+                      .join("")}
+                  </span>
+                  <span className="text">
+                    <strong>{user.name}</strong>
+                    <span>Signed in as {user.email}</span>
+                  </span>
+                  <Button variant="quiet" size="sm" iconLeft="log-out" onClick={() => void signOut()}>
+                    Sign out
+                  </Button>
+                </div>
+              </Section>
+            ) : null}
 
-        {account ? (
-          <Section title="Account">
-            <p style={{ margin: 0 }}>
-              Signed in as <strong>{account.name}</strong> · {account.email}
-            </p>
-            <div>
-              <Button variant="quiet" onClick={() => void signOut()}>
-                Sign out
-              </Button>
-            </div>
-          </Section>
-        ) : null}
-
-        <Section title="Gmail">
-          <p style={{ margin: 0, color: "var(--text-muted)" }}>
-            {session.data && !session.data.canConnectInbox
-              ? `Demo mode: only ${session.data.inbox ?? "the demo inbox's own account"} can connect Gmail, so this account's dashboard stays empty.`
-              : "Demo mode: the Google step is a walkthrough, and Refresh reads the demo inbox. Reset demo empties this dashboard and scans the inbox again."}
-          </p>
-          {account ? (
-            <div>
-              <Button variant="secondary" disabled={resetting} onClick={() => void resetDemo()}>
-                {resetting ? "Resetting…" : "Reset demo"}
-              </Button>
-            </div>
-          ) : null}
-        </Section>
+            <Section id="settings-appearance" title="Appearance" description="How GradTracker looks on this device.">
+              <div style={{ display: "grid", gap: 18 }}>
+                <Switch
+                  checked={theme === "dark"}
+                  onChange={() => toggle()}
+                  label="Dark theme"
+                  description="Light until you choose — the switch in the sidebar does the same."
+                />
+                <Switch
+                  checked={shortcuts}
+                  onChange={(on) => setShortcuts(on)}
+                  label="Press / to search"
+                  description="Turn this off if you use speech input or switch control — a stray slash would jump to the search box."
+                />
+              </div>
+            </Section>
+          </div>
+        </div>
       </div>
     </>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  id,
+  title,
+  description,
+  badge,
+  children,
+}: {
+  id: string;
+  title: string;
+  description?: React.ReactNode;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId} style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-      <h2
-        id={headingId}
-        style={{
-          margin: 0,
-          fontSize: "var(--micro-cap-size)",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "var(--text-muted)",
-          fontWeight: "var(--weight-medium)",
-        }}
-      >
-        {title}
-      </h2>
+    <section id={id} aria-labelledby={headingId} className="gt-card">
+      <div className="gt-card-title">
+        <div>
+          <h2 id={headingId}>{title}</h2>
+          {description ? <p>{description}</p> : null}
+        </div>
+        {badge}
+      </div>
       {children}
     </section>
   );

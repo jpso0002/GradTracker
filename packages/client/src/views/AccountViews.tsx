@@ -1,16 +1,15 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { AuthSessionResponse } from "@gradtracker/shared";
-import { Button, Input, Wordmark } from "../ds";
+import { Button, Icon, Input, Wordmark } from "../ui";
 import { api, ApiError, NetworkError } from "../api/client";
 
 /**
  * Create your account and Sign in — the presentation demo's own accounts
- * (D40). The product signs in with Google (T4.1–T4.3, deferred) and stores no
- * credential; these accounts live outside its database, for the demo only.
+ * (D40) — in the style of Will's Connect page (D41).
  *
- * The demo: create a fresh account in front of the room, see its empty
- * dashboard, sign out, and sign in to the demo inbox's account.
+ * The product signs in with Google (T4.1–T4.3, deferred) and stores no
+ * credential; these accounts live outside its database, for the demo only.
  */
 
 /** Where a signed-in student goes next: the demo inbox's account to its first
@@ -20,53 +19,77 @@ export function nextPath(session: AuthSessionResponse): string {
   return session.canConnectInbox && !session.scanned ? "/connect" : "/pipeline";
 }
 
-/** A signed-out screen: centred, no navigation. */
-export function CenteredPage({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * A signed-out screen, as Will drew Connect: the logo and a quiet promise
+ * across the top, the pitch on the left, the card on the right, the rings
+ * behind. `title` is the document title.
+ */
+export function ConnectLayout({ title, copy, card }: { title: string; copy: ReactNode; card: ReactNode }) {
   useEffect(() => {
     document.title = `${title} · GradTracker`;
   }, [title]);
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        boxSizing: "border-box",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "var(--space-xl) var(--space-lg)",
-        background: "var(--surface-page)",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "calc(var(--container-max) / 2.6)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-xl)",
-        }}
-      >
-        <Wordmark size={24} />
-        {children}
-      </div>
+    <main className="gt-connect-page">
+      <header className="gt-connect-header">
+        <Wordmark size={20} />
+        <span className="gt-tiny-link">Privacy first, always</span>
+      </header>
+      <section className="gt-connect-copy">{copy}</section>
+      <section className="gt-connect-card">{card}</section>
+      <footer className="gt-connect-footer">Built for the job search, not for your data.</footer>
     </main>
   );
 }
 
-function Heading({ title, lead }: { title: string; lead: string }) {
+/** Will's pitch: the eyebrow, the two-line headline, the lede. */
+export function Pitch({
+  eyebrow = "Your application copilot",
+  line,
+  emphasis,
+  lede,
+  children,
+  heading = false,
+}: {
+  eyebrow?: string;
+  line: string;
+  emphasis: string;
+  lede: string;
+  children?: ReactNode;
+  /** True when the headline is the page's heading, not decoration beside it. */
+  heading?: boolean;
+}) {
+  // The space before the break keeps the two lines apart when read as one name.
+  const headline = (
+    <>
+      {line} <br />
+      <em>{emphasis}</em>
+    </>
+  );
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-      <h1 style={{ margin: 0, fontSize: "var(--heading-lg-size)", lineHeight: "var(--heading-lg-lh)" }}>{title}</h1>
-      <p style={{ margin: 0, color: "var(--text-secondary)" }}>{lead}</p>
-    </div>
+    <>
+      <div className="gt-connect-eyebrow">
+        <Icon name="sparkles" size={15} />
+        {eyebrow}
+      </div>
+      {heading ? <h1>{headline}</h1> : <p className="gt-display">{headline}</p>}
+      <p className="gt-connect-lede">{lede}</p>
+      {children}
+    </>
   );
 }
 
-function Footnote({ children }: { children: ReactNode }) {
+const PITCH = {
+  line: "Twenty applications.",
+  emphasis: "One clear next step.",
+  lede: "GradTracker turns your inbox into a ranked, up-to-date application pipeline — so you always know what needs attention next.",
+};
+
+function CardHeading({ title, sub }: { title: string; sub: string }) {
   return (
-    <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "var(--caption-size)", textAlign: "center" }}>
-      {children}
-    </p>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <h1 style={{ fontSize: 24, margin: 0, letterSpacing: "-0.5px" }}>{title}</h1>
+      <p className="sub">{sub}</p>
+    </div>
   );
 }
 
@@ -83,7 +106,7 @@ function message(cause: unknown): { text: string; field?: Field } {
 
 function FormError({ text }: { text: string }) {
   return (
-    <p role="alert" style={{ margin: 0, color: "var(--ruby-deep)", fontSize: "var(--caption-size)" }}>
+    <p role="alert" className="gt-form-error">
       {text}
     </p>
   );
@@ -132,43 +155,49 @@ export function SignUpView() {
   };
 
   return (
-    <CenteredPage title="Create your account">
-      <Heading title="Create your account" lead="Every graduate application, one ranked list of what’s due next." />
-
-      <form noValidate onSubmit={(e) => void submit(e)} style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
-        <Input id={ids.name} label="Full name" autoComplete="name" value={values.name} onChange={set("name")} {...shown("name")} />
-        <Input
-          id={ids.email}
-          type="email"
-          label="Email"
-          autoComplete="email"
-          value={values.email}
-          onChange={set("email")}
-          {...shown("email")}
-        />
-        <Input
-          id={ids.password}
-          type="password"
-          label="Password"
-          autoComplete="new-password"
-          // A placeholder, not a hint: this design system puts the hint inside
-          // the label, which would make it part of the field's name.
-          placeholder="At least 8 characters"
-          value={values.password}
-          onChange={set("password")}
-          {...shown("password")}
-        />
-        {failure && !failure.field ? <FormError text={failure.text} /> : null}
-        <Button type="submit" size="lg" fullWidth disabled={busy}>
-          {busy ? "Creating account…" : "Create account"}
-        </Button>
-      </form>
-
-      <Footnote>
-        Already have an account? <Link to="/signin">Sign in</Link>
-      </Footnote>
-      <Footnote>Demo accounts: kept on this computer for the presentation, never in GradTracker’s database.</Footnote>
-    </CenteredPage>
+    <ConnectLayout
+      title="Create your account"
+      copy={<Pitch {...PITCH} />}
+      card={
+        <>
+          <CardHeading title="Create your account" sub="Free for students. Takes a minute." />
+          <form noValidate onSubmit={(e) => void submit(e)} className="gt-form">
+            <Input id={ids.name} label="Full name" autoComplete="name" value={values.name} onChange={set("name")} {...shown("name")} />
+            <Input
+              id={ids.email}
+              type="email"
+              label="Email"
+              autoComplete="email"
+              value={values.email}
+              onChange={set("email")}
+              {...shown("email")}
+            />
+            <Input
+              id={ids.password}
+              type="password"
+              label="Password"
+              autoComplete="new-password"
+              // A placeholder, not a hint: the field's hint sits inside its
+              // label, which would make it part of the field's name.
+              placeholder="At least 8 characters"
+              value={values.password}
+              onChange={set("password")}
+              {...shown("password")}
+            />
+            {failure && !failure.field ? <FormError text={failure.text} /> : null}
+            <Button type="submit" variant="ink" size="lg" fullWidth disabled={busy} iconRight="arrow-right">
+              {busy ? "Creating account…" : "Create account"}
+            </Button>
+          </form>
+          <p className="sub" style={{ textAlign: "center" }}>
+            Already have an account? <Link to="/signin">Sign in</Link>
+          </p>
+          <p className="sub" style={{ fontSize: 12, textAlign: "center" }}>
+            Demo accounts: kept on this computer for the presentation, never in GradTracker’s database.
+          </p>
+        </>
+      }
+    />
   );
 }
 
@@ -199,35 +228,39 @@ export function SignInView() {
   };
 
   return (
-    <CenteredPage title="Sign in">
-      <Heading title="Sign in" lead="Welcome back." />
-
-      <form noValidate onSubmit={(e) => void submit(e)} style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
-        <Input
-          id={ids.email}
-          type="email"
-          label="Email"
-          autoComplete="email"
-          value={values.email}
-          onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))}
-        />
-        <Input
-          id={ids.password}
-          type="password"
-          label="Password"
-          autoComplete="current-password"
-          value={values.password}
-          onChange={(e) => setValues((v) => ({ ...v, password: e.target.value }))}
-        />
-        {failure ? <FormError text={failure} /> : null}
-        <Button type="submit" size="lg" fullWidth disabled={busy}>
-          {busy ? "Signing in…" : "Sign in"}
-        </Button>
-      </form>
-
-      <Footnote>
-        New to GradTracker? <Link to="/signup">Create an account</Link>
-      </Footnote>
-    </CenteredPage>
+    <ConnectLayout
+      title="Sign in"
+      copy={<Pitch {...PITCH} />}
+      card={
+        <>
+          <CardHeading title="Sign in" sub="Welcome back." />
+          <form noValidate onSubmit={(e) => void submit(e)} className="gt-form">
+            <Input
+              id={ids.email}
+              type="email"
+              label="Email"
+              autoComplete="email"
+              value={values.email}
+              onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))}
+            />
+            <Input
+              id={ids.password}
+              type="password"
+              label="Password"
+              autoComplete="current-password"
+              value={values.password}
+              onChange={(e) => setValues((v) => ({ ...v, password: e.target.value }))}
+            />
+            {failure ? <FormError text={failure} /> : null}
+            <Button type="submit" variant="ink" size="lg" fullWidth disabled={busy} iconRight="arrow-right">
+              {busy ? "Signing in…" : "Sign in"}
+            </Button>
+          </form>
+          <p className="sub" style={{ textAlign: "center" }}>
+            New to GradTracker? <Link to="/signup">Create an account</Link>
+          </p>
+        </>
+      }
+    />
   );
 }

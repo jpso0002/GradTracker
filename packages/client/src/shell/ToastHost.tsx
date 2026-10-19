@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
-import { Toast } from "../ds";
+import { Toast } from "../ui";
 
 /**
  * One place toasts appear, so no view has to own a corner of the screen.
@@ -48,15 +48,7 @@ export function ToastHost({ children }: { children: ReactNode }) {
         // Polite, not assertive: a confirmation should not interrupt whatever
         // the student is reading.
         aria-live="polite"
-        style={{
-          position: "fixed",
-          right: "var(--space-xl)",
-          bottom: "var(--space-xl)",
-          zIndex: 50,
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-sm)",
-        }}
+        className="gt-toasts"
       >
         {toasts.map((toast) => (
           <Toast key={toast.id} tone={toast.tone} onDismiss={() => dismiss(toast.id)}>

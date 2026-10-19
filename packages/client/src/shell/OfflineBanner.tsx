@@ -1,4 +1,4 @@
-import { Button, Icon } from "../ds";
+import { Button, Icon } from "../ui";
 import { connectivity, useOffline } from "../connectivity";
 
 /**
@@ -13,19 +13,7 @@ export function OfflineBanner() {
   if (!offline) return null;
 
   return (
-    <div
-      role="status"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-md)",
-        padding: "var(--space-sm) var(--space-xl)",
-        background: "var(--surface-sunken)",
-        borderBottom: "1px solid var(--border-hairline)",
-        color: "var(--text-body)",
-        fontSize: "var(--body-tabular-size)",
-      }}
-    >
+    <div role="status" className="gt-banner">
       <Icon name="wifi-off" size={16} />
       <span style={{ flex: 1 }}>You're offline. What you see may be out of date.</span>
       <Button variant="quiet" size="sm" onClick={() => connectivity.retry()}>

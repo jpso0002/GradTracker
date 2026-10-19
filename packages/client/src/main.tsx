@@ -5,6 +5,8 @@ import { App } from "./App";
 import { ThemeProvider } from "./theme/theme";
 import { installIcons } from "./ds/icons";
 import "./app.css";
+// After the design system and app.css, so Will's tokens win (D41).
+import "./theme/gradtracker.css";
 
 installIcons();
 

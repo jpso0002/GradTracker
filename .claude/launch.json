@@ -4,25 +4,52 @@
     {
       "name": "gradtracker-client",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--config", "packages/client/vite.config.ts", "packages/client"],
+      "runtimeArgs": [
+        "node_modules/vite/bin/vite.js",
+        "--config",
+        "packages/client/vite.config.ts",
+        "packages/client"
+      ],
       "port": 5173
     },
     {
       "name": "gradtracker-api",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--env-file-if-exists=.env", "packages/server/dist/server.js"],
+      "runtimeArgs": [
+        "--env-file-if-exists=.env",
+        "packages/server/dist/server.js"
+      ],
       "port": 3000
     },
     {
       "name": "gradtracker-demo",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--env-file-if-exists=.env", "packages/server/dist/demo-server.js"],
+      "runtimeArgs": [
+        "--env-file-if-exists=.env",
+        "packages/server/dist/demo-server.js"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "gradtracker-demo-sandbox",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--env-file-if-exists=.env",
+        "packages/server/dist/demo-server.js",
+        "--no-inbox",
+        "--data-dir=C:/Users/jidda/AppData/Local/Temp/claude/D--GITHUB-GradTracker/f523e2ed-3dad-4d7d-a9be-beac608f5f2d/scratchpad/demo-sandbox"
+      ],
       "port": 3000
     },
     {
       "name": "gradtracker-client-bun",
       "runtimeExecutable": "/Users/jidds/.bun/bin/bunx",
-      "runtimeArgs": ["vite", "--config", "packages/client/vite.config.ts", "packages/client"],
+      "runtimeArgs": [
+        "vite",
+        "--config",
+        "packages/client/vite.config.ts",
+        "packages/client"
+      ],
       "port": 5173
     }
   ]

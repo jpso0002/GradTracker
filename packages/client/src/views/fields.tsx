@@ -1,6 +1,6 @@
 import { useId, useMemo, type ChangeEvent } from "react";
 import { StageEnum, type Stage, type UpdateJobBody } from "@gradtracker/shared";
-import { Input, Select, STAGES } from "../ds";
+import { Input, Select, STAGES } from "../ui";
 import { visuallyHidden } from "../shell/VisuallyHidden";
 
 /**

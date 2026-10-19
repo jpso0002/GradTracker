@@ -1,11 +1,11 @@
 import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AuthSessionResponse, DemoScanResponse, Job } from "@gradtracker/shared";
-import { Button, Card, Icon } from "../ds";
+import { Button, Icon } from "../ui";
 import { api, ApiError } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useToast } from "../shell/ToastHost";
-import { CenteredPage } from "./AccountViews";
+import { ConnectLayout, Pitch } from "./AccountViews";
 
 /**
  * Connect your Gmail — the demo inbox's account's first sign-in (D35, D40).
@@ -36,73 +36,104 @@ const TITLES: Record<Step, string> = {
 export function ConnectView({ session, onScanned }: { session: AuthSessionResponse; onScanned?: () => void }) {
   const [step, setStep] = useState<Step>("connect");
   const name = session.user?.name ?? "Student";
+  const first = name.trim().split(/\s+/)[0] || name;
+  // The Gmail connected is the demo inbox — the one the scan reads.
+  const email = session.inbox ?? session.user?.email ?? "";
+
+  if (step === "connect") {
+    return (
+      <ConnectLayout
+        title={TITLES.connect}
+        copy={
+          <Pitch
+            heading
+            line={`Welcome, ${first}.`}
+            emphasis="Connect your Gmail"
+            lede="GradTracker finds your applications in your inbox and ranks them by what's due, so you never type one in."
+          >
+            <button type="button" className="gt-google-button" onClick={() => setStep("consent")}>
+              <span className="gt-google-g" aria-hidden="true">
+                G
+              </span>
+              Continue with Google
+              <Icon name="arrow-right" size={18} />
+            </button>
+            <p className="gt-small-print">
+              Demo walkthrough: the Google step is simulated, and the inbox connected is the team’s demo mailbox.
+            </p>
+          </Pitch>
+        }
+        card={<Assurances />}
+      />
+    );
+  }
+
+  if (step === "consent") {
+    return (
+      <ConnectLayout
+        title={TITLES.consent}
+        copy={
+          <Pitch
+            eyebrow="Read-only access"
+            line="Your inbox"
+            emphasis="stays yours."
+            lede="GradTracker asks Google for one thing: permission to read your email. It can never send, delete or change it."
+          />
+        }
+        card={<Consent name={name} email={email} onCancel={() => setStep("connect")} onAllow={() => setStep("scanning")} />}
+      />
+    );
+  }
 
   return (
-    <CenteredPage title={TITLES[step]}>
-      {step === "connect" ? <Connect name={name} onContinue={() => setStep("consent")} /> : null}
-      {step === "consent" ? (
-        <Consent
-          name={name}
-          // The Gmail connected is the demo inbox — the one the scan reads.
-          email={session.inbox ?? session.user?.email ?? ""}
-          onCancel={() => setStep("connect")}
-          onAllow={() => setStep("scanning")}
+    <ConnectLayout
+      title={TITLES.scanning}
+      copy={
+        <Pitch
+          eyebrow="First scan"
+          line="Reading your inbox."
+          emphasis="Applications appear as we find them."
+          lede="Every email goes through the classifier once. What isn't about an application is counted and forgotten."
         />
-      ) : null}
-      {step === "scanning" ? <Scan onScanned={onScanned} /> : null}
-    </CenteredPage>
+      }
+      card={<Scan onScanned={onScanned} />}
+    />
   );
 }
 
-// ── 1. Connect ──────────────────────────────────────────────────────────────
+// ── 1. Connect — Will's permission card ─────────────────────────────────────
 
-function Connect({ name, onContinue }: { name: string; onContinue: () => void }) {
-  const first = name.trim().split(/\s+/)[0] || name;
+function Assurances() {
   return (
     <>
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-        <h1 style={{ margin: 0, fontSize: "var(--heading-lg-size)", lineHeight: "var(--heading-lg-lh)" }}>
-          {`Welcome, ${first}. Connect your Gmail`}
-        </h1>
-        <p style={{ margin: 0, color: "var(--text-secondary)" }}>
-          GradTracker finds your applications in your inbox, so you never type one in.
-        </p>
+      <span className="gt-permission-icon" aria-hidden="true">
+        <Icon name="lock" size={21} />
+      </span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <h2>Your inbox stays yours</h2>
+        <p className="sub">GradTracker uses read-only access to find application updates.</p>
       </div>
-
-      <Card padding="compact" elevation={1}>
-        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "var(--space-lg)" }}>
-          <Assurance
-            title="Reads your Gmail, read-only"
-            detail="GradTracker can never send, delete or change an email."
-          />
-          <Assurance title="Never stores your password" detail="Google signs you in. GradTracker never sees your password." />
-          <Assurance
-            title="Never keeps email content"
-            detail="Only the company, role, stage, deadline, next action and the sender’s domain are kept."
-          />
-        </ul>
-      </Card>
-
-      <Button size="lg" fullWidth onClick={onContinue}>
-        Continue with Google
-      </Button>
-
-      <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "var(--caption-size)", textAlign: "center" }}>
-        Demo walkthrough: the Google step is simulated, and the inbox connected is the team’s demo mailbox.
-      </p>
+      <ul className="gt-permission-list">
+        <Assurance title="Reads your Gmail, read-only" detail="GradTracker can never send, delete or change an email." />
+        <Assurance title="Never stores your password" detail="Google signs you in. GradTracker never sees your password." />
+        <Assurance
+          title="Never keeps email content"
+          detail="Only the company, role, stage, deadline, next action and the sender’s domain are kept."
+        />
+      </ul>
     </>
   );
 }
 
 function Assurance({ title, detail }: { title: string; detail: string }) {
   return (
-    <li style={{ display: "flex", gap: "var(--space-md)", alignItems: "flex-start" }}>
-      <span style={{ color: "var(--accent-primary)", display: "flex", paddingTop: 2 }}>
-        <Icon name="lock" size={16} />
+    <li>
+      <span className="tick" aria-hidden="true">
+        <Icon name="check" size={13} />
       </span>
-      <span style={{ display: "flex", flexDirection: "column", gap: "var(--space-xxs)" }}>
-        <span style={{ color: "var(--text-heading)" }}>{title}</span>
-        <span style={{ color: "var(--text-secondary)", fontSize: "var(--caption-size)" }}>{detail}</span>
+      <span>
+        <strong>{title}</strong>
+        {detail}
       </span>
     </li>
   );
@@ -126,39 +157,18 @@ function Consent({
   return (
     <section
       aria-labelledby={headingId}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-lg)",
-        padding: "var(--card-pad-compact)",
-        background: "var(--surface-card)",
-        border: "1px solid var(--border-hairline)",
-        borderRadius: "var(--radius-lg)",
-        boxShadow: "var(--shadow-2)",
-      }}
+      style={{ display: "flex", flexDirection: "column", gap: 18 }}
     >
       <div>
-        <h1 id={headingId} style={{ margin: 0, fontSize: "var(--heading-md-size)", lineHeight: "var(--heading-md-lh)" }}>
+        <h1 id={headingId} style={{ margin: 0, fontSize: 22 }}>
           Sign in with Google
         </h1>
-        <p style={{ margin: 0, color: "var(--text-secondary)" }}>to continue to GradTracker</p>
+        <p className="sub">to continue to GradTracker</p>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
-        <span
-          aria-hidden="true"
-          style={{
-            width: "var(--control-h)",
-            height: "var(--control-h)",
-            borderRadius: "var(--radius-pill)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--accent-primary-wash)",
-            color: "var(--text-heading)",
-          }}
-        >
-          {name.slice(0, 1)}
+        <span className="gt-avatar large" aria-hidden="true">
+          {name.slice(0, 1).toUpperCase()}
         </span>
         <span style={{ display: "flex", flexDirection: "column" }}>
           <span style={{ color: "var(--text-heading)" }}>{name}</span>
@@ -183,7 +193,9 @@ function Consent({
         <Button variant="quiet" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={onAllow}>Allow</Button>
+        <Button variant="ink" onClick={onAllow}>
+          Allow
+        </Button>
       </div>
 
       <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "var(--caption-size)" }}>
@@ -278,18 +290,16 @@ function Scan({ onScanned }: { onScanned?: (() => void) | undefined }) {
 
   if (mailbox.error) {
     return (
-      <Card padding="compact">
-        <p style={{ marginTop: 0 }}>{mailbox.error.message || "GradTracker could not read the mailbox."}</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <p className="sub">{mailbox.error.message || "GradTracker could not read the mailbox."}</p>
         <Button onClick={mailbox.reload}>Try again</Button>
-      </Card>
+      </div>
     );
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
-      <h1 style={{ margin: 0, fontSize: "var(--heading-lg-size)", lineHeight: "var(--heading-lg-lh)" }}>
-        Scanning your inbox
-      </h1>
+      <h1 style={{ margin: 0, fontSize: 22 }}>Scanning your inbox</h1>
 
       <div
         role="progressbar"
@@ -297,12 +307,12 @@ function Scan({ onScanned }: { onScanned?: (() => void) | undefined }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(progress * 100)}
-        style={{ height: 6, borderRadius: "var(--radius-pill)", background: "var(--border-hairline)", overflow: "hidden" }}
+        className="gt-scan-line"
       >
-        <div style={{ width: `${progress * 100}%`, height: "100%", background: "var(--accent-primary)" }} />
+        <i style={{ width: `${progress * 100}%` }} />
       </div>
 
-      <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-md)" }}>
+      <dl className="gt-scan-counts">
         <Count label="Emails read" value={data ? `${read} of ${data.emails}` : "—"} />
         <Count label="Applications" value={data ? String(found) : "—"} />
         <Count label="To review" value={data ? String(toReview) : "—"} />
@@ -327,20 +337,9 @@ function Scan({ onScanned }: { onScanned?: (() => void) | undefined }) {
 
 function Count({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xxs)" }}>
-      <dt
-        style={{
-          fontSize: "var(--micro-cap-size)",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "var(--text-secondary)",
-        }}
-      >
-        {label}
-      </dt>
-      <dd className="gt-num" style={{ margin: 0, fontSize: "var(--heading-md-size)", color: "var(--text-heading)" }}>
-        {value}
-      </dd>
+    <div>
+      <dt>{label}</dt>
+      <dd className="gt-num">{value}</dd>
     </div>
   );
 }
