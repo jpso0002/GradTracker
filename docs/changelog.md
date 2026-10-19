@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **2026-10-19** — **A rehearsal sandbox:** `gradtracker-demo-sandbox` runs the demo server with `--no-inbox --data-dir=<folder>`, so accounts and data live in that folder and the scan uses the seeded sample mailbox — the real `demo.db` and `demo-accounts.json` are never touched. · `packages/server/src/demo-server.ts`, `.claude/launch.json`
+
 - **2026-10-18** — **Real demo accounts: Create your account, Sign in, Sign out (D40).** Accounts are kept in `demo-accounts.json` beside `demo.db` (gitignored) as a salted scrypt hash — never the password, and never in the product database, whose schema is unchanged (SM-5). Signing in sets a signed HttpOnly cookie that survives a restart; without one the API answers 401 and the app goes to Sign in. Each account has its own dashboard: a new one starts empty; only the demo inbox's own account can connect it, its first sign-in running Connect your Gmail → consent → scan, later ones going straight to its dashboard. Settings shows who is signed in, with Sign out; Reset demo empties only that account's dashboard. Tests: eleven on the server, fourteen on the screens. · `packages/server/src/{demo-accounts,demo,demo-server,app}.ts`, `routes/{auth,auth.test,sync}.ts`, `middleware/context.ts`, `db/seed.ts`, `packages/shared/src/schema/api.ts`, `packages/client/src/{App,api/client}.tsx`, `views/{AccountViews,ConnectView,SettingsView,PipelineView,accounts.test}.tsx`, `.gitignore`
 
 - **2026-10-18** — **The walkthrough opens on a mock "Create your account" (D39).** Full name, email and password, validated like a real sign-up; then "Welcome, Jordan. Connect your Gmail"; then the consent stand-in showing the entered name over **gradtrackerdemo@gmail.com** — the demo inbox, whatever email the account was made with. No account is created; the name and email stay in the tab, the password nowhere. Five tests. · `packages/client/src/views/ConnectView.tsx`, `src/session.ts`, `views/connect.test.tsx`
@@ -109,6 +111,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **2026-10-19** — **The app takes Will's design (D41).** Every screen restyled to Will's Figma Make prototype — palette, DM Sans and Manrope type, sidebar with Light/Dark switch and the signed-in profile, top bar with Sync inbox and Last synced, greeting and four-stat strip, ranked table with company initials and stage pills, slide-over detail panel (beside the list from 1280px), Needs review as a queue with one email at a time, Settings with a section menu and cards, and sign-up, sign-in and the Connect steps on his Connect-page layout — with every behaviour kept and only the GradTracker logo kept from the old look. The supplied design system is untouched: its tokens are redefined in one stylesheet and the screens use GradTracker's own components. Text sizes raised and two colours darkened so every pair clears WCAG AA in both themes. · `packages/client/src/{theme/gradtracker.css,ui/index.tsx}`, `shell/{AppShell,ToastHost,OfflineBanner}.tsx`, `views/{PipelineView,DetailPanel,ReviewView,SettingsView,AccountViews,ConnectView}.tsx`, `theme/theme.tsx`, `ds/icons.ts`, `main.tsx`
+
 - **2026-10-17** — **A student's correction now holds until newer mail (D36).** A field the student edited is locked against any email received before the edit; an email received after it may update the fields it states, which become AI again. Previously an edit was final forever. The stage engine still applies on top. · `packages/server/src/db/repository.ts` (`isFieldLocked`), `domain/provenance/apply.ts`, `domain/classify/apply-email.ts`
 - **2026-10-17** — `SyncResult` gains `updatedApplications` and `ignored`. · `packages/shared/src/schema/api.ts`
 
@@ -151,6 +155,8 @@ All notable changes to this project will be documented in this file.
 - **2026-08-16** — T8.3 (real labelled email corpus) rescheduled to start week 3 rather than week 11 — it is the longest-lead item in the project and the only one that makes the accuracy claim defensible. · `docs/tasks.md`
 
 ### Fixed
+
+- **2026-10-19** — **After Confirm or Not an application, focus fell to the page instead of the next email.** The target was a ref, read by an effect left over from the previous render before the next card existed; it is now state, applied once that card has rendered. · `packages/client/src/views/ReviewView.tsx`
 
 - **2026-10-18** — **The sidebar's Needs review count stayed at 0 after the sign-in scan until the page was reloaded.** The app read the count once, when it opened on the walkthrough — before the scan had filled anything — and nothing asked again on arriving at the dashboard. The scan now tells the app to re-read it as it hands over. One test, seen failing without the fix. · `packages/client/src/App.tsx`, `views/ConnectView.tsx`, `views/connect.test.tsx`
 

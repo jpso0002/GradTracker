@@ -136,12 +136,12 @@ describe("rows are real buttons (design.md §10.2)", () => {
     renderPipelineRoutes();
 
     const overdue = await screen.findByRole("button", { name: /^KPMG/ });
-    expect(overdue.getAttribute("aria-label")).toMatch(/Interview scheduled/);
+    expect(overdue.getAttribute("aria-label")).toMatch(/Interview/);
     expect(overdue.getAttribute("aria-label")).toMatch(/20 Aug/);
     expect(overdue.getAttribute("aria-label")).toMatch(/3 days overdue/);
-    expect(screen.getByRole("button", { name: /^Canva/ }).getAttribute("aria-label")).toMatch(/Offer received.*no deadline/);
+    expect(screen.getByRole("button", { name: /^Canva/ }).getAttribute("aria-label")).toMatch(/Offer.*no deadline/);
     // And on screen, as text: the stage badge reads its label.
-    expect(within(overdue).getByText("Interview scheduled")).toBeDefined();
+    expect(within(overdue).getByText("Interview")).toBeDefined();
   });
 
   it("speaks each headline number with its meaning", async () => {
@@ -164,7 +164,7 @@ describe("rows are real buttons (design.md §10.2)", () => {
 
 describe("each view has a title and an <h1> (design.md §10.3)", () => {
   it.each([
-    ["Applications", () => <PipelineView />],
+    ["Pipeline", () => <PipelineView />],
     ["Needs review", () => <ReviewView />],
     ["Settings", () => <SettingsView />],
   ])("%s", async (title, view) => {

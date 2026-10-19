@@ -92,6 +92,9 @@ describe("ReviewView (T6.3)", () => {
     expect(link.getAttribute("target")).toBe("_blank");
 
     // A seeded item names no email anywhere: no link rather than a dead one.
+    // One email at a time (D41): pick it from the queue first.
+    const queue = screen.getByRole("navigation", { name: "Review queue" });
+    await userEvent.click(within(queue).getByRole("button", { name: /Seeded Co/ }));
     expect(within(await card(/Seeded Co/)).queryByRole("link", { name: /Open in Gmail/ })).toBeNull();
   });
 

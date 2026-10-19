@@ -729,6 +729,44 @@ and refuses to run in production.
 
 ---
 
+### D41 — The app takes Will's design *(19 October 2026)*
+
+**Chosen:** the working app is restyled to Will's Figma Make design (`GradTracker_Figma/`), keeping
+**every behaviour** and only one element of the old look, the GradTracker logo. Pixel-close,
+with his very small text raised so it reads on a projector and stays inside WCAG AA.
+
+- **How, without editing the supplied design system:** its tokens are redefined in
+  `theme/gradtracker.css` (loaded after it) for Will's palette, fonts (DM Sans, Manrope),
+  radii and shadows, light and dark; the screens move to GradTracker's own components in
+  `src/ui/` — same names and props as the ones they replace — plus Will's classes for the
+  sidebar, top bar, stat strip, ranked table, stage pills, panel, review layout, settings and
+  connect pages. The supplied folder still provides icons, inputs and the logo.
+- **Kept from the old app** beyond the logo: the detail panel beside the list at 1280px and up.
+- **From Will's design, adjusted to what the app can back up:** four stat cards (no "Median
+  accuracy" — no model has been measured), no captions under the numbers, the greeting uses
+  the signed-in name and today's date, the "Demo flow" hint points at Accenture (shown only
+  while it is on the list), detail rows show the real sender domain and no location, review
+  cards show one confidence figure (the model gives one per email, not per field).
+- **Layouts adopted:** Needs review as a queue with one email at a time; Settings with a section
+  menu and cards; sign-up, sign-in and the Connect / consent / scan steps in the style of his
+  Connect page; the sidebar narrowing to icons below 900px.
+- **Dropped with the old look:** the Documentation link in the sidebar (its route remains), the
+  phone's bottom tab bar, stacked pipeline cards, following the system's light/dark setting.
+- **Wording:** the sidebar says Applications, the top bar Pipeline; stages are one word
+  (Assessment, Interview, Offer…); the refresh button is "Sync inbox".
+
+**Found on the way:** after Confirm in the review queue, focus fell to the page instead of the
+next email — a ref read by an effect left over from the previous render. The focus target is now
+state, applied after the card it names has rendered. Two of Will's colour pairs were under
+4.5:1 and were darkened.
+
+**Consequence:** 690 tests pass; tests that named the old labels, the tab bar or stacked cards
+were rewritten for the new behaviour. A sandbox launch configuration
+(`gradtracker-demo-sandbox`: `--no-inbox --data-dir=<folder>`) rehearses on seeded data
+without touching `demo.db` or `demo-accounts.json`.
+
+---
+
 ## 3. Defects found reviewing the specification *(Revision 2)*
 
 Six defects found reviewing the four specification documents against each other. Each is

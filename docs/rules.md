@@ -58,7 +58,7 @@ Keep entries concise. One line per decision when possible.
 - **A defect found while testing and scheduled rather than fixed is pinned by an `it.fails` test** naming its finding and fixing task. It passes while the defect exists and fails the moment the defect is fixed — the prompt to turn it into an ordinary test, which is part of the fixing task's done-when (C18, T3.10). Check once, by running it as a plain test, that it fails on its assertion and not on a setup error.
 - **Under `NODE_ENV=test` the adapters are forced to fake**, even if `live` is requested. A test that can reach a live API might succeed — spending money and coupling CI to the network.
 - **No global state library.** Server state lives in the typed API client + component state; a store gets added only when two distant components demonstrably need the same data.
-- **The design system is a read-only dependency.** `GradTracker Design System/` is consumed, never edited and never re-implemented.
+- **The design system is a read-only dependency.** `GradTracker Design System/` is consumed, never edited. *Since D41 the app's look is Will's design*: the supplied tokens are redefined in `theme/gradtracker.css`, and the screens use GradTracker's own components in `src/ui/`. The supplied folder still provides the icons, the form inputs and the logo.
 - **Adapters default to `fake`** — `GMAIL_ADAPTER` and `CLASSIFIER_ADAPTER` must be explicitly set to `live`.
 - **Commits are made by the team, not by Claude** (set 16 August 2026). Claude leaves the working tree ready and reports what changed; staging, committing and branching are manual. Documentation updates still happen per task, so a commit is always a coherent unit.
 - **Documentation is maintained per task, not in a batch.** On completing any task: log it in [changelog.md](changelog.md), record any decision here, tick it in [tasks.md](tasks.md), and update the in-app `/docs` pages if architecture, components, data flow, APIs or dependencies changed.
@@ -82,7 +82,7 @@ Keep entries concise. One line per decision when possible.
 
 ## Design Patterns
 
-- **Stage colour is reachable only through `StageBadge`.** Never read a `--stage-*` token directly; never colour anything else with a stage colour.
+- **Stage colour is reachable only through `StageBadge`** (now `src/ui`, D41). Never read a `--stage-*` token elsewhere; never colour anything else with a stage colour.
 - **`DeadlinePill` receives `daysLeft`, never a colour.** Urgency is the component's judgement so it cannot disagree between two places in the UI.
 - **`ConfidenceMeter` appears on AI-sourced fields only.** It disappears the moment a field becomes human-verified.
 - **A field shows a confidence meter or an "Edited" tag — never both, never neither.**
@@ -136,9 +136,9 @@ Keep entries concise. One line per decision when possible.
 ### Client
 
 - **The design system is vendored, never edited.** `scripts/sync-ds.mjs` copies it in; `ds.sync.test.ts` fails on any byte of drift. If a component needs changing, change it at the source and re-sync — a local edit is a silent fork.
-- **Everything imports from `src/ds`, never from `src/ds/vendor` directly.** One place to see what the app uses, one place to shim, one path to change if the system ever ships as a package.
+- **Screens import components from `src/ui` (D41), which re-exports what is still used from `src/ds`; nothing imports `src/ds/vendor` directly.** One place to see what the app uses, one place to shim, one path to change if the system ever ships as a package.
 - **No hardcoded colour in `packages/client`** — no hex, no `rgb()`, no `hsl()`, no named colours. Enforced by `no-hardcoded-colour.test.ts`, which also asserts it found source to check so it cannot pass vacuously.
-- **The app sets `data-theme` and picks no colours.** The design system defines both palettes; choosing one is the app's whole job.
+- **Colours live in one file: `theme/gradtracker.css` (D41).** It redefines the design system's tokens for both themes in Will's palette and holds Will's component classes; screens use tokens and classes, never a raw colour. The theme starts light, as Will's design does, and the sidebar's Light/Dark switch changes it.
 - **The client never re-sorts the pipeline.** Order is the server's single opinion about what matters today. Filters are sent to the server, which re-ranks. There is no `?sort=` and no client-side comparator.
 - **`format.ts` does no date arithmetic.** `daysLeft` arrives on the payload, computed server-side from the `x-timezone` header. A client that recomputes it can disagree with the rank it was given — that is defect C2 exactly.
 - **A count renders as `—` until it is known, never as `0`.** "0 due this week" is a claim; "not loaded yet" is not.
@@ -158,14 +158,15 @@ Keep entries concise. One line per decision when possible.
 - **After an action, focus goes somewhere deliberate:** the next review card, or the empty queue; Edit, when the editor closes; the refused field, after a refusal; the safe choice, when a warning appears. Never to the page.
 - **An animation that gates removal reads its duration from the motion token** (`tokenDurationMs`), never a second constant. `prefers-reduced-motion` zeroes the token, and the removal follows it.
 - **The threshold slider saves once per gesture.** It waits for the student to stop, and a failed save restores the stored value and says so.
-- **The pipeline is cards whenever the list is narrower than the design system's row needs (800px), at any screen size** — measured on the list, not inferred from the viewport. The row needs 788px; at the 1280px reference size with the panel open it had 579 and spilled under the panel (T5.8).
+- **The pipeline is Will's ranked table at every width (D41)**; below its 640px minimum it scrolls sideways inside its card, never the page. The sidebar narrows to its icons below 900px, every link still named. *Superseded:* stacked cards below 800px and the phone's bottom tab bar (T5.8).
 - **Below 1024px every control is a 44px touch target.** GradTracker's own controls set `--touch-min` inline; the design system's are restated in `app.css`, with `!important`, because their inline sizes beat a stylesheet.
 - **Over the list, the detail panel is a modal dialog** (below 1280px): focus is held inside, Escape always closes it, and focus returns to the row that opened it. Beside the list it is a landmark (`aside`). A phone gets a full-screen sheet with Back.
 - **Rows are buttons, named with everything they show** — stage and deadline urgency in words — because the design system's row is a `div` no keyboard reaches.
 - **Every view renders `ViewTitle`**: the document title and an `<h1>`, since `TopBar` draws its title as a `span`.
 - **What was loaded stays through a failed reload; a different question starts empty.** Offline, the shell's banner says so over the last pipeline; a new tab or filter never shows the previous answer.
 - **A single-key shortcut has an off switch** (WCAG 2.1.4). "/" to search is turned off in Settings → Keyboard.
-- **`app.css` holds only what tokens cannot express inline** — focus rings, touch sizes, rendered markdown — and declares no colour of its own.
+- **`app.css` holds only focus rings, touch sizes and rendered markdown, with no colour of its own; `theme/gradtracker.css` holds the look** (D41).
+- **Every text colour pair in `theme/gradtracker.css` clears 4.5:1 in both themes** — computed, not assumed. Will's stage and accent foregrounds were darkened where they fell short, and his 7–11px text raised to at least 11–12px.
 - **Contrast is computed from the token files, not assumed** (`contrast.test.ts`). A pair the app relies on must pass; the design system's known failures are pinned as failing until fixed at the source.
 - **Documentation pages are sections of `docs/`, compiled in** — never copied into the app. A link to another docs file becomes plain text, not a dead link.
 - **The simulated sign-in says it is simulated, on every step** (D35). It authenticates no one and contacts no one; it decides only where the app opens. A mock sign-in without the label would look like a working one.

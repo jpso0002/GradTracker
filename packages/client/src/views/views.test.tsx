@@ -94,7 +94,7 @@ describe("PipelineView", () => {
     renderPipeline();
     await waitFor(() => expect(screen.getByText("Zip Co")).toBeDefined());
 
-    await userEvent.click(screen.getByRole("button", { name: "Assessment pending" }));
+    await userEvent.click(screen.getByRole("button", { name: "Assessment" }));
 
     // The filter is sent to the server, which re-ranks. The client does not
     // reorder what it already has.
@@ -120,7 +120,7 @@ describe("PipelineView", () => {
     // "never read anything").
     await waitFor(() => expect(screen.getByText("No applications found")).toBeDefined());
 
-    await userEvent.click(screen.getByRole("button", { name: "Offer received" }));
+    await userEvent.click(screen.getByRole("button", { name: "Offer" }));
     await waitFor(() =>
       expect(screen.getByText("No applications match these filters")).toBeDefined(),
     );
@@ -499,7 +499,7 @@ describe("Review required marker (T6.6)", () => {
     const marker = await screen.findByRole("link", { name: /^Review required/ });
     expect(screen.getAllByRole("link", { name: /^Review required/ })).toHaveLength(1);
     expect(marker.getAttribute("href")).toBe(`/review#review-${QUESTION}`);
-    expect(marker.closest("[role=listitem]")?.textContent).toContain("Macquarie");
+    expect(marker.closest("li")?.textContent).toContain("Macquarie");
   });
 
   it("disappears once the question is resolved", async () => {
@@ -509,7 +509,7 @@ describe("Review required marker (T6.6)", () => {
     renderPipeline();
 
     await screen.findByRole("link", { name: /^Review required/ });
-    await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sync inbox" }));
 
     await waitFor(() => expect(screen.queryByRole("link", { name: /^Review required/ })).toBeNull());
     expect(screen.getByText("Macquarie")).toBeDefined();

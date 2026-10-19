@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { App } from "../App";
 import { ThemeProvider } from "../theme/theme";
-import { api, NetworkError } from "../api/client";
+import { api, ApiError, NetworkError } from "../api/client";
 import { connectivity } from "../connectivity";
 
 /**
@@ -17,6 +17,11 @@ import { connectivity } from "../connectivity";
 
 beforeEach(() => {
   vi.spyOn(api, "listReview").mockResolvedValue({ items: [] });
+  // The sidebar's profile and the top bar's "Last synced" read these; outside
+  // the demo there is no account and Sync inbox only reloads (501).
+  vi.spyOn(api, "session").mockResolvedValue({ user: null, canConnectInbox: false, scanned: false, inbox: null });
+  vi.spyOn(api, "syncStatus").mockResolvedValue({ state: "idle", lastSyncAt: null, emailsReadTotal: 0, progress: null, lastError: null });
+  vi.spyOn(api, "sync").mockRejectedValue(new ApiError(501, "Live sync is not available here."));
   // The pipeline's own request is irrelevant here; leave it pending.
   vi.spyOn(api, "listJobs").mockImplementation(() => new Promise(() => {}));
 });
@@ -40,7 +45,7 @@ function renderAt(path: string) {
 describe("sidebar (T5.10)", () => {
   it("offers neither Calendar nor Archive, and no empty 'Coming soon' heading", () => {
     renderAt("/pipeline");
-    const nav = screen.getByRole("navigation");
+    const nav = screen.getByRole("navigation", { name: "Main" });
     expect(within(nav).queryByText("Calendar")).toBeNull();
     expect(within(nav).queryByText("Archive")).toBeNull();
     expect(within(nav).queryByText("Coming soon")).toBeNull();
@@ -49,8 +54,8 @@ describe("sidebar (T5.10)", () => {
   it("keeps every destination that still exists", () => {
     // The positive control — an empty sidebar would pass the test above.
     renderAt("/pipeline");
-    const nav = screen.getByRole("navigation");
-    for (const label of ["Applications", "Needs review", "Settings", "Documentation"]) {
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    for (const label of ["Applications", "Needs review", "Settings"]) {
       expect(within(nav).getByText(label)).toBeDefined();
     }
   });
@@ -93,7 +98,7 @@ describe("offline (T5.7, app-flow.md §7)", () => {
     renderAt("/pipeline");
     await screen.findByText("KPMG");
 
-    await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sync inbox" }));
 
     expect(await screen.findByText(/You're offline/)).toBeDefined();
     // What was loaded stays on screen — the student can still read it.
@@ -108,7 +113,7 @@ describe("offline (T5.7, app-flow.md §7)", () => {
       .mockResolvedValue(loaded);
     renderAt("/pipeline");
     await screen.findByText("KPMG");
-    await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sync inbox" }));
     await screen.findByText(/You're offline/);
 
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
@@ -139,12 +144,12 @@ describe("the review queue in the shell (T6.3)", () => {
       .mockResolvedValue({ items: [] });
     vi.spyOn(api, "confirmReview").mockResolvedValue({ jobId: "j1", matched: false });
     renderAt("/review");
-    const nav = screen.getByRole("navigation");
+    const nav = screen.getByRole("navigation", { name: "Main" });
 
-    // The count sits in its own span, so the name reads "Needs review1".
-    expect(await within(nav).findByRole("button", { name: /^Needs review\s*1$/ })).toBeDefined();
+    // The count is part of the link's name, not just a number drawn beside it.
+    expect(await within(nav).findByRole("link", { name: "Needs review, 1" })).toBeDefined();
     await userEvent.click(await screen.findByRole("button", { name: "Confirm" }));
 
-    await waitFor(() => expect(within(nav).getByRole("button", { name: /^Needs review\s*0$/ })).toBeDefined());
+    await waitFor(() => expect(within(nav).getByRole("link", { name: "Needs review, 0" })).toBeDefined());
   });
 });

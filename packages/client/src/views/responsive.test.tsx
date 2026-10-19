@@ -115,40 +115,25 @@ const order = () =>
 describe("at 375px — a phone (T5.8)", () => {
   beforeEach(() => setViewport(375));
 
-  it("replaces the sidebar with a bottom tab bar that keeps every destination", async () => {
+  it("keeps every destination in the narrowed sidebar, each named (D41)", async () => {
+    // Will's design narrows the sidebar to its icons below 900px — by CSS, so
+    // here only the names can be checked: every link still says where it goes.
     renderApp();
-    const tabs = await screen.findByRole("navigation", { name: "Main" });
+    const nav = await screen.findByRole("navigation", { name: "Main" });
 
-    for (const label of ["Applications", "Needs review", "Settings", "Documentation"]) {
-      expect(within(tabs).getByRole("link", { name: new RegExp(`^${label}`) })).toBeDefined();
+    for (const label of ["Applications", "Needs review", "Settings"]) {
+      expect(within(nav).getByRole("link", { name: new RegExp(`^${label}`) })).toBeDefined();
     }
-    expect(within(tabs).getByRole("link", { name: /^Applications/ }).getAttribute("aria-current")).toBe("page");
-    // Each tab is at least a touch target tall.
-    for (const link of within(tabs).getAllByRole("link")) expect(link.style.minHeight).toBe("var(--touch-min)");
-    // The desktop sidebar is gone.
-    expect(screen.queryByText("Demo mode")).toBeNull();
+    expect(within(nav).getByRole("link", { name: /^Applications/ }).getAttribute("aria-current")).toBe("page");
   });
 
-  it("shows stacked cards — company and role, then stage and deadline, then next action — in the server's order", async () => {
+  it("shows the ranked rows in the server's order, each a named button", async () => {
     renderPipeline();
     await screen.findByText("Zip Co");
 
     expect(order()).toEqual(["Zip Co", "Atlassian", "NAB"]);
-    const card = screen.getByRole("button", { name: /^Zip Co/ });
-    expect(card.style.minHeight).toBe("var(--touch-min)");
-    const lines = card.querySelectorAll("[data-line]");
-    expect([...lines].map((l) => l.getAttribute("data-line"))).toEqual(["identity", "status", "action"]);
-    expect(lines[0]!.textContent).toContain("Graduate Data Scientist");
-    expect(lines[1]!.textContent).toContain("Offer received");
-    expect(lines[2]!.textContent).toBe("Complete online assessment");
-  });
-
-  it("sizes the pipeline's own controls for touch", async () => {
-    renderPipeline();
-    await screen.findByText("Zip Co");
-
-    expect(screen.getByRole("button", { name: "Refresh" }).style.minHeight).toBe("var(--touch-min)");
-    expect(screen.getByRole("button", { name: "Assessment pending" }).style.minHeight).toBe("var(--touch-min)");
+    const row = screen.getByRole("button", { name: /^Zip Co/ });
+    expect(row.getAttribute("aria-label")).toMatch(/Offer.*1 day overdue.*next action: Complete online assessment/);
   });
 
   it("opens an application as a full-screen sheet with a way back", async () => {
@@ -191,15 +176,14 @@ describe("between 768 and 1279px — tablet and small desktop (T5.8)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
-  it("collapses the sidebar to an icon rail at tablet width, every item named", async () => {
+  it("names every item in the sidebar at tablet width", async () => {
     setViewport(900);
     renderApp();
-    const rail = await screen.findByRole("navigation", { name: "Main" });
+    const nav = await screen.findByRole("navigation", { name: "Main" });
 
-    for (const label of ["Applications", "Needs review", "Settings", "Documentation"]) {
-      expect(within(rail).getByRole("link", { name: new RegExp(`^${label}`) })).toBeDefined();
+    for (const label of ["Applications", "Needs review", "Settings"]) {
+      expect(within(nav).getByRole("link", { name: new RegExp(`^${label}`) })).toBeDefined();
     }
-    expect(screen.queryByText("Demo mode")).toBeNull();
   });
 });
 

@@ -151,7 +151,7 @@ describe("creating an account (D40)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
 
     expect(signUp).toHaveBeenCalledWith({ name: "Jordan Psomas", email: "jordan@student.monash.edu", password: "correct-horse" });
-    expect(await heading("Applications")).toBeDefined();
+    expect(await heading("Pipeline")).toBeDefined();
     expect(await screen.findByText(/only the demo inbox's own account can connect Gmail/)).toBeDefined();
     expect(JSON.stringify({ ...window.sessionStorage, ...window.localStorage })).not.toContain("correct-horse");
   });
@@ -207,13 +207,13 @@ describe("signing in (D40)", () => {
     current = demoScanned;
     scanned = true;
     renderAt("/");
-    expect(await heading("Applications")).toBeDefined();
+    expect(await heading("Pipeline")).toBeDefined();
   });
 
   it("never lets another account connect the demo inbox", async () => {
     current = newcomer;
     renderAt("/connect");
-    expect(await heading("Applications")).toBeDefined();
+    expect(await heading("Pipeline")).toBeDefined();
   });
 
   it("goes to Sign in when the server says nobody is signed in", async () => {
@@ -245,10 +245,10 @@ describe("the demo inbox's first scan (D37, D40)", () => {
       vi.advanceTimersByTime(SCAN_MS + 1000);
     });
 
-    expect(await heading("Applications")).toBeDefined();
+    expect(await heading("Pipeline")).toBeDefined();
     expect(await screen.findByText(/Inbox scanned — 20 applications found, 4 to review/)).toBeDefined();
-    const nav = await screen.findByRole("navigation");
-    await waitFor(() => expect(within(nav).getByRole("button", { name: /^Needs review\s*4$/ })).toBeDefined());
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    await waitFor(() => expect(within(nav).getByRole("link", { name: "Needs review, 4" })).toBeDefined());
   });
 
   it("says why when it fell back to the sample mailbox", async () => {
@@ -275,10 +275,26 @@ describe("Settings → Account (D40)", () => {
     renderAt("/settings");
 
     expect(await screen.findByText(/Signed in as/)).toBeDefined();
-    expect(screen.getByText(/jordan@student.monash.edu/)).toBeDefined();
-    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    expect(screen.getAllByText(/jordan@student.monash.edu/).length).toBeGreaterThan(0);
+    // Settings' own Sign out (the sidebar's profile has one too).
+    const profile = screen.getByRole("region", { name: "Profile" });
+    await userEvent.click(within(profile).getByRole("button", { name: "Sign out" }));
 
     expect(signOut).toHaveBeenCalled();
+    expect(await heading("Sign in")).toBeDefined();
+  });
+
+  it("the sidebar shows the signed-in account, with its own Sign out", async () => {
+    current = newcomer;
+    vi.spyOn(api, "signOut").mockImplementation(async () => {
+      current = signedOut;
+      return { ok: true };
+    });
+    renderAt("/pipeline");
+
+    expect(await screen.findByText("Jordan Psomas")).toBeDefined();
+    const signOuts = await screen.findAllByRole("button", { name: "Sign out" });
+    await userEvent.click(signOuts[0]!);
     expect(await heading("Sign in")).toBeDefined();
   });
 

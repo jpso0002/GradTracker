@@ -67,7 +67,7 @@ describe("Refresh (D36)", () => {
     const onReviewChanged = renderPipeline();
     await waitFor(() => expect(api.listJobs).toHaveBeenCalledTimes(1));
 
-    await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sync inbox" }));
 
     expect(sync).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("2 new emails — 1 application updated, 1 to review")).toBeDefined();
@@ -80,7 +80,7 @@ describe("Refresh (D36)", () => {
     renderPipeline();
     await waitFor(() => expect(api.listJobs).toHaveBeenCalledTimes(1));
 
-    await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sync inbox" }));
 
     await waitFor(() => expect(api.listJobs).toHaveBeenCalledTimes(2));
     expect(screen.queryByText(/not available/)).toBeNull();
@@ -90,7 +90,7 @@ describe("Refresh (D36)", () => {
     vi.spyOn(api, "sync").mockRejectedValue(new ApiError(502, "Could not sign in to the demo inbox."));
     renderPipeline();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Refresh" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Sync inbox" }));
 
     expect(await screen.findByText("Could not sign in to the demo inbox.")).toBeDefined();
   });
