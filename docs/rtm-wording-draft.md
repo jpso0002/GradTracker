@@ -4,6 +4,8 @@
 `GradTracker_RTM_v3`, from the 6 October meeting and D36. Nothing here is in the RTM until
 the team agrees and pastes it in.*
 
+> **19 October 2026: adopted into RTM v4**, with one change: the team chose **95%** for the RQ-04 deadline target, not the 90% proposed below. RQ-01 was also reworded (no credential in the product database) and RQ-10 Openings added.
+
 ---
 
 ## RQ-03 — the 95% target and the confidence slider
