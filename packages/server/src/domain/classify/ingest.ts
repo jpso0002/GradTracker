@@ -24,6 +24,7 @@ export async function ingestEmails(
     stageChanges: 0,
     needsReview: 0,
     ignored: 0,
+    newOpenings: 0,
   };
 
   const ordered = [...emails].sort((a, b) => a.receivedAt.getTime() - b.receivedAt.getTime());
@@ -42,6 +43,9 @@ export async function ingestEmails(
         break;
       case "queued-for-review":
         result.needsReview += 1;
+        break;
+      case "openings":
+        result.newOpenings += outcome.added;
         break;
       case "not-application":
       case "skipped":

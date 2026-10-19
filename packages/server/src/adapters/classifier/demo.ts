@@ -59,6 +59,15 @@ export class DemoEmailClassifier implements EmailClassifier {
       // The labels commit to no wording; the dashboard derives one from stage.
       nextAction: null,
       confidence: SAMPLE_CONFIDENCE[sample.email.id] ?? CONFIDENT,
+      // Closing dates move with the email, as deadlines do.
+      ...(expected.openings
+        ? {
+            openings: expected.openings.map((o) => ({
+              ...o,
+              closesAt: o.closesAt ? shiftDays(new Date(o.closesAt), days).toISOString() : null,
+            })),
+          }
+        : {}),
       model: "fake",
       usage: { inputTokens: 0, outputTokens: 0 },
     });

@@ -96,16 +96,21 @@ async function find(company: string) {
   return all.find((j) => j.company === company);
 }
 
-const BOTH = { emailsRead: 2, newApplications: 0, updatedApplications: 1, stageChanges: 1, needsReview: 1, ignored: 0 };
-const NOTHING = { emailsRead: 0, newApplications: 0, updatedApplications: 0, stageChanges: 0, needsReview: 0, ignored: 0 };
+const BOTH = { emailsRead: 2, newApplications: 0, updatedApplications: 1, stageChanges: 1, needsReview: 1, ignored: 0, newOpenings: 0 };
+const NOTHING = { emailsRead: 0, newApplications: 0, updatedApplications: 0, stageChanges: 0, needsReview: 0, ignored: 0, newOpenings: 0 };
+// The backup sends all three live emails: the two above and the SEEK alert (D43).
+const ALL_THREE = { ...BOTH, emailsRead: 3, newOpenings: 2 };
 
 describe("POST /api/demo/scan — the opening scan (D37)", () => {
   it("builds the dashboard from the sample emails in the inbox", async () => {
     const res = await request(appWith(inboxOf([]))).post("/api/demo/scan").expect(200);
 
     expect(res.body).toMatchObject({ source: "inbox", inbox: "gradtrackerdemo@gmail.com", notice: null, emailsRead: 80 });
-    // The 25 non-applications are read and dropped — nothing stored.
-    expect(res.body.ignored).toBe(25);
+    // Of the 25 non-applications, 19 are read and dropped, nothing stored;
+    // six job alerts and careers emails leave openings (D43).
+    expect(res.body.ignored).toBe(19);
+    expect(res.body.newOpenings).toBeGreaterThan(0);
+    expect(await repo.listOpenings(userId)).toHaveLength(res.body.newOpenings);
 
     const jobs = [...(await repo.listJobs(userId, { status: "active" })), ...(await repo.listJobs(userId, { status: "archived" }))];
     expect(jobs).toHaveLength(res.body.newApplications);
@@ -209,6 +214,20 @@ describe("POST /api/sync — Refresh in the demo (D36)", () => {
     expect((await find("Accenture"))?.stage).toBe("interview");
   });
 
+  it("lists the SEEK alert's two jobs as openings, not applications (D43)", async () => {
+    const app = appWith(inboxOf([sent("seek-alert")]));
+    const before = (await repo.listJobs(userId)).length;
+
+    const res = await request(app).post("/api/sync").expect(200);
+    expect(res.body).toMatchObject({ emailsRead: 1, newOpenings: 2, newApplications: 0, needsReview: 0 });
+    expect(await repo.listJobs(userId)).toHaveLength(before);
+
+    const openings = await request(app).get("/api/openings").expect(200);
+    const afterpay = openings.body.openings.find((o: { company: string }) => o.company === "Afterpay");
+    expect(afterpay).toMatchObject({ role: "Graduate Software Engineer", location: "Melbourne", source: "SEEK" });
+    expect(openings.body.openings.some((o: { company: string }) => o.company === "Linktree")).toBe(true);
+  });
+
   it("changes nothing on a second press", async () => {
     const app = appWith(inboxOf([sent("accenture-interview")]));
     await request(app).post("/api/sync").expect(200);
@@ -248,7 +267,7 @@ describe("POST /api/sync/backup", () => {
   it("shows the room what a live Refresh would have, once", async () => {
     const app = appWith(null);
     const first = await request(app).post("/api/sync/backup").expect(200);
-    expect(first.body).toEqual(BOTH);
+    expect(first.body).toEqual(ALL_THREE);
     expect((await find("Accenture"))?.stage).toBe("interview");
 
     const second = await request(app).post("/api/sync/backup").expect(200);

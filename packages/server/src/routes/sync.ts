@@ -143,6 +143,7 @@ export function demoRoutes(repo: Repository, demo: DemoSession): Router {
       newApplications: active.length + archived.length,
       updatedApplications: 0,
       stageChanges: 0,
+      newOpenings: 0,
       needsReview: review.length,
       ignored: 0,
       source: "sample",
@@ -175,7 +176,7 @@ export function demoRoutes(repo: Repository, demo: DemoSession): Router {
       if (samples.length === 0) {
         return fromSample(
           req.userId,
-          "The demo inbox has no sample emails yet — run npm run demo:load-inbox. Showing the sample mailbox instead.",
+          "The demo inbox has no sample emails yet. Run npm run demo:load-inbox. Showing the sample mailbox instead.",
         );
       }
 

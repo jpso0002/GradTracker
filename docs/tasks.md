@@ -68,7 +68,7 @@ T3.12, now done; its T7.3 and T2.8 wait on **B3**.
 | **5** ✅ | T3.10 · T3.11 | Ambiguous matches routed to review (**C18**) · confirming onto an existing application applies the email, not a correction (**C16**) — *done 5 Oct* | — |
 | **6** ✅ | T6.1 · T6.3 · T6.6 · T4.10 · T6.4 · T5.11 | Panel editing · review queue screen · row marker · settings API and slider · search — *done 5 Oct*, fixing **C23** on the way | — |
 | **7** ✅ | T5.7 · T5.8 · T6.5 · T4.7 · T5.12 · T5.9 | Empty states · responsive · accessibility audit · security tests · performance · Documentation Center — *done 5 Oct*; the audit is [accessibility-audit.md](accessibility-audit.md) | — |
-| **P** ✅ | D36 · D37 · D38 · D40 · D41 · D42 | **Presentation MVP** — Refresh reads a demo Gmail inbox over IMAP; a scripted classifier for the two live emails; Ctrl+Alt+R backup; a correction holds until newer mail; the inbox guide and RTM wording draft; the dashboard read from the demo inbox at sign-in (D37); Open in Gmail fixed and on review cards (D38); real demo accounts — sign up, sign in, sign out (D40); the app restyled to Will's design (D41); the sample emails re-told for the presentation date (D42) — *done 17–19 Oct, for the 20 Oct presentation* | Team: create the demo inbox's account once, agree the RTM wording |
+| **P** ✅ | D36 · D37 · D38 · D40 · D41 · D42 · D43 | **Presentation MVP** — Refresh reads a demo Gmail inbox over IMAP; a scripted classifier for the two live emails; Ctrl+Alt+R backup; a correction holds until newer mail; the inbox guide and RTM wording draft; the dashboard read from the demo inbox at sign-in (D37); Open in Gmail fixed and on review cards (D38); real demo accounts — sign up, sign in, sign out (D40); the app restyled to Will's design (D41); the sample emails re-told for the presentation date (D42); the Openings page, with a third live email (D43) — *done 17–19 Oct, for the 20 Oct presentation* | Team: create the demo inbox's account once, agree the RTM wording |
 | **Alongside** | T8.3 · T2.10 | Export → inventory → label → freeze → measure; next-action judgements after each run. **Exporting and labelling can start now** — the toolkit and guide exist | **B6** · measuring: T7.3 |
 
 ### Demo modes
@@ -1430,7 +1430,7 @@ arrives through the hybrid local path instead (T7.7–T7.10). T7.4–T7.6 stay d
 
 | | Item | Status |
 |---|---|---|
-| **S1** | "Upcoming jobs to apply for" — a module built from job-board ads | **Stretch goal after the MVP.** Needs a new classification category, table and view, and would persist extracted content from non-application email for the first time — a privacy change to decide deliberately, not drift into. Nothing is built until RQ-01 to RQ-09 are complete. |
+| **S1** | "Upcoming jobs to apply for" — a module built from job-board ads | ✅ **Built as Openings (D43), 19 Oct, at the team's request.** Was: stretch goal after the MVP. Needs a new classification category, table and view, and would persist extracted content from non-application email for the first time — a privacy change to decide deliberately, not drift into. Nothing is built until RQ-01 to RQ-09 are complete. |
 | — | Manual "add application" | **Not building.** Adding means confirming an item from the review queue (D31). |
 | — | A GradTracker login for the demo | **Not building.** The local demo is operated by the team (D31). |
 

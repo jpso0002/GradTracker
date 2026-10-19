@@ -120,12 +120,32 @@ describe("processEmail", () => {
   });
 
   it("stores nothing at all for a non-application", async () => {
-    // Not merely "no job" — no row, no id, no domain. A LinkedIn alert leaves
-    // no trace in the database.
-    const outcome = await processEmail(deps(), userId, await email("fixture-004"));
+    // Not merely "no job" — no row, no id, no domain. A webinar invitation
+    // leaves no trace in the database.
+    const outcome = await processEmail(deps(), userId, await email("fixture-062"));
     expect(outcome.kind).toBe("not-application");
     expect(await repo.listJobs(userId)).toHaveLength(0);
     expect(await repo.listPendingReview(userId)).toHaveLength(0);
+    expect(await repo.listOpenings(userId)).toHaveLength(0);
+  });
+
+  it("keeps a job alert's openings, and still no application (D43)", async () => {
+    const outcome = await processEmail(deps(), userId, await email("fixture-004"));
+    expect(outcome).toEqual({ kind: "openings", found: 3, added: 3 });
+    expect(await repo.listJobs(userId)).toHaveLength(0);
+    expect(await repo.listPendingReview(userId)).toHaveLength(0);
+
+    const openings = await repo.listOpenings(userId);
+    expect(openings.map((o) => o.company).sort()).toEqual(["Atlassian", "Bain & Company", "REA Group"]);
+    expect(openings.every((o) => o.source === "LinkedIn" && o.senderDomain === "linkedin.com")).toBe(true);
+  });
+
+  it("lists the same job once, however many alerts name it (D43)", async () => {
+    await processEmail(deps(), userId, await email("fixture-004"));
+    // 059 names REA Group's Graduate Data Analyst again, and two new jobs.
+    const outcome = await processEmail(deps(), userId, await email("fixture-059"));
+    expect(outcome).toEqual({ kind: "openings", found: 3, added: 2 });
+    expect(await repo.listOpenings(userId)).toHaveLength(5);
   });
 
   it("queues a low-confidence extraction instead of asserting it", async () => {
@@ -471,7 +491,9 @@ describe("the whole corpus through the pipeline", () => {
       outcomes.push(outcome.kind);
     }
 
-    expect(outcomes.filter((o) => o === "not-application")).toHaveLength(25);
+    // Six of the 25 non-applications advertise jobs, kept as openings (D43).
+    expect(outcomes.filter((o) => o === "not-application")).toHaveLength(19);
+    expect(outcomes.filter((o) => o === "openings")).toHaveLength(6);
     expect(outcomes.filter((o) => o === "created-job" || o === "updated-job")).toHaveLength(53);
     // Two become questions for the student instead: 020 names no role — "the
     // next step is a coding challenge" — and 057 confirms a withdrawal, which

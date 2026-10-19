@@ -20,7 +20,7 @@ export function DocsView() {
 
   return (
     <>
-      <ViewTitle title={`${page.title} — Documentation`} />
+      <ViewTitle title={`${page.title} · Documentation`} />
       <TopBar title="Documentation" subtitle={page.title} />
       <div style={{ padding: "var(--space-xl)", display: "flex", flexDirection: "column", gap: "var(--space-xl)", minWidth: 0 }}>
         <Tabs
@@ -36,7 +36,7 @@ export function DocsView() {
         {page.slug === "dependencies" ? <InstalledPackages /> : null}
 
         <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "var(--caption-size)" }}>
-          From docs/{page.file} — {page.headings.map((h) => h.replace(/^#+\s*/, "§")).join(", ")}. Edit the file, not
+          From docs/{page.file}: {page.headings.map((h) => h.replace(/^#+\s*/, "§")).join(", ")}. Edit the file, not
           this page.
         </p>
       </div>

@@ -79,9 +79,9 @@ export function Pitch({
 }
 
 const PITCH = {
-  line: "Twenty applications.",
+  line: "Endless applications.",
   emphasis: "One clear next step.",
-  lede: "GradTracker turns your inbox into a ranked, up-to-date application pipeline — so you always know what needs attention next.",
+  lede: "GradTracker turns your inbox into a ranked, up-to-date application pipeline, so you always know what needs attention next.",
 };
 
 function CardHeading({ title, sub }: { title: string; sub: string }) {

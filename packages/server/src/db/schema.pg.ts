@@ -151,6 +151,34 @@ export const jobFieldProvenance = pgTable(
   (table) => [primaryKey({ columns: [table.jobId, table.field] })],
 );
 
+// ── job_openings (D43) ──────────────────────────────────────────────────────
+// Jobs a student could apply for, read from job alerts and careers emails.
+// Extracted fields only — the email's text is never stored, here or anywhere.
+export const jobOpenings = pgTable(
+  "job_openings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    company: text("company").notNull(),
+    companyNormalised: text("company_normalised").notNull(),
+    role: text("role").notNull(),
+    location: text("location"),
+    closesAt: timestamp("closes_at", { withTimezone: true }),
+    source: text("source"),
+    senderDomain: text("sender_domain"),
+    gmailMessageId: text("gmail_message_id").notNull(),
+    status: text("status").$type<"open" | "dismissed" | "applied">().notNull().default("open"),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("job_openings_user_company_role_idx").on(table.userId, table.companyNormalised, table.role),
+    index("job_openings_user_status_idx").on(table.userId, table.status),
+  ],
+);
+
 // ── sync_state ──────────────────────────────────────────────────────────────
 export const syncState = pgTable("sync_state", {
   userId: uuid("user_id")

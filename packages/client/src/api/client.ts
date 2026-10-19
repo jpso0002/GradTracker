@@ -8,6 +8,7 @@ import {
   SyncResultSchema,
   DemoScanResponseSchema,
   AuthSessionResponseSchema,
+  ListOpeningsResponseSchema,
   type ListJobsResponse,
   type JobDetailResponse,
   type MeResponse,
@@ -17,6 +18,7 @@ import {
   type SyncResult,
   type DemoScanResponse,
   type AuthSessionResponse,
+  type ListOpeningsResponse,
   type SignInBody,
   type SignUpBody,
   type UpdateJobBody,
@@ -187,6 +189,26 @@ export const api = {
     return request(
       `/api/review/${encodeURIComponent(eventId)}/dismiss`,
       z.object({ ok: z.boolean() }),
+      { method: "POST" },
+    );
+  },
+
+  /** Jobs the student could apply for, from job alerts (D43). */
+  listOpenings(): Promise<ListOpeningsResponse> {
+    return request("/api/openings", ListOpeningsResponseSchema);
+  },
+
+  dismissOpening(id: string): Promise<{ ok: boolean }> {
+    return request(`/api/openings/${encodeURIComponent(id)}/dismiss`, z.object({ ok: z.boolean() }), {
+      method: "POST",
+    });
+  },
+
+  /** "I've applied": the opening becomes an application at Applied. */
+  markOpeningApplied(id: string): Promise<{ jobId: string; created: boolean }> {
+    return request(
+      `/api/openings/${encodeURIComponent(id)}/applied`,
+      z.object({ jobId: z.string(), created: z.boolean() }),
       { method: "POST" },
     );
   },

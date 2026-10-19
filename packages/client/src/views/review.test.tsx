@@ -157,7 +157,7 @@ describe("ReviewView (T6.3)", () => {
     ]);
     const c = await card(/Macquarie/);
     const question = within(c).getByRole("group", {
-      name: /same application as Macquarie — Graduate Program \(Risk\)/,
+      name: /same application as Macquarie, Graduate Program \(Risk\)/,
     });
 
     // Unanswered, Confirm asks rather than guessing.
@@ -169,7 +169,7 @@ describe("ReviewView (T6.3)", () => {
     await userEvent.click(within(c).getByRole("button", { name: "Confirm" }));
 
     expect(confirm).toHaveBeenCalledWith(FIRST, { application: "same" });
-    expect(await screen.findByText("Added to Macquarie — Graduate Program (Risk)")).toBeDefined();
+    expect(await screen.findByText("Added to Macquarie, Graduate Program (Risk)")).toBeDefined();
   });
 
   it("answering a new one starts a separate application", async () => {

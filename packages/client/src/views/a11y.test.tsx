@@ -10,6 +10,7 @@ import { PipelineView } from "./PipelineView";
 import { DetailPanel } from "./DetailPanel";
 import { ReviewView } from "./ReviewView";
 import { SettingsView } from "./SettingsView";
+import { OpeningsView } from "./OpeningsView";
 import { ToastHost } from "../shell/ToastHost";
 import { api, ApiError } from "../api/client";
 import { connectivity } from "../connectivity";
@@ -164,12 +165,14 @@ describe("rows are real buttons (design.md §10.2)", () => {
 
 describe("each view has a title and an <h1> (design.md §10.3)", () => {
   it.each([
-    ["Pipeline", () => <PipelineView />],
+    ["Applications", () => <PipelineView />],
     ["Needs review", () => <ReviewView />],
+    ["Openings", () => <OpeningsView />],
     ["Settings", () => <SettingsView />],
   ])("%s", async (title, view) => {
     vi.spyOn(api, "listJobs").mockResolvedValue(pipeline([]));
     vi.spyOn(api, "getSettings").mockResolvedValue({ reviewThreshold: 0.75 });
+    vi.spyOn(api, "listOpenings").mockResolvedValue({ openings: [] });
     render(
       <ThemeProvider>
         <ToastHost>

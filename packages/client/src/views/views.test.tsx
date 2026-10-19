@@ -109,7 +109,7 @@ describe("PipelineView", () => {
     vi.spyOn(api, "listJobs").mockImplementation(() => new Promise(() => {}));
     renderPipeline();
     // "0 live applications" is a claim; "not loaded yet" is not.
-    await waitFor(() => expect(screen.getAllByText("—").length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText("-").length).toBeGreaterThan(0));
   });
 
   it("distinguishes an empty pipeline from a too-narrow filter", async () => {
@@ -295,7 +295,7 @@ describe("empty and error states (T5.7)", () => {
     );
 
     expect(await screen.findByText("That application no longer exists.")).toBeDefined();
-    await userEvent.click(screen.getByRole("button", { name: "Back to the pipeline" }));
+    await userEvent.click(screen.getByRole("button", { name: "Back to applications" }));
     expect(onClose).toHaveBeenCalled();
   });
 });

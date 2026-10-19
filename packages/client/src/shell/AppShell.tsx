@@ -10,7 +10,7 @@ import { OfflineBanner } from "./OfflineBanner";
  * The app shell, in Will's design (D41): the sidebar, then whatever the route
  * renders.
  *
- * Pipeline, Needs review and Settings; the Light/Dark switch and the signed-in
+ * Applications, Needs review, Openings (D43) and Settings; the Light/Dark switch and the signed-in
  * account at the foot. Below 900px the sidebar narrows to its icons (Will's
  * breakpoint), every destination still in it and still named for assistive
  * technology. The Documentation page left the sidebar with the restyle; its
@@ -26,6 +26,7 @@ interface Destination {
 const WORKSPACE: Destination[] = [
   { path: "/pipeline", label: "Applications", icon: "briefcase" },
   { path: "/review", label: "Needs review", icon: "inbox" },
+  { path: "/openings", label: "Openings", icon: "megaphone" },
 ];
 
 const ACCOUNT: Destination[] = [{ path: "/settings", label: "Settings", icon: "settings" }];

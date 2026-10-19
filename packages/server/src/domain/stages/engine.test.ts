@@ -143,7 +143,7 @@ describe("next action", () => {
         followUpRequired: true,
         daysSinceLastEvent: 21,
       }),
-    ).toBe("Follow up — no reply in 21 days");
+    ).toBe("Follow up: no reply in 21 days");
   });
 
   it("gives terminal jobs nothing to do", () => {

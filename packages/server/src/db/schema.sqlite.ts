@@ -144,6 +144,34 @@ export const jobFieldProvenance = sqliteTable(
   (table) => [primaryKey({ columns: [table.jobId, table.field] })],
 );
 
+// ── job_openings (D43) ──────────────────────────────────────────────────────
+// Jobs a student could apply for, read from job alerts and careers emails.
+// Extracted fields only — the email's text is never stored, here or anywhere.
+export const jobOpenings = sqliteTable(
+  "job_openings",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    company: text("company").notNull(),
+    companyNormalised: text("company_normalised").notNull(),
+    role: text("role").notNull(),
+    location: text("location"),
+    closesAt: integer("closes_at", { mode: "timestamp_ms" }),
+    source: text("source"),
+    senderDomain: text("sender_domain"),
+    gmailMessageId: text("gmail_message_id").notNull(),
+    status: text("status").$type<"open" | "dismissed" | "applied">().notNull().default("open"),
+    firstSeenAt: integer("first_seen_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(nowMs),
+  },
+  (table) => [
+    uniqueIndex("job_openings_user_company_role_idx").on(table.userId, table.companyNormalised, table.role),
+    index("job_openings_user_status_idx").on(table.userId, table.status),
+  ],
+);
+
 // ── sync_state ──────────────────────────────────────────────────────────────
 export const syncState = sqliteTable("sync_state", {
   userId: text("user_id")

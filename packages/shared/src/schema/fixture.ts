@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { StageEnum } from "./stage.js";
+import { OpeningSchema } from "./classification.js";
 
 /**
  * The labelled fixture corpus — the artefact SM-1, SM-2 and SM-3 are measured
@@ -54,6 +55,10 @@ export const ExpectedClassificationSchema = z
     /** Why this fixture is in the corpus. Free text, for the human reading a
      *  failure report — especially valuable on hard negatives. */
     note: z.string().optional(),
+
+    /** Jobs a job alert or careers email offers (D43). Not scored by the
+     *  accuracy harness; read by the demo's answer key. */
+    openings: z.array(OpeningSchema).optional(),
   })
   .superRefine((value, ctx) => {
     // A label that says "not an application" but also names a company is a

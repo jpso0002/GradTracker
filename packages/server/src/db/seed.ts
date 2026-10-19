@@ -65,8 +65,8 @@ export const SEED_JOBS: SeedSpec[] = [
   // ── Stale — no deadline, but past the staleness threshold ────────────────
   // These must be capped at bucket 3, not sink to bucket 4 where a student
   // would never scroll to them.
-  { company: "ANZ", role: "Graduate Analyst", stage: "applied", deadlineInDays: null, lastEventDaysAgo: 21, nextAction: "Follow up — no reply in 21 days", senderDomain: "anz.com", confidence: 0.81 },
-  { company: "Xero", role: "Graduate Developer", stage: "applied", deadlineInDays: null, lastEventDaysAgo: 17, nextAction: "Follow up — no reply in 17 days", senderDomain: "lever.co", confidence: 0.83 },
+  { company: "ANZ", role: "Graduate Analyst", stage: "applied", deadlineInDays: null, lastEventDaysAgo: 21, nextAction: "Follow up: no reply in 21 days", senderDomain: "anz.com", confidence: 0.81 },
+  { company: "Xero", role: "Graduate Developer", stage: "applied", deadlineInDays: null, lastEventDaysAgo: 17, nextAction: "Follow up: no reply in 17 days", senderDomain: "lever.co", confidence: 0.83 },
   { company: "SEEK", role: "Associate Product Manager", stage: "interview", deadlineInDays: null, lastEventDaysAgo: 11, nextAction: "Follow up on interview outcome", senderDomain: "seek.com.au", confidence: 0.88 },
 
   // ── Offers — highest stage rank ──────────────────────────────────────────

@@ -174,6 +174,8 @@ Keep entries concise. One line per decision when possible.
 - **Refresh outside the presentation demo reloads quietly** (501 from the server): there is no inbox to read, and the button must not pretend there was. A missing or failing demo inbox says how to fix it.
 - **The demo inbox's sample emails are appended, never sent** (D37), and marked by their Message-ID; the reader keeps them apart from mail a person sent. The load script adds only what is missing and never deletes.
 - **Sample dates are brought forward when read, not when loaded** (D37), in whole calendar days of Melbourne wall-clock time, so a deadline keeps its time of day and the demo never ages.
+- **No em dashes in text the app shows** (19 October): commas, colons and full stops instead. Comments, docs and the sample emails' own text are not app text.
+- **Openings (D43):** a non-application that advertises jobs leaves one `job_openings` row per job (company, role, location, closing date, source, sender domain, email id) and nothing else; every other non-application leaves nothing. One row per student + normalised company + role. The page hides closed openings and ones already tracked. "I've applied" creates an application at Applied with human provenance, or uses the one already tracked. Prompt v3 asks for them.
 - **The sample emails tell the presentation's story** (D42): dated 28 Sep – 19 Oct 2026, every date written inside an email moved with it, mostly live applications with every stage present. A change to an email changes its label in the same edit, and the whole-corpus tests say what the story produces.
 - **Demo accounts never touch the product database** (D40): they live in `demo-accounts.json` (gitignored) as a salted scrypt hash, and each maps to an ordinary `users` row. No table gains a password column — SM-5's tests still hold for the product. The routes exist only under `npm run demo` and refuse production.
 - **A session is a signed cookie** (HttpOnly, SameSite=Lax), signed with `SESSION_SECRET`; without one the API answers 401 and the app goes to Sign in. Sign-in gives the same message for an unknown email and a wrong password.
@@ -245,7 +247,7 @@ Keep entries concise. One line per decision when possible.
 
 ### Out of scope (do not build)
 - Email sending or replying · calendar integration · admin roles or permissions · analytics for early careers services · marketing site · non-Gmail providers · CV or document storage · manual "add application" · a GradTracker login for the local demo.
-- **Post-MVP stretch only:** an "upcoming jobs to apply for" module (backlog S1). It would store extracted content from non-application email for the first time — decide it, don't drift into it.
+- ~~Post-MVP stretch only: an "upcoming jobs to apply for" module (backlog S1).~~ Decided and built as **Openings** (D43), see Business Logic.
 
 ## Integrations
 

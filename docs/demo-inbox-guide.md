@@ -113,10 +113,10 @@ account, so create it again.
    first time, Connect → Allow → scan).
 4. Carry on: Refresh with the live emails, Needs review, and so on.
 
-## 4. The two live emails
+## 4. The three live emails
 
 Send them **from a teammate's own account** (phone is fine) **to the demo address**. Mail the
-demo inbox sends to itself is skipped. Save both as drafts beforehand so each can be sent
+demo inbox sends to itself is skipped. Save all three as drafts beforehand so each can be sent
 with one tap. Copy the subject exactly; the body can be pasted as is.
 
 ### Email 1 — the application update
@@ -157,6 +157,24 @@ Kestrel Partners
 with a Kestrel Partners card with no role at 47% confidence. The model wasn't sure enough,
 so the student is asked.
 
+### Email 3 — a job alert (Openings, D43)
+
+**Subject:** `New graduate jobs matching your search`
+
+```
+Based on your saved search 'graduate melbourne'
+
+Graduate Software Engineer, Afterpay, Melbourne. Closing 6 November
+Associate Product Manager (Graduate), Linktree, Melbourne
+
+View all matches
+Manage your job alerts in your SEEK account.
+```
+
+**What the room sees:** nothing new in Applications, because a job alert is not an application.
+**Openings** gains Afterpay (closes 6 Nov) and Linktree (no closing date). Click **I've applied**
+on Afterpay and it becomes an application at Applied.
+
 ## Opening an email in Gmail
 
 In the application panel's timeline and on each **Needs review** card, **Open in Gmail** opens
@@ -168,12 +186,12 @@ has no real emails, so its items show no link.
 
 1. Start both terminals before the presentation and leave them running. Go through the
    sign-in live: that's the scan.
-2. When it's time, the teammate sends Email 1 (and Email 2), then says "sent".
+2. When it's time, the teammate sends Email 1 (and Emails 2 and 3), then says "sent".
 3. Wait a few seconds, since Gmail can take 5–30 seconds to deliver. Press **Refresh**. The
-   toast says what happened, e.g. *"2 new emails — 1 application updated, 1 to review"*.
+   toast says what happened, e.g. *"3 new emails: 1 application updated, 1 to review, 2 new openings"*.
 4. *"No new emails"* means it hasn't arrived yet. Wait ten seconds and press again.
 5. **If anything fails** (the toast says it couldn't sign in, the Wi-Fi is down, or the
-   email never arrives), press **Ctrl+Alt+R** on the dashboard. It feeds the same two emails
+   email never arrives), press **Ctrl+Alt+R** on the dashboard. It feeds the same three emails
    through the same pipeline and looks identical. It works once; pressing it again changes
    nothing.
 

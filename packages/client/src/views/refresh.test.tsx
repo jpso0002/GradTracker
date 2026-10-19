@@ -26,6 +26,7 @@ const BOTH: SyncResult = {
   stageChanges: 1,
   needsReview: 1,
   ignored: 0,
+  newOpenings: 0,
 };
 
 beforeEach(() => {
@@ -53,11 +54,14 @@ function renderPipeline(onReviewChanged = vi.fn()) {
 
 describe("syncSummary", () => {
   it("says what arrived, in counts", () => {
-    expect(syncSummary(BOTH)).toBe("2 new emails — 1 application updated, 1 to review");
+    expect(syncSummary(BOTH)).toBe("2 new emails: 1 application updated, 1 to review");
     expect(syncSummary({ ...BOTH, emailsRead: 1, updatedApplications: 0, needsReview: 0, newApplications: 1 })).toBe(
-      "1 new email — 1 new application",
+      "1 new email: 1 new application",
     );
     expect(syncSummary({ ...BOTH, emailsRead: 0 })).toBe("No new emails");
+    expect(syncSummary({ ...BOTH, emailsRead: 3, newOpenings: 2 })).toBe(
+      "3 new emails: 1 application updated, 1 to review, 2 new openings",
+    );
   });
 });
 
@@ -70,7 +74,7 @@ describe("Refresh (D36)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Sync inbox" }));
 
     expect(sync).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText("2 new emails — 1 application updated, 1 to review")).toBeDefined();
+    expect(await screen.findByText("2 new emails: 1 application updated, 1 to review")).toBeDefined();
     await waitFor(() => expect(api.listJobs).toHaveBeenCalledTimes(2));
     expect(onReviewChanged).toHaveBeenCalled();
   });
@@ -105,6 +109,6 @@ describe("Refresh (D36)", () => {
 
     fireEvent.keyDown(window, { key: "r", code: "KeyR", ctrlKey: true, altKey: true });
     expect(backup).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText("2 new emails — 1 application updated, 1 to review")).toBeDefined();
+    expect(await screen.findByText("2 new emails: 1 application updated, 1 to review")).toBeDefined();
   });
 });

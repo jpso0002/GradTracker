@@ -67,6 +67,7 @@ export class FakeEmailClassifier implements EmailClassifier {
       // than inventing a string the labels never committed to.
       nextAction: null,
       confidence: this.options.confidenceFor?.(id) ?? DEFAULT_CONFIDENCE,
+      ...(expected.openings ? { openings: expected.openings } : {}),
     };
 
     const answer = this.options.corrupt ? this.options.corrupt(truth, id) : truth;

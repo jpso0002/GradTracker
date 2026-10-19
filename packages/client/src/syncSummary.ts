@@ -1,8 +1,8 @@
 import type { SyncResult } from "@gradtracker/shared";
 
 /**
- * What one Refresh did, in a sentence (D36): "2 new emails — 1 application
- * updated, 1 to review". Counts only, as the server sends them.
+ * What one Refresh did, in a sentence (D36): "3 new emails: 1 application
+ * updated, 1 to review, 2 new openings". Counts only, as the server sends them.
  */
 export function syncSummary(result: SyncResult): string {
   if (result.emailsRead === 0) return "No new emails";
@@ -14,8 +14,9 @@ export function syncSummary(result: SyncResult): string {
       ? `${plural(result.updatedApplications, "application", "applications")} updated`
       : null,
     result.needsReview > 0 ? `${result.needsReview} to review` : null,
+    result.newOpenings > 0 ? plural(result.newOpenings, "new opening", "new openings") : null,
     result.ignored > 0 ? `${result.ignored} not about an application` : null,
   ].filter((p): p is string => p !== null);
 
-  return `${plural(result.emailsRead, "new email", "new emails")} — ${parts.join(", ")}`;
+  return `${plural(result.emailsRead, "new email", "new emails")}: ${parts.join(", ")}`;
 }

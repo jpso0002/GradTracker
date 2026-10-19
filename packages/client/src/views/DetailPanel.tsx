@@ -162,7 +162,7 @@ export function DetailPanel({ jobId, onClose, onChanged, layout = "inline" }: De
         <EmptyState
           icon="layers"
           title="That application no longer exists."
-          action={<Button onClick={onClose}>Back to the pipeline</Button>}
+          action={<Button onClick={onClose}>Back to applications</Button>}
           compact
         />
       ) : detail.error ? (
@@ -296,7 +296,7 @@ function EditForm({ job, onCancel, onSaved }: { job: Job; onCancel: () => void; 
       } else {
         toast.show(
           cause instanceof NetworkError
-            ? "You are offline — nothing was saved."
+            ? "You are offline. Nothing was saved."
             : cause instanceof Error
               ? cause.message
               : "Could not save",

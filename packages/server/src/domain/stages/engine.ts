@@ -117,7 +117,7 @@ export function deriveNextAction(input: {
 
   if (input.followUpRequired) {
     const days = Math.floor(input.daysSinceLastEvent);
-    return `Follow up — no reply in ${days} days`;
+    return `Follow up: no reply in ${days} days`;
   }
 
   if (input.extracted !== null && input.extracted.trim() !== "") return input.extracted;

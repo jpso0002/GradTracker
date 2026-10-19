@@ -731,3 +731,77 @@ describe("app basics", () => {
     expect(res.body.demoMode).toBe(true);
   });
 });
+
+describe("/api/openings (D43)", () => {
+  const opening = (company: string, role: string, closesAt: Date | null, over: Record<string, unknown> = {}) => ({
+    company,
+    companyNormalised: company.toLowerCase(),
+    role,
+    location: "Melbourne",
+    closesAt,
+    source: "SEEK",
+    senderDomain: "seek.com.au",
+    gmailMessageId: `alert-${company}`,
+    firstSeenAt: new Date("2026-08-10T00:00:00Z"),
+    ...over,
+  });
+
+  it("lists open ones soonest closing first, then those with no closing date", async () => {
+    await repo.upsertOpenings(userId, [
+      opening("Canva", "Graduate Software Engineer", null),
+      opening("NAB", "Data Graduate", new Date("2026-08-30T13:59:00Z")),
+      opening("Telstra", "Junior Analyst", new Date("2026-08-18T13:59:00Z")),
+    ]);
+    const res = await request(app).get("/api/openings").expect(200);
+
+    expect(res.body.openings.map((o: { company: string }) => o.company)).toEqual(["Telstra", "NAB", "Canva"]);
+    expect(res.body.openings[0]).toMatchObject({ role: "Junior Analyst", location: "Melbourne", source: "SEEK", daysLeft: 2 });
+    expect(res.body.openings[2].daysLeft).toBeNull();
+  });
+
+  it("leaves out closed ones, ones already tracked, and other students' openings", async () => {
+    await seedJob(userId); // KPMG, Vacationer Program
+    await repo.upsertOpenings(userId, [
+      opening("Closed Co", "Graduate", new Date("2026-08-01T13:59:00Z")),
+      opening("KPMG", "Vacationer Program", null),
+    ]);
+    await repo.upsertOpenings(otherUserId, [opening("Theirs", "Graduate", null)]);
+
+    const res = await request(app).get("/api/openings").expect(200);
+    expect(res.body.openings).toEqual([]);
+  });
+
+  it("dismisses one, for this student only", async () => {
+    await repo.upsertOpenings(userId, [opening("Canva", "Graduate Software Engineer", null)]);
+    const [row] = await repo.listOpenings(userId);
+
+    await request(app).post(`/api/openings/${row!.id}/dismiss`).expect(200);
+    expect((await request(app).get("/api/openings").expect(200)).body.openings).toEqual([]);
+    await request(createApp({ db: handle.db, clock: () => NOW, userId: otherUserId }))
+      .post(`/api/openings/${row!.id}/dismiss`)
+      .expect(404);
+  });
+
+  it("turns \"I've applied\" into an application at Applied, in the student's own words", async () => {
+    await repo.upsertOpenings(userId, [opening("Canva", "Graduate Software Engineer", null)]);
+    const [row] = await repo.listOpenings(userId);
+
+    const res = await request(app).post(`/api/openings/${row!.id}/applied`).expect(200);
+    expect(res.body.created).toBe(true);
+
+    const detail = await request(app).get(`/api/jobs/${res.body.jobId}`).expect(200);
+    expect(detail.body.job).toMatchObject({ company: "Canva", role: "Graduate Software Engineer", stage: "applied" });
+    expect((await request(app).get("/api/openings").expect(200)).body.openings).toEqual([]);
+    expect(await repo.listOpenings(userId, "applied")).toHaveLength(1);
+  });
+
+  it("uses the application already tracked rather than adding a second", async () => {
+    const job = await seedJob(userId);
+    await repo.upsertOpenings(userId, [opening("KPMG", "Vacationer Program", null)]);
+    const [row] = await repo.listOpenings(userId);
+
+    const res = await request(app).post(`/api/openings/${row!.id}/applied`).expect(200);
+    expect(res.body).toEqual({ jobId: job!.id, created: false });
+    expect(await repo.listJobs(userId)).toHaveLength(1);
+  });
+});

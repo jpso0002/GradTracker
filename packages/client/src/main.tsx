@@ -11,7 +11,7 @@ import "./theme/gradtracker.css";
 installIcons();
 
 const root = document.getElementById("root");
-if (!root) throw new Error("No #root element — index.html is wrong.");
+if (!root) throw new Error("No #root element. index.html is wrong.");
 
 createRoot(root).render(
   <StrictMode>

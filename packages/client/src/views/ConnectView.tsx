@@ -199,7 +199,7 @@ function Consent({
       </div>
 
       <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "var(--caption-size)" }}>
-        Simulated for the demo — this is where Google’s own consent screen would appear.
+        Simulated for the demo. This is where Google’s own consent screen would appear.
       </p>
     </section>
   );
@@ -274,7 +274,7 @@ function Scan({ onScanned }: { onScanned?: (() => void) | undefined }) {
       setProgress(done);
       if (done < 1) return;
       window.clearInterval(timer);
-      show(`Inbox scanned — ${data.applications.length} applications found, ${data.toReview} to review`);
+      show(`Inbox scanned: ${data.applications.length} applications found, ${data.toReview} to review`);
       if (data.notice) show(data.notice, "info");
       onScanned?.();
       navigate("/pipeline", { replace: true });
@@ -313,13 +313,13 @@ function Scan({ onScanned }: { onScanned?: (() => void) | undefined }) {
       </div>
 
       <dl className="gt-scan-counts">
-        <Count label="Emails read" value={data ? `${read} of ${data.emails}` : "—"} />
-        <Count label="Applications" value={data ? String(found) : "—"} />
-        <Count label="To review" value={data ? String(toReview) : "—"} />
+        <Count label="Emails read" value={data ? `${read} of ${data.emails}` : "-"} />
+        <Count label="Applications" value={data ? String(found) : "-"} />
+        <Count label="To review" value={data ? String(toReview) : "-"} />
       </dl>
 
       <p style={{ margin: 0, minHeight: "1.5em", color: "var(--text-secondary)", fontSize: "var(--caption-size)" }}>
-        {latest ? `Found ${latest.company} — ${latest.role}` : "Reading your mail…"}
+        {latest ? `Found ${latest.company}, ${latest.role}` : "Reading your mail…"}
       </p>
 
       <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "var(--caption-size)" }}>
@@ -328,7 +328,7 @@ function Scan({ onScanned }: { onScanned?: (() => void) | undefined }) {
         {!data
           ? null
           : data.inbox
-            ? `Reading ${data.inbox}, the demo inbox: sample emails, classified from their labels — no model is called.`
+            ? `Reading ${data.inbox}, the demo inbox: sample emails, classified from their labels. No model is called.`
             : "Simulated scan of a sample mailbox: nothing is read from Gmail."}
       </p>
     </div>

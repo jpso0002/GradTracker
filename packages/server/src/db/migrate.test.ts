@@ -22,13 +22,14 @@ const MIGRATIONS_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../mig
 const EXPECTED_TABLES = [
   "email_events",
   "job_field_provenance",
+  "job_openings",
   "jobs",
   "sync_state",
   "users",
 ];
 
 describe("migrations — SQLite", () => {
-  it("applies cleanly to an empty database and creates all five tables", async () => {
+  it("applies cleanly to an empty database and creates all six tables", async () => {
     const client = createClient({ url: ":memory:" });
     const db = drizzleSqlite(client);
 
@@ -54,7 +55,7 @@ describe("migrations — SQLite", () => {
 });
 
 describe("migrations — Postgres", () => {
-  it("applies cleanly to an empty database and creates all five tables", async () => {
+  it("applies cleanly to an empty database and creates all six tables", async () => {
     const pglite = new PGlite();
     const db = drizzlePg(pglite);
 

@@ -68,6 +68,34 @@ export const DEMO_SCRIPTS: readonly DemoScript[] = [
     }),
   },
   {
+    id: "seek-alert",
+    subject: "New graduate jobs matching your search",
+    body: [
+      "Based on your saved search 'graduate melbourne'",
+      "",
+      "Graduate Software Engineer, Afterpay, Melbourne. Closing 6 November",
+      "Associate Product Manager (Graduate), Linktree, Melbourne",
+      "",
+      "View all matches",
+      "Manage your job alerts in your SEEK account.",
+    ].join("\n"),
+    backupFrom: "noreply@seek.com.au",
+    // Not an application: two jobs the student could apply for (D43).
+    classify: () => ({
+      isApplication: false,
+      company: null,
+      role: null,
+      stage: null,
+      deadlineAt: null,
+      nextAction: null,
+      confidence: 0.97,
+      openings: [
+        { company: "Afterpay", role: "Graduate Software Engineer", location: "Melbourne", closesAt: closing(11, 6), source: "SEEK" },
+        { company: "Linktree", role: "Associate Product Manager (Graduate)", location: "Melbourne", closesAt: null, source: "SEEK" },
+      ],
+    }),
+  },
+  {
     id: "kestrel-ambiguous",
     subject: "Quick question about your application",
     body: [
@@ -93,6 +121,10 @@ export const DEMO_SCRIPTS: readonly DemoScript[] = [
     }),
   },
 ];
+
+/** 23:59 Melbourne daylight time on a day in 2026 — a closing date as written. */
+const closing = (month: number, day: number) =>
+  `2026-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T12:59:00.000Z`;
 
 const UNRECOGNISED: Classification = {
   isApplication: true,

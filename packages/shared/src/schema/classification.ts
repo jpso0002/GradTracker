@@ -17,6 +17,24 @@ export const LIMITS = Object.freeze({
  * validates the adapter's response, and it types the pipeline. Defined once,
  * here — never restated in server or client (rules.md → Architecture).
  */
+/**
+ * A job the student could apply for, read from an email that is not about
+ * their own application — a job-board alert, an "applications are open"
+ * announcement, a careers newsletter (D43). Fields only, never the email.
+ */
+export const OpeningSchema = z.object({
+  company: z.string().min(1).max(LIMITS.COMPANY_MAX),
+  role: z.string().min(1).max(LIMITS.ROLE_MAX),
+  /** As the email gives it: "Sydney", "Melbourne VIC", "Remote". */
+  location: z.string().max(80).nullable(),
+  /** ISO 8601, by the deadline rules. Null when no closing date is stated. */
+  closesAt: z.string().datetime({ offset: true }).nullable(),
+  /** The board or sender: "LinkedIn", "SEEK", "EY". */
+  source: z.string().max(60).nullable(),
+});
+
+export type Opening = z.infer<typeof OpeningSchema>;
+
 export const ClassificationSchema = z.object({
   /** False for anything that is not a job application email. The pipeline
    *  discards these without writing a row. When unsure the model must answer
@@ -39,6 +57,10 @@ export const ClassificationSchema = z.object({
    *  (default 0.75) the email is queued for review instead of entering the
    *  pipeline as fact. `>=` accepts at the boundary. */
   confidence: z.number().min(0).max(1),
+
+  /** Jobs this email offers to apply for (D43). Only on emails that are not
+   *  about the student's own application; absent or empty otherwise. */
+  openings: z.array(OpeningSchema).max(20).optional(),
 
   /**
    * DEV-ONLY (defect C1). This field quotes the email, so persisting it —

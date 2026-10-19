@@ -78,7 +78,7 @@ describe("signing up (D40)", () => {
     await signUp(agent, "jordan@student.monash.edu").expect(201);
     const res = await signUp(request.agent(app()), "JORDAN@student.monash.edu").expect(409);
     expect(res.body).toMatchObject({ field: "email" });
-    expect(res.body.error).toMatch(/sign in instead/);
+    expect(res.body.error).toMatch(/Sign in instead/);
   });
 
   it("checks the form like the screen does", async () => {

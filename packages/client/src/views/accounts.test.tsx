@@ -151,14 +151,14 @@ describe("creating an account (D40)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
 
     expect(signUp).toHaveBeenCalledWith({ name: "Jordan Psomas", email: "jordan@student.monash.edu", password: "correct-horse" });
-    expect(await heading("Pipeline")).toBeDefined();
+    expect(await heading("Applications")).toBeDefined();
     expect(await screen.findByText(/only the demo inbox's own account can connect Gmail/)).toBeDefined();
     expect(JSON.stringify({ ...window.sessionStorage, ...window.localStorage })).not.toContain("correct-horse");
   });
 
   it("says when the email already has an account, on the email field", async () => {
     vi.spyOn(api, "signUp").mockRejectedValue(
-      new ApiError(409, "There's already an account with this email — sign in instead.", "email"),
+      new ApiError(409, "There's already an account with this email. Sign in instead.", "email"),
     );
     renderAt("/signup");
     await userEvent.type(await screen.findByLabelText("Full name"), "Jordan");
@@ -166,7 +166,7 @@ describe("creating an account (D40)", () => {
     await userEvent.type(screen.getByLabelText("Password"), "correct-horse");
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByText(/sign in instead/)).toBeDefined();
+    expect(await screen.findByText(/Sign in instead/)).toBeDefined();
     expect(screen.getByLabelText(/^Email/).getAttribute("aria-invalid")).toBe("true");
   });
 });
@@ -207,13 +207,13 @@ describe("signing in (D40)", () => {
     current = demoScanned;
     scanned = true;
     renderAt("/");
-    expect(await heading("Pipeline")).toBeDefined();
+    expect(await heading("Applications")).toBeDefined();
   });
 
   it("never lets another account connect the demo inbox", async () => {
     current = newcomer;
     renderAt("/connect");
-    expect(await heading("Pipeline")).toBeDefined();
+    expect(await heading("Applications")).toBeDefined();
   });
 
   it("goes to Sign in when the server says nobody is signed in", async () => {
@@ -240,13 +240,13 @@ describe("the demo inbox's first scan (D37, D40)", () => {
   it("names the inbox, says no model is called, and opens the dashboard with the review count", async () => {
     await connectAndAllow();
     expect(await screen.findByText(/Reading gradtrackerdemo@gmail.com, the demo inbox/)).toBeDefined();
-    expect(screen.getByText(/no model is called/)).toBeDefined();
+    expect(screen.getByText(/No model is called/)).toBeDefined();
     await act(async () => {
       vi.advanceTimersByTime(SCAN_MS + 1000);
     });
 
-    expect(await heading("Pipeline")).toBeDefined();
-    expect(await screen.findByText(/Inbox scanned — 20 applications found, 4 to review/)).toBeDefined();
+    expect(await heading("Applications")).toBeDefined();
+    expect(await screen.findByText(/Inbox scanned: 20 applications found, 4 to review/)).toBeDefined();
     const nav = await screen.findByRole("navigation", { name: "Main" });
     await waitFor(() => expect(within(nav).getByRole("link", { name: "Needs review, 4" })).toBeDefined());
   });

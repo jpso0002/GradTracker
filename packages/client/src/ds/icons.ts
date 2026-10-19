@@ -1,5 +1,7 @@
 import {
   AlertCircle,
+  MapPin,
+  Megaphone,
   User,
   LogOut,
   Calendar,
@@ -56,6 +58,8 @@ import {
  * trimming the set cannot produce a blank square at runtime.
  */
 export const ICONS = {
+  MapPin,
+  Megaphone,
   AlertCircle,
   ArrowRight,
   Calendar,

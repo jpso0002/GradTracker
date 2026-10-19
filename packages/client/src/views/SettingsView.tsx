@@ -98,11 +98,11 @@ export function SettingsView({ onReset }: { onReset?: () => void } = {}) {
         try {
           const result = await api.updateSettings({ reviewThreshold: next });
           setSaved(result.reviewThreshold);
-          toast.show("Review threshold saved — it applies to new mail");
+          toast.show("Review threshold saved. It applies to new mail");
         } catch (cause) {
           toast.show(
             cause instanceof NetworkError
-              ? "You are offline — the review threshold was not saved."
+              ? "You are offline. The review threshold was not saved."
               : "Could not save the review threshold.",
             "error",
           );
@@ -238,7 +238,7 @@ export function SettingsView({ onReset }: { onReset?: () => void } = {}) {
                   <div className="gt-note-row" style={{ marginTop: 16, alignItems: "center" }}>
                     <Icon name="sparkles" size={16} />
                     <p id={helpId}>
-                      {consequence(threshold)} Applies to new mail only — applications already in your pipeline stay where
+                      {consequence(threshold)} Applies to new mail only. Applications already in your pipeline stay where
                       they are.
                     </p>
                   </div>
@@ -274,13 +274,13 @@ export function SettingsView({ onReset }: { onReset?: () => void } = {}) {
                   checked={theme === "dark"}
                   onChange={() => toggle()}
                   label="Dark theme"
-                  description="Light until you choose — the switch in the sidebar does the same."
+                  description="Light until you choose. The switch in the sidebar does the same."
                 />
                 <Switch
                   checked={shortcuts}
                   onChange={(on) => setShortcuts(on)}
                   label="Press / to search"
-                  description="Turn this off if you use speech input or switch control — a stray slash would jump to the search box."
+                  description="Turn this off if you use speech input or switch control, as a stray slash would jump to the search box."
                 />
               </div>
             </Section>

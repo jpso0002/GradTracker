@@ -124,6 +124,8 @@ export type ProcessOutcome =
   | { kind: "skipped"; reason: PreFilterReason }
   | { kind: "already-processed" }
   | { kind: "not-application" }
+  /** Not about an application, but it listed jobs to apply for (D43). */
+  | { kind: "openings"; found: number; added: number }
   | { kind: "queued-for-review"; eventId: string }
   | { kind: "created-job"; jobId: string }
   | { kind: "updated-job"; jobId: string; stageChanged: boolean };
@@ -177,8 +179,28 @@ export async function processEmail(
   const c = classified.classification;
 
   // Not an application: counted, not stored. Nothing about this email is
-  // written anywhere — no row, no id, no domain.
-  if (!c.isApplication) return { kind: "not-application" };
+  // written anywhere — no row, no id, no domain — unless it listed jobs to
+  // apply for (D43). Then the openings are kept, as fields, and still nothing
+  // of the email itself.
+  if (!c.isApplication) {
+    const openings = c.openings ?? [];
+    if (openings.length === 0) return { kind: "not-application" };
+    const added = await deps.repo.upsertOpenings(
+      userId,
+      openings.map((o) => ({
+        company: o.company,
+        companyNormalised: normaliseCompany(o.company),
+        role: o.role,
+        location: o.location,
+        closesAt: o.closesAt ? new Date(o.closesAt) : null,
+        source: o.source,
+        senderDomain: classified.senderDomain,
+        gmailMessageId: classified.gmailMessageId,
+        firstSeenAt: classified.receivedAt,
+      })),
+    );
+    return { kind: "openings", found: openings.length, added };
+  }
 
   const common = {
     gmailMessageId: classified.gmailMessageId,

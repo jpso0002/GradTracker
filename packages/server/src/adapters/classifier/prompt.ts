@@ -15,9 +15,13 @@ import { DEFAULT_TIMEZONE, formatWallClock } from "../../time/zoned-time.js";
  * recognised rather than forbidden (C17); the guide's deadline conventions and
  * naming rule are stated; fields come from this email alone; and the received
  * time is given in the student's timezone (C20).
+ *
+ * **v3 (19 October 2026)** asks for openings (D43): a job alert or careers
+ * email is still not an application, but the jobs it advertises are listed, so
+ * the student can see what they could apply for.
  */
 
-export const PROMPT_VERSION = "v2";
+export const PROMPT_VERSION = "v3";
 
 /** What each stage means, in the model's terms. Deliberately concrete: "an
  *  invitation to complete a test" is checkable, "the assessment stage" is not.
@@ -82,6 +86,10 @@ These are the cases that matter most, because getting them wrong pollutes the st
 
 A job alert can use almost identical vocabulary to a real application update — company name, role title, a deadline. The distinguishing question is always: **has this student already applied, or is this email inviting them to?** If it is inviting them, it is not an application.
 
+## Openings
+
+When an email is NOT an application but advertises jobs the student could apply for (a job alert, a job board's recommendations, a careers newsletter, "applications are now open"), list each one in "openings": company, role, location, closesAt and source. Only jobs the email names with both a company and a role; at most 20. Omit "openings" for every other email.
+
 ## When you are unsure
 
 Return "isApplication": false rather than guessing.
@@ -115,6 +123,7 @@ Extract only what this email states. You see one email at a time: do not fill a 
   - stage: one of the six above, or null if not an application.
   - deadlineAt: ISO timestamp or null.
   - nextAction: the single next thing the student must do, imperative and specific — "Complete online assessment", "Confirm Thursday 14:00 slot". Null if there is nothing to do.
+  - openings: for a non-application only, as above. Each has company and role (named as for an application), location (the city as written, or null), closesAt (the stated closing date as an ISO timestamp, by the deadline rules above, or null) and source (the job board or sender the student would recognise, such as "SEEK" or "LinkedIn", or null).
   - confidence: your confidence in this classification, 0 to 1. Be honest. Low confidence routes the email to human review, which is the correct outcome when the email is genuinely ambiguous.`;
 }
 

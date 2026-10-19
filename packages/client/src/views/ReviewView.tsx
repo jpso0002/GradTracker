@@ -273,7 +273,7 @@ function ReviewCard({
       const result = await api.confirmReview(item.eventId, body);
       toast.show(
         suggestion && answer === "same"
-          ? `Added to ${suggestion.company} — ${suggestion.role}`
+          ? `Added to ${suggestion.company}, ${suggestion.role}`
           : result.matched
             ? "Added to an application you already track"
             : "Added to your pipeline",
@@ -293,7 +293,7 @@ function ReviewCard({
     setBusy(true);
     try {
       await api.dismissReview(item.eventId);
-      toast.show("Dismissed — GradTracker will not ask about this email again", "info");
+      toast.show("Dismissed. GradTracker will not ask about this email again", "info");
       onHandled(item.eventId);
     } catch (cause) {
       toast.show(failure(cause, "Could not dismiss this email"), "error");
@@ -470,7 +470,7 @@ function SameOrNew({
       }}
     >
       <legend style={{ padding: "0 6px", color: "var(--ink)", fontWeight: 600, fontSize: 14 }}>
-        Is this the same application as {suggestion.company} — {suggestion.role}?
+        Is this the same application as {suggestion.company}, {suggestion.role}?
       </legend>
       {option("same", sameId, "Same application")}
       {option("new", newId, "New application")}
@@ -526,6 +526,6 @@ function CardSkeleton() {
 }
 
 function failure(cause: unknown, fallback: string): string {
-  if (cause instanceof NetworkError) return "You are offline — nothing was changed.";
+  if (cause instanceof NetworkError) return "You are offline. Nothing was changed.";
   return cause instanceof Error ? cause.message : fallback;
 }

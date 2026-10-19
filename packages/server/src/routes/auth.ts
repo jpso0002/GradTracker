@@ -89,7 +89,7 @@ export function authRoutes(db: Database, repo: Repository, options: DemoAuthOpti
     const { name, email, password } = parsed.data;
     const account = await options.accounts.create(name, email, password);
     if (account === "exists") {
-      res.status(409).json({ error: "There's already an account with this email — sign in instead.", field: "email" });
+      res.status(409).json({ error: "There's already an account with this email. Sign in instead.", field: "email" });
       return;
     }
     await userFor(account);
@@ -123,7 +123,7 @@ export function authRoutes(db: Database, repo: Repository, options: DemoAuthOpti
  */
 export function accountContext(db: Database, options: DemoAuthOptions) {
   if (process.env["NODE_ENV"] === "production") {
-    throw new Error("Demo accounts must never run in production — the product signs in with Google (T4.1–T4.3).");
+    throw new Error("Demo accounts must never run in production: the product signs in with Google (T4.1 to T4.3).");
   }
   const userIds = new Map<string, UserId>();
 

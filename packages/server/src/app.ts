@@ -9,6 +9,7 @@ import { reviewRoutes } from "./routes/review.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { demoRoutes, syncRoutes, type DemoSession } from "./routes/sync.js";
 import { accountContext, authRoutes, type DemoAuthOptions } from "./routes/auth.js";
+import { openingRoutes } from "./routes/openings.js";
 
 /**
  * The Express application.
@@ -79,6 +80,7 @@ export function createApp(options: AppOptions): Express {
 
   app.use("/api/jobs", jobRoutes(repo, options.clock));
   app.use("/api/review", reviewRoutes(repo));
+  app.use("/api/openings", openingRoutes(repo, options.clock));
   app.use("/api/settings", settingsRoutes(repo));
   app.use("/api/sync", syncRoutes(repo, options.demo));
   if (options.demo) app.use("/api/demo", demoRoutes(repo, options.demo));

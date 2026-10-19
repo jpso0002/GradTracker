@@ -188,13 +188,12 @@ export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void
 
   const now = new Date();
   const firstName = session.data?.user?.name.trim().split(/\s+/)[0];
-  const demoTarget = jobs.find((job) => job.company === "Accenture" && job.status === "active");
 
   return (
     <>
-      <ViewTitle title="Pipeline" />
+      <ViewTitle title="Applications" />
       <header className="gt-topbar">
-        <span style={{ font: "700 18px var(--font-display)" }}>Pipeline</span>
+        <span style={{ font: "700 18px var(--font-display)" }}>Applications</span>
         <div className="gt-topbar-actions">
           <label ref={searchLabel} style={{ display: "flex" }}>
             <VisuallyHidden>Search applications</VisuallyHidden>
@@ -229,13 +228,6 @@ export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void
               <h2>{firstName ? `${greeting(now)}, ${firstName}.` : `${greeting(now)}.`}</h2>
               <span className="lede">Here’s what needs your attention today.</span>
             </div>
-            {demoTarget ? (
-              <div className="gt-flow-hint">
-                <span>DEMO FLOW</span>
-                <strong>Click Accenture to inspect &amp; edit</strong>
-                <Icon name="arrow-right" size={16} />
-              </div>
-            ) : null}
           </section>
 
           <StatStrip stats={stats} needsReview={review.data?.items.length} />
@@ -243,7 +235,7 @@ export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void
           <section className="gt-section" aria-labelledby="pipeline-heading">
             <div className="gt-section-heading">
               <div>
-                <h2 id="pipeline-heading">Your pipeline</h2>
+                <h2 id="pipeline-heading">Your applications</h2>
                 <p>Ranked by what needs attention first</p>
               </div>
               <Tabs
@@ -295,7 +287,7 @@ export function PipelineView({ onReviewChanged }: { onReviewChanged?: () => void
 function StatStrip({ stats, needsReview }: { stats: PipelineStats | undefined; needsReview: number | undefined }) {
   // A dash, not a zero, while the number is unknown. "0 due this week" is a
   // claim; "not loaded yet" is not.
-  const value = (n: number | undefined) => (n === undefined ? "—" : n.toLocaleString("en-AU"));
+  const value = (n: number | undefined) => (n === undefined ? "-" : n.toLocaleString("en-AU"));
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
   /** Read as one phrase — "23 live applications" (design.md §10.3) — rather
@@ -388,7 +380,7 @@ function PipelineBody(props: BodyProps) {
       <EmptyState
         icon="wifi-off"
         title="You are offline"
-        description="GradTracker cannot reach the server. Your pipeline is unchanged."
+        description="GradTracker cannot reach the server. Your applications are unchanged."
         action={<Button onClick={props.onRetry}>Try again</Button>}
       />
     );
@@ -398,7 +390,7 @@ function PipelineBody(props: BodyProps) {
     return (
       <EmptyState
         icon="triangle-alert"
-        title="Could not load your pipeline"
+        title="Could not load your applications"
         description={error.message}
         action={<Button onClick={props.onRetry}>Try again</Button>}
       />
@@ -410,7 +402,7 @@ function PipelineBody(props: BodyProps) {
       <EmptyState
         icon="filter-x"
         title="No applications match these filters"
-        description="Your pipeline is not empty — the filters are just narrow."
+        description="You have applications. The filters are just narrow."
         action={<Button onClick={props.onClearFilters}>Clear filters</Button>}
         compact
       />
@@ -447,7 +439,7 @@ function PipelineBody(props: BodyProps) {
           `GradTracker read ${stats?.emailsRead ?? 0} emails and didn't find any job applications.` +
           (waiting > 0
             ? ` ${waiting} it wasn't sure about ${waiting === 1 ? "is" : "are"} waiting in Needs review.`
-            : " If that's wrong, lower the review threshold in Settings — it applies to new mail.")
+            : " If that's wrong, lower the review threshold in Settings. It applies to new mail.")
         }
         action={
           waiting > 0 ? (
@@ -483,7 +475,7 @@ function PipelineBody(props: BodyProps) {
           // The server answered, but not with the pipeline. What is on screen is
           // what was loaded before, and the student should know that.
           <p role="status" style={{ margin: "10px 20px", color: "var(--text-secondary)", fontSize: 13 }}>
-            Could not refresh — showing what was loaded before. {error.message}
+            Could not refresh. Showing what was loaded before. {error.message}
           </p>
         ) : null}
         <div className="gt-table-header" aria-hidden="true">
@@ -559,7 +551,7 @@ function PipelineRow({ job, selected, onSelect }: { job: Job; selected: boolean;
         <Link
           to={`/review#review-${job.pendingReviewId}`}
           className="gt-row-marker"
-          aria-label={`Review required: an email may belong to ${job.company} — ${job.role}`}
+          aria-label={`Review required: an email may belong to ${job.company}, ${job.role}`}
         >
           <Icon name="sparkles" size={13} />
           Review required
@@ -572,7 +564,7 @@ function PipelineRow({ job, selected, onSelect }: { job: Job; selected: boolean;
 /** Rows, not a spinner. The list has a known shape, so show that shape. */
 function Skeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading your pipeline">
+    <div aria-busy="true" aria-label="Loading your applications">
       {[0, 1, 2, 3, 4].map((i) => (
         <div
           key={i}

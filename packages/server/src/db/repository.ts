@@ -3,7 +3,7 @@ import { and, eq, inArray, desc } from "drizzle-orm";
 import { TERMINAL_STAGES } from "@gradtracker/shared";
 import type { UserId, Stage, JobStatus, ReviewStatus, ExtractableField, ProvenanceSource, ClassifierModel } from "@gradtracker/shared";
 import type { Database } from "./client.js";
-import { users, jobs, emailEvents, jobFieldProvenance, syncState } from "./schema.sqlite.js";
+import { users, jobs, emailEvents, jobFieldProvenance, syncState, jobOpenings } from "./schema.sqlite.js";
 
 /**
  * The repository layer — the only code that talks to the database.
@@ -119,6 +119,19 @@ export interface NewEmailEvent {
   classifierModel: ClassifierModel;
 }
 
+/** One opening to save (D43). */
+export interface NewOpening {
+  company: string;
+  companyNormalised: string;
+  role: string;
+  location: string | null;
+  closesAt: Date | null;
+  source: string | null;
+  senderDomain: string | null;
+  gmailMessageId: string;
+  firstSeenAt: Date;
+}
+
 export function createRepository(db: Database) {
   /** Confirms a job belongs to this user. Every job-scoped operation goes
    *  through here, so the ownership check exists in exactly one place. */
@@ -193,10 +206,94 @@ export function createRepository(db: Database) {
       return row;
     },
 
+    // ── openings (D43) ──────────────────────────────────────────────────────
+
+    /**
+     * Saves the openings one email listed. The same company and role seen
+     * again is the same opening: a closing date or location it now states
+     * fills in what was missing, and a dismissed or applied one stays so.
+     * Returns how many were new.
+     */
+    async upsertOpenings(userId: UserId, openings: NewOpening[]) {
+      let added = 0;
+      for (const opening of openings) {
+        const [existing] = await db
+          .select()
+          .from(jobOpenings)
+          .where(
+            and(
+              eq(jobOpenings.userId, userId),
+              eq(jobOpenings.companyNormalised, opening.companyNormalised),
+              eq(jobOpenings.role, opening.role),
+            ),
+          )
+          .limit(1);
+        if (existing) {
+          await db
+            .update(jobOpenings)
+            .set({
+              location: existing.location ?? opening.location,
+              closesAt: existing.closesAt ?? opening.closesAt,
+              source: existing.source ?? opening.source,
+            })
+            .where(eq(jobOpenings.id, existing.id));
+          continue;
+        }
+        await db.insert(jobOpenings).values({
+          id: randomUUID(),
+          userId,
+          company: opening.company,
+          companyNormalised: opening.companyNormalised,
+          role: opening.role,
+          location: opening.location,
+          closesAt: opening.closesAt,
+          source: opening.source,
+          senderDomain: opening.senderDomain,
+          gmailMessageId: opening.gmailMessageId,
+          firstSeenAt: opening.firstSeenAt,
+        });
+        added += 1;
+      }
+      return added;
+    },
+
+    async listOpenings(userId: UserId, status: "open" | "dismissed" | "applied" = "open") {
+      return db
+        .select()
+        .from(jobOpenings)
+        .where(and(eq(jobOpenings.userId, userId), eq(jobOpenings.status, status)));
+    },
+
+    async findOpening(userId: UserId, openingId: string) {
+      const [row] = await db
+        .select()
+        .from(jobOpenings)
+        .where(and(eq(jobOpenings.userId, userId), eq(jobOpenings.id, openingId)))
+        .limit(1);
+      return row;
+    },
+
+    async setOpeningStatus(userId: UserId, openingId: string, status: "open" | "dismissed" | "applied") {
+      const [row] = await db
+        .update(jobOpenings)
+        .set({ status })
+        .where(and(eq(jobOpenings.userId, userId), eq(jobOpenings.id, openingId)))
+        .returning();
+      return row;
+    },
+
     // ── email events ────────────────────────────────────────────────────────
 
     /** The idempotency check that makes a crashed sync safe to re-read. */
     async hasProcessedMessage(userId: UserId, gmailMessageId: string) {
+      // An email that only listed openings (D43) left no event; its openings
+      // carry its id instead.
+      const [opening] = await db
+        .select({ id: jobOpenings.id })
+        .from(jobOpenings)
+        .where(and(eq(jobOpenings.userId, userId), eq(jobOpenings.gmailMessageId, gmailMessageId)))
+        .limit(1);
+      if (opening) return true;
       const [row] = await db
         .select({ id: emailEvents.id })
         .from(emailEvents)

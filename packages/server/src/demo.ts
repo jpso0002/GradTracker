@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import type { Database } from "./db/client.js";
-import { users, jobs, emailEvents, jobFieldProvenance, syncState } from "./db/schema.sqlite.js";
+import { users, jobs, emailEvents, jobFieldProvenance, syncState, jobOpenings } from "./db/schema.sqlite.js";
 import { eq, inArray, ne } from "drizzle-orm";
 import { CONFIDENCE, asUserId, type Fixture, type UserId } from "@gradtracker/shared";
 import { seed, SEED_GOOGLE_SUB, SEED_STUDENT, type SeedResult } from "./db/seed.js";
@@ -60,7 +60,7 @@ const MIGRATIONS = join(dirname(fileURLToPath(import.meta.url)), "../migrations/
 export async function resetDemoDatabase(db: Database, today: Date = new Date()): Promise<SeedResult> {
   await migrate(db, { migrationsFolder: MIGRATIONS });
   // Children before parents, so no foreign key is left pointing at nothing.
-  for (const table of [jobFieldProvenance, emailEvents, jobs, syncState]) {
+  for (const table of [jobFieldProvenance, emailEvents, jobs, syncState, jobOpenings]) {
     await db.delete(table);
   }
   await db.delete(users).where(ne(users.googleSub, SEED_GOOGLE_SUB));
@@ -74,7 +74,7 @@ export async function resetDemoDatabase(db: Database, today: Date = new Date()):
  */
 export async function clearDemoDatabase(db: Database): Promise<UserId> {
   await migrate(db, { migrationsFolder: MIGRATIONS });
-  for (const table of [jobFieldProvenance, emailEvents, jobs, syncState]) {
+  for (const table of [jobFieldProvenance, emailEvents, jobs, syncState, jobOpenings]) {
     await db.delete(table);
   }
   await db.delete(users).where(ne(users.googleSub, SEED_GOOGLE_SUB));
@@ -155,6 +155,7 @@ export async function clearUserData(db: Database, userId: UserId): Promise<void>
   await db.delete(emailEvents).where(eq(emailEvents.userId, userId));
   await db.delete(jobs).where(eq(jobs.userId, userId));
   await db.delete(syncState).where(eq(syncState.userId, userId));
+  await db.delete(jobOpenings).where(eq(jobOpenings.userId, userId));
   await db.update(users).set({ reviewThreshold: CONFIDENCE.DEFAULT_REVIEW_THRESHOLD }).where(eq(users.id, userId));
 }
 

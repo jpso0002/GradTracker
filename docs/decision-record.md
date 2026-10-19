@@ -794,6 +794,42 @@ before 19 October was measured on a different text — none was, as no model has
 demo inbox must be emptied and re-loaded: the new versions keep their Message-IDs, so the load
 script skips them while the old ones are there.
 
+### D43 — Openings: the jobs a student could apply for *(19 October 2026)*
+
+**Chosen:** backlog S1, decided deliberately as D31 asked. A third page in the sidebar,
+**Openings**, lists the jobs that job alerts, job boards and careers emails advertise: company
+and role, location, closing date and source (SEEK, LinkedIn, Indeed, a careers service).
+Soonest closing first; no closing date after, newest first.
+
+- **What is stored, and why it is an exception.** Until now a non-application left no trace. An
+  email that advertises jobs now leaves one row per job in a new `job_openings` table: the
+  five fields above, the sender's domain and the email's id, nothing else. No subject, no body,
+  no sender address. The classifier lists the jobs (prompt **v3**, an `openings` array on a
+  non-application only, at most 20); every other non-application is still dropped untouched.
+- **The same job once.** One row per student, company (normalised) and role, however many
+  alerts name it; a later alert fills a missing location, closing date or source.
+- **Not shown:** a closed opening (nothing left to do) and one already tracked as an application
+  (it would be listed twice).
+- **Actions:** **Open in Gmail** (the alert itself, D38); **I've applied**, which creates an
+  application at Applied in the student's own words (company, role and stage carry human
+  provenance, D36) or uses the one already tracked, then opens it; **Dismiss**; and a search over
+  company, role, location and source.
+- **The demo:** six of the 80 sample emails now carry openings (004, 059, 060, 061, 066, 071), so
+  the scan fills the page; a **third live email**, a SEEK alert ("New graduate jobs matching your
+  search"), adds Afterpay and Linktree, and is in the Ctrl+Alt+R backup too. The toast counts
+  them: "2 new openings".
+
+**Rejected:** openings inside Applications under a filter (they are not applications, and the
+ranking would mix the two); storing the alert's text to show it in the app (Open in Gmail shows
+it without keeping it); a separate classification category (one boolean stays the gate, and
+the corpus labels need no new class).
+
+**Consequence:** the privacy line moves from "a non-application leaves nothing" to "a
+non-application leaves only the jobs it advertises, as fields". The sign-up and connect screens'
+"never keeps email content" still holds. 19 of the 25 non-applications are still dropped
+whole. The scripted and answer-key classifiers return openings; no model has been measured
+on them (B3).
+
 ---
 
 ## 3. Defects found reviewing the specification *(Revision 2)*

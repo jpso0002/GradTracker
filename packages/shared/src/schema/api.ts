@@ -165,6 +165,8 @@ export const SyncResultSchema = z.object({
   needsReview: z.number().int().nonnegative(),
   /** Read and judged not to be about an application: counted, never stored. */
   ignored: z.number().int().nonnegative(),
+  /** Jobs to apply for found in job alerts and careers emails (D43). */
+  newOpenings: z.number().int().nonnegative().default(0),
 });
 
 export type SyncResult = z.infer<typeof SyncResultSchema>;
@@ -272,3 +274,28 @@ export const AuthSessionResponseSchema = z.object({
 });
 
 export type AuthSessionResponse = z.infer<typeof AuthSessionResponseSchema>;
+
+// ── Openings (D43) ──────────────────────────────────────────────────────────
+
+export const OpeningStatusEnum = z.enum(["open", "dismissed", "applied"]);
+
+/** A job the student could apply for, as the Openings page shows it. */
+export const OpeningItemSchema = z.object({
+  id: z.string(),
+  company: z.string(),
+  role: z.string(),
+  location: z.string().nullable(),
+  closesAt: z.string().datetime().nullable(),
+  /** Days until it closes, on the student's calendar. Null with no date. */
+  daysLeft: z.number().int().nullable(),
+  source: z.string().nullable(),
+  senderDomain: z.string().nullable(),
+  /** The email it was read from, for "View in Gmail". Never its content. */
+  gmailMessageId: z.string(),
+  firstSeenAt: z.string().datetime(),
+});
+
+export type OpeningItem = z.infer<typeof OpeningItemSchema>;
+
+export const ListOpeningsResponseSchema = z.object({ openings: z.array(OpeningItemSchema) });
+export type ListOpeningsResponse = z.infer<typeof ListOpeningsResponseSchema>;

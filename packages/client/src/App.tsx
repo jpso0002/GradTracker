@@ -4,6 +4,7 @@ import { AppShell } from "./shell/AppShell";
 import { ToastHost } from "./shell/ToastHost";
 import { PipelineView } from "./views/PipelineView";
 import { ReviewView } from "./views/ReviewView";
+import { OpeningsView } from "./views/OpeningsView";
 import { SettingsView } from "./views/SettingsView";
 import { DocsView } from "./views/DocsView";
 import { ConnectView } from "./views/ConnectView";
@@ -53,6 +54,7 @@ export function App() {
           {/* The queue tells the shell when it changes, so the sidebar count
               follows what the student has handled. */}
           <Route path="/review" element={<ReviewRoute />} />
+          <Route path="/openings" element={<OpeningsView />} />
           <Route path="/settings" element={<SettingsRoute />} />
           <Route path="/docs" element={<Navigate to="/docs/architecture" replace />} />
           <Route path="/docs/:page" element={<DocsView />} />
