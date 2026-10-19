@@ -87,7 +87,7 @@ export function demoCorruption(correct: Classification, fixtureId: string): Clas
 
   // A deadline invented where none was stated.
   if (fixtureId === "034-macquarie-panel") {
-    return { ...correct, deadlineAt: "2026-06-18T04:00:00.000Z" };
+    return { ...correct, deadlineAt: "2026-10-20T03:00:00.000Z" };
   }
 
   return correct;

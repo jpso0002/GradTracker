@@ -95,7 +95,7 @@ team chose classifies live (D23, §4).
 | Source | ~18,300 lines of TypeScript/TSX in the three packages' `src/` — ~10,700 application, ~7,600 tests (excludes the vendored design system and build output; counted 5 October) |
 | Accessibility | WCAG 2.1 AA audit: 36 of 50 criteria pass, 4 partly — the rest is mostly the design system's tokens ([accessibility-audit.md](accessibility-audit.md)) |
 | Performance | Seeded 25-application pipeline: API p95 8 ms (budget 200), edit round-trip p95 11 ms (budget 300); browser largest paint 148 ms |
-| Fixture corpus | 80 labelled emails — 55 application / 25 not; 27 deadline-bearing; 15 hard negatives |
+| Fixture corpus | 80 labelled emails — 55 application / 25 not; 28 deadline-bearing; 15 hard negatives; dated 28 Sep – 19 Oct 2026 (D42) |
 | Real emails harvested | 32 → 8 applications, 20 updates, 4 correctly rejected |
 | Gates | `test`, `lint`, `typecheck`, `accuracy` — all green |
 | Commits | All 31 by Jordan (`jpso0002`); a single repository (D22) |

@@ -472,11 +472,12 @@ describe("the whole corpus through the pipeline", () => {
     }
 
     expect(outcomes.filter((o) => o === "not-application")).toHaveLength(25);
-    expect(outcomes.filter((o) => o === "created-job" || o === "updated-job")).toHaveLength(52);
-    // Three become questions for the student instead: 020 names no role — "the
-    // next step is a coding challenge" — and 057 and 058 confirm withdrawals,
-    // which only the student may apply (C17).
-    expect(outcomes.filter((o) => o === "queued-for-review")).toHaveLength(3);
+    expect(outcomes.filter((o) => o === "created-job" || o === "updated-job")).toHaveLength(53);
+    // Two become questions for the student instead: 020 names no role — "the
+    // next step is a coding challenge" — and 057 confirms a withdrawal, which
+    // only the student may apply (C17). (058 was a second withdrawal until the
+    // sample mailbox was re-told for the presentation, D42.)
+    expect(outcomes.filter((o) => o === "queued-for-review")).toHaveLength(2);
 
     // 55 application emails across roughly 20 employers — the pipeline must
     // group them, not create 55 separate jobs.

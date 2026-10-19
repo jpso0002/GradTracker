@@ -767,6 +767,35 @@ without touching `demo.db` or `demo-accounts.json`.
 
 ---
 
+### D42 — The sample emails re-told for the presentation date *(19 October 2026)*
+
+**Chosen:** the 80 sample emails — which are also the authored tuning corpus — are edited so the
+demo inbox looks like a student's in mid-October rather than a season gone by.
+
+- **Dates:** every email moves into 28 September – 19 October 2026 by calendar days, keeping
+  each application's order; every date and weekday written inside an email moves by the same
+  number of days, so "by Friday" keeps its meaning and 001's deliberate weekday mismatch
+  survives. "AEST" becomes "AEDT" after daylight saving starts on 4 October. Deadlines are
+  recomputed: wall-clock dates shift, "within N business days" is recounted, "expires in 48
+  hours" keeps its 48 hours. Because the text is dated, an email opened from the app reads the
+  same as the dashboard on presentation day.
+- **Story:** ten emails re-written (045–048, 051–055, 058) and five response deadlines moved later
+  (029, 033, 035, 037, 041), so the scan produces 20 applications — 17 live across applied,
+  assessment, interview and offer (two offers), three rejected — one overdue item (PwC), and four
+  to review including IBM's withdrawal, so every stage is present.
+- **Kept:** 80 emails, 55 applications and 25 not, the 15 hard negatives, the fixture ids. Deadline-
+  bearing goes from 27 to 28 (the Optiver offer's "remains open until 30 October").
+
+**Rejected:** a separate demo set beside the tuning corpus (offered; the team chose one set);
+shifting dates only when read (the text inside each email would still say May and June).
+
+**Consequence:** the tuning corpus's labels change with its emails, so any accuracy figure from
+before 19 October was measured on a different text — none was, as no model has run (B3). The
+demo inbox must be emptied and re-loaded: the new versions keep their Message-IDs, so the load
+script skips them while the old ones are there.
+
+---
+
 ## 3. Defects found reviewing the specification *(Revision 2)*
 
 Six defects found reviewing the four specification documents against each other. Each is

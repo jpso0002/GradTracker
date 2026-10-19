@@ -42,7 +42,11 @@ review at low confidence rather than onto the dashboard.
 
 After the semester, revoke the app password from the same page.
 
-## 2. Load the 80 sample emails (once)
+## 2. Load the 80 sample emails (once — or again after D42)
+
+**If the inbox already holds the older sample emails** (loaded before 19 October), delete them in
+Gmail first: select all → Delete, then empty the Bin. The new versions have the same
+Message-IDs, so the load script would otherwise think they are already there and add nothing.
 
 ```
 npm.cmd run demo:load-inbox
@@ -53,8 +57,10 @@ sender (Greenhouse, LinkedIn, Deloitte…) and original date. **Nothing is sent*
 added straight into the inbox, already marked as read. It should print `Placed 80 sample
 emails in …`. Running it again adds only what's missing and never deletes anything.
 
-In Gmail they show their original May–June dates. The app moves them forward when it reads
-them, so the newest one arrived yesterday, whatever day you present.
+They are dated **28 September – 19 October 2026** (D42), and every date written inside them
+matches, so an email opened from the app reads the same as the dashboard. On presentation day
+(20 October) the app shows them exactly as dated; on any other day it moves them by the same
+number of days so the newest arrived yesterday.
 
 ## 3. Start the demo
 
@@ -81,9 +87,12 @@ stores a salted hash, never the password, and each account has its own dashboard
 2. Create the demo inbox's account: any name, **email `gradtrackerdemo@gmail.com`**, and a
    password you choose (8+ characters). Remember it, since you'll type it during the demo.
 3. That account's first sign-in goes to **Connect your Gmail → Continue with Google →
-   Allow**, then the scan: about 7 seconds, 80 emails read, about 20 applications, and a
-   review queue including two emails the "model" was unsure about (Xero and SEEK). If the
-   inbox can't be read, the scan uses the seeded sample mailbox, and a toast says why.
+   Allow**, then the scan: about 7 seconds, 80 emails read, 25 ignored, **20 applications** —
+   17 live (2 applied, 3 assessments, 10 interviews, 2 offers), 3 rejected in Archived, PwC's
+   assessment the one overdue item — and **4 to review**: Xero and SEEK (the "model" unsure),
+   an unclear Atlassian match, and IBM's withdrawal, which only you can apply (confirm it live
+   to show the withdrawn stage). If the inbox can't be read, the scan uses the seeded sample
+   mailbox, and a toast says why.
 4. After that, signing in as this account goes straight to its dashboard.
 
 Accounts and dashboards survive restarts. **Settings → Reset demo** empties the signed-in

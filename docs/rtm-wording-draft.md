@@ -49,9 +49,9 @@ safety net for the remaining 5%, not a replacement for the target. Making the ac
 **The concern raised:** if an email states a deadline, the system should always find it,
 so why 80% and not 100%?
 
-**Why not 100%:** it is a measured rate, not a promise per email. With 27 deadline-bearing
-emails, a single miss fails a 100% target. And even 27 out of 27 would not show the true
-rate is 100%: the 95% confidence interval would be roughly 87–100%. A target the
+**Why not 100%:** it is a measured rate, not a promise per email. With 28 deadline-bearing
+emails, a single miss fails a 100% target. And even 28 out of 28 would not show the true
+rate is 100%: the 95% confidence interval would be roughly 88–100%. A target the
 measurement can never confirm can't be verified.
 
 **Options:**
